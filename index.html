@@ -29,12 +29,13 @@
     .counter-btn:disabled { opacity:0.3; cursor:not-allowed; }
     .badge-pelada { background:#14532d; color:#4ade80; }
     .badge-compromisso { background:#1e3a5f; color:#60a5fa; }
-    .team-btn { padding:0.2rem 0.6rem; border-radius:9999px; font-size:0.65rem; font-weight:700; border:2px solid transparent; cursor:pointer; transition:all 0.12s; }
-    .team-btn.verm { border-color:#7f1d1d; color:#fca5a5; background:#1c0a0a; }
-    .team-btn.verm.sel { background:#7f1d1d; border-color:#ef4444; color:#fff; }
-    .team-btn.azul { border-color:#1e3a5f; color:#93c5fd; background:#0a0f1c; }
-    .team-btn.azul.sel { background:#1e40af; border-color:#3b82f6; color:#fff; }
+    .team-toggle { padding:0.25rem 0.75rem; border-radius:9999px; font-size:0.68rem; font-weight:700; border:2px solid; cursor:pointer; transition:all 0.15s; min-width:68px; text-align:center; }
+    .team-toggle.is-azul { background:#0a1628; border-color:#2563eb; color:#93c5fd; }
+    .team-toggle.is-azul:hover { background:#1e3a8a; color:#bfdbfe; }
+    .team-toggle.is-verm { background:#7f1d1d; border-color:#ef4444; color:#fff; }
+    .team-toggle.is-verm:hover { background:#991b1b; }
     /* ── Campo (futebol de botão) ── */
+    #page-campo { margin:0 -0.75rem -1rem; padding:1rem 0.75rem; }
     #campo-field { position:relative; touch-action:none; user-select:none; }
     .player-token {
       position:absolute; width:38px; height:38px;
@@ -145,16 +146,16 @@ const INITIAL_PLAYERS = [
   "Claudecir","Cícero","Kross de terno","Léo","Anderson"
 ];
 
-// ── Default 4-3-3 positions (portrait, 0-1 range) ──
+// ── Default 4-3-3 positions (landscape, 0-1 range, red attacks right) ──
 const DEF_POS = [
-  {x:.5,y:.05},           // GK
-  {x:.15,y:.22},{x:.38,y:.18},{x:.62,y:.18},{x:.85,y:.22}, // DEF 4
-  {x:.2,y:.38},{x:.5,y:.35},{x:.8,y:.38},   // MID 3
-  {x:.15,y:.54},{x:.5,y:.52},{x:.85,y:.54}, // FWD 3
+  {x:.05,y:.50},                                                      // GK
+  {x:.18,y:.12},{x:.18,y:.37},{x:.18,y:.63},{x:.18,y:.88},           // DEF 4
+  {x:.33,y:.22},{x:.33,y:.50},{x:.33,y:.78},                         // MID 3
+  {x:.43,y:.15},{x:.43,y:.50},{x:.43,y:.85},                         // FWD 3
 ];
 function defaultPos(team, idx) {
   const base = DEF_POS[Math.min(idx, DEF_POS.length-1)];
-  if (team==="azul") return { x: base.x, y: 1 - base.y }; // mirror vertically
+  if (team==="azul") return { x: 1 - base.x, y: base.y }; // mirror horizontally
   return { ...base };
 }
 
@@ -340,97 +341,97 @@ function renderCampo() {
   const verm = vermPids.length, azul = azulPids.length;
 
   el.innerHTML = `
-    <div class="mb-3 flex items-center justify-between">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-3 px-1">
       <div>
-        <div class="font-black text-base">Campo — ${fmtDate(game.date)}</div>
-        <p class="text-xs text-green-300/50 mt-0.5">Arraste os jogadores para posicionar</p>
+        <div class="font-black text-base leading-tight">Campo — ${fmtDate(game.date)}</div>
+        <div class="text-[10px] text-green-300/40 mt-0.5">Arraste os jogadores para posicionar</div>
       </div>
-      <div class="text-xs text-green-300/50 text-right">
-        <div>🔴 ${verm} × 🔵 ${azul}</div>
-        <div>${badge(game.type)}</div>
+      <div class="flex items-center gap-2">${badge(game.type)}</div>
+    </div>
+
+    <!-- Placar de times -->
+    <div class="grid grid-cols-2 gap-2 mb-3">
+      <div class="bg-red-950/40 border border-red-800/50 rounded-xl p-3">
+        <div class="flex items-center gap-1.5 mb-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0"></span>
+          <span class="text-red-400 font-black text-xs uppercase tracking-wider">Vermelho</span>
+          <span class="ml-auto text-red-300/60 text-xs font-bold">${verm}</span>
+        </div>
+        <div class="space-y-0.5">
+          ${vermPids.map(pid=>`<div class="text-red-200/80 text-[11px] font-semibold truncate">${playerName(pid)}</div>`).join("")||`<div class="text-red-300/20 text-xs">—</div>`}
+        </div>
+      </div>
+      <div class="bg-blue-950/40 border border-blue-800/50 rounded-xl p-3">
+        <div class="flex items-center gap-1.5 mb-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0"></span>
+          <span class="text-blue-400 font-black text-xs uppercase tracking-wider">Azul</span>
+          <span class="ml-auto text-blue-300/60 text-xs font-bold">${azul}</span>
+        </div>
+        <div class="space-y-0.5">
+          ${azulPids.map(pid=>`<div class="text-blue-200/80 text-[11px] font-semibold truncate">${playerName(pid)}</div>`).join("")||`<div class="text-blue-300/20 text-xs">—</div>`}
+        </div>
       </div>
     </div>
 
-    <!-- Campo SVG + tokens -->
-    <div id="campo-field" class="relative mx-auto rounded-xl overflow-hidden shadow-2xl border-2 border-[#1a3a1a]"
-         style="width:100%;max-width:340px;aspect-ratio:68/105">
+    <!-- Campo landscape: vermelho esquerda, azul direita -->
+    <div id="campo-field" class="relative mx-auto rounded-2xl overflow-hidden shadow-2xl border-2 border-[#1e4a1e]"
+         style="width:100%;aspect-ratio:105/68">
 
-      <!-- SVG campo -->
-      <svg viewBox="0 0 68 105" xmlns="http://www.w3.org/2000/svg"
+      <svg viewBox="0 0 105 68" xmlns="http://www.w3.org/2000/svg"
            style="position:absolute;inset:0;width:100%;height:100%;display:block">
-        <!-- listras do gramado -->
-        <rect x="0" y="0"    width="68" height="8.75"  fill="#2d7a2d"/>
-        <rect x="0" y="8.75" width="68" height="8.75"  fill="#2a6e2a"/>
-        <rect x="0" y="17.5" width="68" height="8.75"  fill="#2d7a2d"/>
-        <rect x="0" y="26.25"width="68" height="8.75"  fill="#2a6e2a"/>
-        <rect x="0" y="35"   width="68" height="8.75"  fill="#2d7a2d"/>
-        <rect x="0" y="43.75"width="68" height="8.75"  fill="#2a6e2a"/>
-        <rect x="0" y="52.5" width="68" height="8.75"  fill="#2d7a2d"/>
-        <rect x="0" y="61.25"width="68" height="8.75"  fill="#2a6e2a"/>
-        <rect x="0" y="70"   width="68" height="8.75"  fill="#2d7a2d"/>
-        <rect x="0" y="78.75"width="68" height="8.75"  fill="#2a6e2a"/>
-        <rect x="0" y="87.5" width="68" height="8.75"  fill="#2d7a2d"/>
-        <rect x="0" y="96.25"width="68" height="8.75"  fill="#2a6e2a"/>
-        <!-- linha de fundo -->
-        <rect x="0" y="0" width="68" height="105" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.8"/>
-        <!-- linha do meio -->
-        <line x1="0" y1="52.5" x2="68" y2="52.5" stroke="rgba(255,255,255,0.85)" stroke-width="0.7"/>
+        <!-- listras verticais do gramado -->
+        <rect x="0"     y="0" width="8.75" height="68" fill="#2d7a2d"/>
+        <rect x="8.75"  y="0" width="8.75" height="68" fill="#296e29"/>
+        <rect x="17.5"  y="0" width="8.75" height="68" fill="#2d7a2d"/>
+        <rect x="26.25" y="0" width="8.75" height="68" fill="#296e29"/>
+        <rect x="35"    y="0" width="8.75" height="68" fill="#2d7a2d"/>
+        <rect x="43.75" y="0" width="8.75" height="68" fill="#296e29"/>
+        <rect x="52.5"  y="0" width="8.75" height="68" fill="#2d7a2d"/>
+        <rect x="61.25" y="0" width="8.75" height="68" fill="#296e29"/>
+        <rect x="70"    y="0" width="8.75" height="68" fill="#2d7a2d"/>
+        <rect x="78.75" y="0" width="8.75" height="68" fill="#296e29"/>
+        <rect x="87.5"  y="0" width="8.75" height="68" fill="#2d7a2d"/>
+        <rect x="96.25" y="0" width="8.75" height="68" fill="#296e29"/>
+        <!-- borda -->
+        <rect x="0" y="0" width="105" height="68" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.8"/>
+        <!-- linha do meio vertical -->
+        <line x1="52.5" y1="0" x2="52.5" y2="68" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
         <!-- círculo central -->
-        <circle cx="34" cy="52.5" r="9.15" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.7"/>
-        <circle cx="34" cy="52.5" r="0.7" fill="rgba(255,255,255,0.85)"/>
-        <!-- marca do meio -->
-        <line x1="31" y1="52.5" x2="37" y2="52.5" stroke="rgba(255,255,255,0.5)" stroke-width="0.4"/>
-        <line x1="34" y1="49.5" x2="34" y2="55.5" stroke="rgba(255,255,255,0.5)" stroke-width="0.4"/>
-        <!-- área grande topo -->
-        <rect x="13.84" y="0" width="40.32" height="16.5" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.85)" stroke-width="0.7"/>
-        <!-- área pequena topo -->
-        <rect x="24.84" y="0" width="18.32" height="5.5" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.7"/>
-        <!-- pênalti topo -->
-        <circle cx="34" cy="11" r="0.7" fill="rgba(255,255,255,0.85)"/>
-        <!-- arco pênalti topo -->
-        <path d="M 26.5 16.5 A 9.15 9.15 0 0 1 41.5 16.5" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.7"/>
-        <!-- gol topo -->
-        <rect x="27.34" y="-2" width="13.32" height="2" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.7)" stroke-width="0.5"/>
-        <!-- área grande baixo -->
-        <rect x="13.84" y="88.5" width="40.32" height="16.5" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.85)" stroke-width="0.7"/>
-        <!-- área pequena baixo -->
-        <rect x="24.84" y="99.5" width="18.32" height="5.5" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.7"/>
-        <!-- pênalti baixo -->
-        <circle cx="34" cy="94" r="0.7" fill="rgba(255,255,255,0.85)"/>
-        <!-- arco pênalti baixo -->
-        <path d="M 26.5 88.5 A 9.15 9.15 0 0 0 41.5 88.5" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.7"/>
-        <!-- gol baixo -->
-        <rect x="27.34" y="105" width="13.32" height="2" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.7)" stroke-width="0.5"/>
+        <circle cx="52.5" cy="34" r="9.15" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
+        <circle cx="52.5" cy="34" r="0.7" fill="rgba(255,255,255,0.9)"/>
+        <!-- área grande esquerda (vermelho defende) -->
+        <rect x="0" y="13.84" width="16.5" height="40.32" fill="rgba(255,100,100,0.05)" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
+        <!-- área pequena esquerda -->
+        <rect x="0" y="24.84" width="5.5" height="18.32" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6"/>
+        <!-- pênalti esquerda -->
+        <circle cx="11" cy="34" r="0.7" fill="rgba(255,255,255,0.9)"/>
+        <!-- arco pênalti esquerda -->
+        <path d="M 16.5 26.5 A 9.15 9.15 0 0 1 16.5 41.5" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
+        <!-- gol esquerda -->
+        <rect x="-2.5" y="27.34" width="2.5" height="13.32" fill="rgba(255,100,100,0.15)" stroke="rgba(255,255,255,0.7)" stroke-width="0.5"/>
+        <!-- área grande direita (azul defende) -->
+        <rect x="88.5" y="13.84" width="16.5" height="40.32" fill="rgba(100,100,255,0.05)" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
+        <!-- área pequena direita -->
+        <rect x="99.5" y="24.84" width="5.5" height="18.32" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6"/>
+        <!-- pênalti direita -->
+        <circle cx="94" cy="34" r="0.7" fill="rgba(255,255,255,0.9)"/>
+        <!-- arco pênalti direita -->
+        <path d="M 88.5 26.5 A 9.15 9.15 0 0 0 88.5 41.5" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
+        <!-- gol direita -->
+        <rect x="105" y="27.34" width="2.5" height="13.32" fill="rgba(100,100,255,0.15)" stroke="rgba(255,255,255,0.7)" stroke-width="0.5"/>
         <!-- cantos -->
-        <path d="M 0 2.5 A 2.5 2.5 0 0 1 2.5 0"  fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.7"/>
-        <path d="M 65.5 0 A 2.5 2.5 0 0 1 68 2.5" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.7"/>
-        <path d="M 0 102.5 A 2.5 2.5 0 0 0 2.5 105" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.7"/>
-        <path d="M 65.5 105 A 2.5 2.5 0 0 0 68 102.5" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.7"/>
-        <!-- label times -->
-        <text x="34" y="8" text-anchor="middle" fill="rgba(255,255,255,0.25)" font-size="4" font-weight="bold">🔴 VERMELHO</text>
-        <text x="34" y="100" text-anchor="middle" fill="rgba(255,255,255,0.25)" font-size="4" font-weight="bold">🔵 AZUL</text>
+        <path d="M 0 3 A 3 3 0 0 1 3 0"    fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6"/>
+        <path d="M 102 0 A 3 3 0 0 1 105 3" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6"/>
+        <path d="M 0 65 A 3 3 0 0 0 3 68"    fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6"/>
+        <path d="M 102 68 A 3 3 0 0 0 105 65" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6"/>
+        <!-- labels times no campo -->
+        <text x="26" y="5.5" text-anchor="middle" fill="rgba(255,120,120,0.5)" font-size="3.8" font-weight="bold" font-family="system-ui">VERMELHO</text>
+        <text x="79" y="5.5" text-anchor="middle" fill="rgba(120,160,255,0.5)" font-size="3.8" font-weight="bold" font-family="system-ui">AZUL</text>
       </svg>
 
       <!-- Tokens dos jogadores -->
       ${tokens}
-    </div>
-
-    <!-- Legenda -->
-    <div class="flex justify-center gap-4 mt-3 text-xs text-green-300/50">
-      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full disc-red inline-block"></span> Vermelho</span>
-      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full disc-blue inline-block"></span> Azul</span>
-    </div>
-
-    <!-- Lista compacta jogadores -->
-    <div class="mt-4 grid grid-cols-2 gap-2 text-xs">
-      <div class="bg-red-950/30 border border-red-900/40 rounded-xl p-3">
-        <div class="text-red-400 font-bold text-[10px] uppercase tracking-wider mb-2">🔴 Time Vermelho</div>
-        ${vermPids.map(pid=>`<div class="text-red-200/80 py-0.5 truncate">${playerName(pid)}</div>`).join("")||`<div class="text-red-300/30">—</div>`}
-      </div>
-      <div class="bg-blue-950/30 border border-blue-900/40 rounded-xl p-3">
-        <div class="text-blue-400 font-bold text-[10px] uppercase tracking-wider mb-2">🔵 Time Azul</div>
-        ${azulPids.map(pid=>`<div class="text-blue-200/80 py-0.5 truncate">${playerName(pid)}</div>`).join("")||`<div class="text-blue-300/30">—</div>`}
-      </div>
     </div>
   `;
 
@@ -689,10 +690,15 @@ function checkPin(){
 }
 
 let gameTeams={}, selectedGameType="pelada";
-function setTeam(pid,team){
+function setTeam(pid){
   gameTeams[pid]=gameTeams[pid]==="vermelho"?null:"vermelho";
-  const v=document.getElementById("tb-v-"+pid);
-  if(v)v.classList.toggle("sel",gameTeams[pid]==="vermelho");
+  const btn=document.getElementById("tb-v-"+pid);
+  if(!btn) return;
+  if(gameTeams[pid]==="vermelho"){
+    btn.className="team-toggle is-verm"; btn.textContent="🔴 Verm";
+  } else {
+    btn.className="team-toggle is-azul"; btn.textContent="🔵 Azul";
+  }
 }
 function setGameType(t){
   selectedGameType=t;
@@ -723,14 +729,17 @@ function renderAdmin(){
             <button onclick="setGameType('pelada')"      id="gt-pelada" class="flex-1 py-2 rounded-lg bg-green-800 border border-green-600 text-sm font-bold text-green-300">Pelada</button>
             <button onclick="setGameType('compromisso')" id="gt-comp"   class="flex-1 py-2 rounded-lg bg-[#0b1a10] border border-[#2a4a35] text-sm font-bold text-blue-400">Compromisso</button>
           </div></div>
-        <div><label class="text-[10px] text-green-300/50 uppercase tracking-wider block mb-1.5">Jogadores — marque os do time 🔴 (resto vai para 🔵)</label>
+        <div>
+          <label class="text-[10px] text-green-300/50 uppercase tracking-wider block mb-2">Jogadores — clique no time para alternar</label>
           <div class="space-y-1.5 max-h-72 overflow-y-auto pr-1" id="player-checkboxes">
             ${players.map(p=>`<div class="flex items-center gap-2 bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-2.5 py-2">
               <input type="checkbox" value="${p.id}" class="accent-green-500 w-4 h-4 shrink-0" checked/>
-              <span class="flex-1 text-xs font-semibold truncate">${p.name}</span>
-              <button id="tb-v-${p.id}" onclick="setTeam('${p.id}','vermelho')" class="team-btn verm">🔴 Verm</button>
+              <span class="flex-1 text-sm font-semibold truncate">${p.name}</span>
+              <button id="tb-v-${p.id}" onclick="setTeam('${p.id}')" class="team-toggle is-azul">🔵 Azul</button>
             </div>`).join("")}
-          </div></div>
+          </div>
+          <p class="text-[10px] text-green-300/30 mt-1.5">Por padrão todos são 🔵 Azul. Clique para mudar para 🔴 Verm.</p>
+        </div>
         <button onclick="createGame()" class="w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 font-bold text-sm transition-colors">Criar Jogo</button>
       </div>
     </div>
@@ -758,7 +767,8 @@ function renderAdmin(){
             <div class="text-sm font-semibold">${fmtDate(g.date)} — ${g.type==="compromisso"?"Compromisso":"Pelada"}</div>
             <div class="text-[10px] text-green-300/40">👥${pids.length}${(v||a)?` · 🔴${v}×🔵${a}`:""}</div>
           </div>
-          <button onclick="deleteGame('${g.id}')" class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-950/60 border border-red-800/50 text-red-400 hover:bg-red-900/60 hover:text-red-300 text-xs font-bold transition-colors">🗑 Excluir</button>
+          <button onclick="openEditGame('${g.id}')" class="px-3 py-1.5 rounded-lg bg-[#1a3825] border border-green-800/50 text-green-400 hover:bg-green-900/40 text-xs font-bold transition-colors">✏️ Editar</button>
+          <button onclick="deleteGame('${g.id}')" class="px-3 py-1.5 rounded-lg bg-red-950/60 border border-red-800/50 text-red-400 hover:bg-red-900/60 text-xs font-bold transition-colors">🗑</button>
         </div>`;}).join("")}</div>`:`<p class="text-xs text-green-300/40">Nenhum jogo ainda.</p>`}
     </div>
   </div>`;
@@ -779,6 +789,58 @@ async function createGame(){
 async function addPlayer(){const i=document.getElementById("new-player");const n=i?.value?.trim();if(!n)return;const id=db.ref("players").push().key;await db.ref("players/"+id).set({name:n,active:true});if(i)i.value="";}
 async function removePlayer(id){if(!confirm(`Remover ${playerName(id)}?`))return;await db.ref("players/"+id+"/active").set(false);}
 async function deleteGame(id){if(!confirm("Excluir este jogo e todos os votos?"))return;await db.ref("games/"+id).remove();await db.ref("ratings/"+id).remove();await db.ref("formations/"+id).remove();}
+
+let editGameId=null, editTeams={};
+function openEditGame(gid){
+  editGameId=gid;
+  const g=S.games[gid]; if(!g) return;
+  const pids=getGamePlayerIds(g);
+  editTeams={};
+  pids.forEach(pid=>{ editTeams[pid]=getPlayerTeam(g,pid); });
+  const allPlayers=activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
+  openModal(`
+    <h3 class="font-black text-base mb-3">✏️ Editar Jogo — ${fmtDate(g.date)}</h3>
+    <p class="text-[10px] text-green-300/50 mb-3 uppercase tracking-wider">Marque quem participa e o time</p>
+    <div class="space-y-1.5 max-h-[55vh] overflow-y-auto pr-1 mb-4" id="edit-player-list">
+      ${allPlayers.map(p=>{
+        const inGame=pids.includes(p.id);
+        const team=editTeams[p.id]||"azul";
+        return `<div class="flex items-center gap-2 bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-2.5 py-2">
+          <input type="checkbox" id="ep-${p.id}" value="${p.id}" ${inGame?"checked":""} class="accent-green-500 w-4 h-4 shrink-0" onchange="toggleEditPlayer('${p.id}',this.checked)"/>
+          <span class="flex-1 text-sm font-semibold truncate">${p.name}</span>
+          <button id="et-${p.id}" onclick="toggleEditTeam('${p.id}')" class="team-toggle ${team==="vermelho"?"is-verm":"is-azul"}" ${inGame?"":"disabled style='opacity:0.3'"}>
+            ${team==="vermelho"?"🔴 Verm":"🔵 Azul"}
+          </button>
+        </div>`;
+      }).join("")}
+    </div>
+    <button onclick="saveEditGame()" class="w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 font-black text-sm transition-colors">💾 Salvar alterações</button>
+  `);
+}
+function toggleEditPlayer(pid,checked){
+  if(checked){ editTeams[pid]=editTeams[pid]||"azul"; }
+  else { delete editTeams[pid]; }
+  const btn=document.getElementById("et-"+pid);
+  if(btn){ btn.disabled=!checked; btn.style.opacity=checked?"1":"0.3"; }
+}
+function toggleEditTeam(pid){
+  editTeams[pid]=editTeams[pid]==="vermelho"?"azul":"vermelho";
+  const btn=document.getElementById("et-"+pid);
+  if(btn){
+    btn.className="team-toggle "+(editTeams[pid]==="vermelho"?"is-verm":"is-azul");
+    btn.textContent=editTeams[pid]==="vermelho"?"🔴 Verm":"🔵 Azul";
+  }
+}
+async function saveEditGame(){
+  if(!editGameId) return;
+  const checked=[...document.querySelectorAll("#edit-player-list input:checked")].map(c=>c.value);
+  if(checked.length<2){alert("Selecione ao menos 2 jogadores");return;}
+  const players={};
+  checked.forEach(pid=>{ players[pid]={team:editTeams[pid]||"azul"}; });
+  await db.ref("games/"+editGameId+"/players").set(players);
+  closeModal();
+  alert("Jogo atualizado!");
+}
 async function savePin(){const p=document.getElementById("new-pin")?.value?.trim();if(!p||p.length<4){alert("PIN deve ter ao menos 4 dígitos");return;}await db.ref("config/adminPin").set(p);alert("PIN salvo!");}
 
 // ── Modal ──
