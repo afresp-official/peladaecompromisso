@@ -164,8 +164,8 @@ function getGamePlayerIds(g) {
   return g.playerIds||[];
 }
 function getPlayerTeam(g, pid) {
-  if (g.players && g.players[pid]) return g.players[pid].team||null;
-  return null;
+  if (g.players && g.players[pid]) return g.players[pid].team||"azul";
+  return "azul";
 }
 function teamBadge(t) {
   if (t==="vermelho") return `<span class="inline-block w-2.5 h-2.5 rounded-full bg-red-500 shrink-0"></span>`;
