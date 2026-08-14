@@ -713,15 +713,23 @@ function addAssist(pid,d){
 }
 function setObs(pid,val){if(!voteState.ratings[pid]) voteState.ratings[pid]={note:0,goals:0,assists:0,obs:""};voteState.ratings[pid].obs=val;}
 async function submitVotes(){
-  const game=latestGame(); if(!game||!S.uid) return;
+  const gameId=voteState.gameId; if(!gameId||!S.uid) return;
+  const game=S.games[gameId]; if(!game) return;
   const missing=Object.entries(voteState.ratings).filter(([,v])=>!v.note).map(([pid])=>playerName(pid));
-  if(missing.length){alert("Faltou nota para: "+missing.join(", "));return;}
-  const updates={};
-  Object.entries(voteState.ratings).forEach(([pid,v])=>{
-    updates[`/ratings/${game.id}/${S.uid}/${pid}`]={note:v.note,goals:v.goals,assists:v.assists,obs:(v.obs||"").trim(),ts:Date.now()};
-  });
-  await db.ref().update(updates);
-  voteState={gameId:null,ratings:{}};
+  if(missing.length){alert("Faltou nota para: "+missing.slice(0,5).join(", ")+(missing.length>5?` e mais ${missing.length-5}...`:""));return;}
+  const btn=document.querySelector("button[onclick='submitVotes()']");
+  if(btn){btn.disabled=true;btn.textContent="Enviando...";}
+  try{
+    const updates={};
+    Object.entries(voteState.ratings).forEach(([pid,v])=>{
+      updates[`/ratings/${gameId}/${S.uid}/${pid}`]={note:v.note,goals:v.goals,assists:v.assists,obs:(v.obs||"").trim(),ts:Date.now()};
+    });
+    await db.ref().update(updates);
+    voteState={gameId:null,ratings:{}};
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent="✅ Enviar votos";}
+    alert("Erro ao enviar: "+e.message);
+  }
 }
 function renderMyVotes(el,game){
   const mv=S.ratings[game.id]?.[S.uid]||{};
