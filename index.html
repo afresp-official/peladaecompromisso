@@ -908,14 +908,22 @@ async function deleteVoter(gid,vid){
   await db.ref(`ratings/${gid}/${vid}`).remove();
   openGameVotes(gid);
 }
-function openEditVoter(gid,vid){
+async function openEditVoter(gid,vid){
   const g=S.games[gid]; if(!g) return;
-  const existing=S.ratings[gid]?.[vid]||{};
+  openModal(`<div class="text-center py-10 text-green-300/40 text-sm">Carregando votos...</div>`);
+  // Busca direto do Firebase para garantir dados atualizados
+  const snap=await db.ref(`ratings/${gid}/${vid}`).once("value");
+  const existing=snap.val()||{};
   const pids=getGamePlayerIds(g).filter(p=>p!==vid);
   editVoteState={gid,vid,ratings:{}};
   pids.forEach(pid=>{
     const v=existing[pid]||{};
-    editVoteState.ratings[pid]={note:v.note||0,goals:v.goals||0,assists:v.assists||0,obs:v.obs||""};
+    editVoteState.ratings[pid]={
+      note: v.note ?? 0,
+      goals: v.goals ?? 0,
+      assists: v.assists ?? 0,
+      obs: v.obs ?? ""
+    };
   });
   openModal(`
     <div class="flex items-center gap-2 mb-3">
