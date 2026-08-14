@@ -316,7 +316,13 @@ function renderGameStatus(){
   const pids=getGamePlayerIds(game);
   const verm=pids.filter(pid=>getPlayerTeam(game,pid)==="vermelho").length;
   const azul=pids.filter(pid=>getPlayerTeam(game,pid)==="azul").length;
-  const result=voters>0?calcGameResult(game):null;
+  // Usa resultado oficial do admin; se não existir, não mostra placar
+  const officialResult=game.result||null;
+  const result=officialResult?{
+    vermScore:officialResult.v||0,
+    azulScore:officialResult.a||0,
+    scorers:Object.entries(officialResult.scorers||{}).map(([pid,goals])=>({name:playerName(pid),team:getPlayerTeam(game,pid),goals})).sort((a,b)=>b.goals-a.goals)
+  }:null;
   el.innerHTML=card(`
     <div class="flex items-start justify-between mb-3">
       <div><div class="text-[10px] text-green-400/60 uppercase tracking-widest font-semibold mb-1">Último jogo</div>
@@ -855,6 +861,7 @@ function renderAdmin(){
             <div class="text-[10px] text-green-300/40">👥${pids.length}${(v||a)?` · 🔴${v}×🔵${a}`:""} · 🗳️${voterCount}</div>
           </div>
           <button onclick="openEditGame('${g.id}')" class="px-2.5 py-1.5 rounded-lg bg-[#1a3825] border border-green-800/50 text-green-400 text-xs font-bold">✏️</button>
+          <button onclick="openSetResult('${g.id}')" class="px-2.5 py-1.5 rounded-lg bg-[#1a2e3f] border border-blue-800/50 text-blue-400 text-xs font-bold">⚽</button>
           <button onclick="openGameVotes('${g.id}')" class="px-2.5 py-1.5 rounded-lg bg-amber-950/60 border border-amber-700/40 text-amber-400 text-xs font-bold">🗳️</button>
           <button onclick="deleteGame('${g.id}')" class="px-2.5 py-1.5 rounded-lg bg-red-950/60 border border-red-800/50 text-red-400 text-xs font-bold">🗑</button>
         </div>`;}).join("")}</div>`:`<p class="text-xs text-green-300/40">Nenhum jogo ainda.</p>`}
@@ -920,6 +927,72 @@ function toggleEditTeam(pid){
     btn.textContent=editTeams[pid]==="vermelho"?"🔴 Verm":"🔵 Azul";
   }
 }
+function openSetResult(gid){
+  const g=S.games[gid]; if(!g) return;
+  const res=g.result||{v:0,a:0,scorers:{}};
+  const pids=getGamePlayerIds(g);
+  const vermPids=pids.filter(p=>getPlayerTeam(g,p)==="vermelho");
+  const azulPids=pids.filter(p=>getPlayerTeam(g,p)==="azul");
+  const scorerRow=(pid)=>{
+    const goals=res.scorers?.[pid]||0;
+    return `<div class="flex items-center gap-2 bg-[#0b1a10] border border-[#1e3a27] rounded-lg px-2.5 py-2">
+      <span class="flex-1 text-sm font-semibold truncate">${playerName(pid)}</span>
+      <button onclick="adjResGoal('${pid}',-1)" class="counter-btn" ${goals<=0?"disabled":""}>−</button>
+      <span id="rg-${pid}" class="font-black text-yellow-300 w-5 text-center">${goals}</span>
+      <button onclick="adjResGoal('${pid}',1)" class="counter-btn">+</button>
+    </div>`;
+  };
+  openModal(`
+    <h3 class="font-black text-base mb-1">⚽ Resultado Oficial</h3>
+    <p class="text-[10px] text-green-300/40 mb-4">${fmtDate(g.date)} — defina o placar e artilheiros</p>
+    <div class="flex items-center gap-3 mb-5">
+      <div class="flex-1 text-center">
+        <div class="text-red-400 text-[10px] font-bold uppercase tracking-wider mb-1">🔴 Vermelho</div>
+        <div class="flex items-center justify-center gap-2">
+          <button onclick="adjResScore('v',-1)" class="counter-btn">−</button>
+          <span id="rs-v" class="font-black text-3xl text-red-400 w-8 text-center">${res.v||0}</span>
+          <button onclick="adjResScore('v',1)" class="counter-btn">+</button>
+        </div>
+      </div>
+      <div class="text-green-300/30 font-black text-xl">×</div>
+      <div class="flex-1 text-center">
+        <div class="text-blue-400 text-[10px] font-bold uppercase tracking-wider mb-1">🔵 Azul</div>
+        <div class="flex items-center justify-center gap-2">
+          <button onclick="adjResScore('a',-1)" class="counter-btn">−</button>
+          <span id="rs-a" class="font-black text-3xl text-blue-400 w-8 text-center">${res.a||0}</span>
+          <button onclick="adjResScore('a',1)" class="counter-btn">+</button>
+        </div>
+      </div>
+    </div>
+    <p class="text-[10px] text-green-300/40 uppercase tracking-wider mb-2">Artilheiros</p>
+    ${vermPids.length?`<p class="text-[10px] text-red-400/70 mb-1">🔴 Vermelho</p><div class="space-y-1.5 mb-3">${vermPids.map(scorerRow).join("")}</div>`:""}
+    ${azulPids.length?`<p class="text-[10px] text-blue-400/70 mb-1">🔵 Azul</p><div class="space-y-1.5 mb-3">${azulPids.map(scorerRow).join("")}</div>`:""}
+    <button onclick="saveResult('${gid}')" class="w-full py-3 mt-2 rounded-xl bg-green-600 hover:bg-green-500 font-black text-sm">💾 Salvar resultado</button>
+  `);
+  window._editResult={v:res.v||0,a:res.a||0,scorers:Object.assign({},res.scorers||{})};
+}
+function adjResScore(team,d){
+  window._editResult[team]=Math.max(0,(window._editResult[team]||0)+d);
+  const el=document.getElementById("rs-"+team);
+  if(el) el.textContent=window._editResult[team];
+}
+function adjResGoal(pid,d){
+  window._editResult.scorers=window._editResult.scorers||{};
+  window._editResult.scorers[pid]=Math.max(0,(window._editResult.scorers[pid]||0)+d);
+  const el=document.getElementById("rg-"+pid);
+  if(el) el.textContent=window._editResult.scorers[pid];
+  const btns=el?.parentElement?.querySelectorAll(".counter-btn");
+  if(btns) btns[0].disabled=window._editResult.scorers[pid]<=0;
+}
+async function saveResult(gid){
+  const r=window._editResult;
+  // limpa scorers com 0 gols
+  const scorers={};
+  Object.entries(r.scorers||{}).forEach(([pid,g])=>{if(g>0) scorers[pid]=g;});
+  await db.ref(`games/${gid}/result`).set({v:r.v,a:r.a,scorers});
+  closeModal();
+}
+
 async function saveEditGame(){
   if(!editGameId) return;
   const checked=[...document.querySelectorAll("#edit-player-list input:checked")].map(c=>c.value);
