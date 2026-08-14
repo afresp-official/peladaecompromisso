@@ -895,12 +895,42 @@ function openGameVotes(gid){
                 <div class="font-bold text-sm truncate">${playerName(vid)}</div>
                 <div class="text-[10px] text-green-300/40">${count} avaliação${count!==1?"ões":""}</div>
               </div>
-              <button onclick="openEditVoter('${gid}','${vid}')" class="px-3 py-1.5 rounded-lg bg-amber-950/60 border border-amber-700/40 text-amber-300 text-xs font-bold hover:bg-amber-900/40">✏️ Editar</button>
+              <button onclick="viewVoter('${gid}','${vid}')" class="px-2.5 py-1.5 rounded-lg bg-[#1a3825] border border-green-800/40 text-green-400 text-xs font-bold hover:bg-green-900/30">👁 Ver</button>
+              <button onclick="openEditVoter('${gid}','${vid}')" class="px-2.5 py-1.5 rounded-lg bg-amber-950/60 border border-amber-700/40 text-amber-300 text-xs font-bold hover:bg-amber-900/40">✏️</button>
               <button onclick="deleteVoter('${gid}','${vid}')" class="px-2.5 py-1.5 rounded-lg bg-red-950/60 border border-red-800/40 text-red-400 text-xs font-bold hover:bg-red-900/40">🗑</button>
             </div>`;
           }).join("")}
         </div>`
     }
+  `);
+}
+async function viewVoter(gid,vid){
+  const g=S.games[gid]; if(!g) return;
+  openModal(`<div class="text-center py-8 text-green-300/40 text-sm">Carregando...</div>`);
+  const snap=await db.ref(`ratings/${gid}/${vid}`).once("value");
+  const votes=snap.val()||{};
+  const rows=Object.entries(votes).sort((a,b)=>(b[1].note||0)-(a[1].note||0));
+  openModal(`
+    <div class="flex items-center gap-2 mb-4">
+      <button onclick="openGameVotes('${gid}')" class="text-green-400 text-sm font-bold">← Voltar</button>
+      <span class="font-black text-sm flex-1 truncate">Votos de ${playerName(vid)}</span>
+    </div>
+    <div class="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+      ${rows.map(([pid,v])=>{
+        const team=getPlayerTeam(g,pid);
+        return `<div class="bg-[#0b1a10] border border-[#2a4a35] rounded-xl px-4 py-3 space-y-1.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">${teamBadge(team)}<span class="font-bold text-sm">${playerName(pid)}</span></div>
+            <div class="flex items-center gap-3">
+              <span class="font-black text-xl text-green-300">${v.note||0}<span class="text-green-300/40 text-sm font-normal">/10</span></span>
+              ${v.goals?`<span class="text-yellow-300 text-sm font-bold">⚽${v.goals}</span>`:""}
+              ${v.assists?`<span class="text-blue-300 text-sm font-bold">🅰${v.assists}</span>`:""}
+            </div>
+          </div>
+          ${v.obs?`<p class="text-xs text-green-300/60 italic border-l-2 border-green-700 pl-2">"${v.obs}"</p>`:""}
+        </div>`;
+      }).join("")}
+    </div>
   `);
 }
 async function deleteVoter(gid,vid){
