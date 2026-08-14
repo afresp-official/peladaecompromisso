@@ -286,6 +286,12 @@ function renderPlayerSelect(){
     </div>`);
 }
 function selectPlayer(id){S.uid=id;localStorage.setItem("afresp_uid",id);renderAll();}
+function medianGoals(arr){
+  if(!arr.length) return 0;
+  const s=[...arr].sort((a,b)=>a-b);
+  const m=Math.floor(s.length/2);
+  return s.length%2 ? s[m] : Math.round((s[m-1]+s[m])/2);
+}
 function calcGameResult(game){
   const gr=S.ratings[game.id]||{};
   const voters=Object.values(gr);
@@ -293,12 +299,7 @@ function calcGameResult(game){
   const pids=getGamePlayerIds(game);
   const playerGoals={};
   pids.forEach(pid=>{
-    const glist=voters.map(v=>v[pid]?.goals||0);
-    const comGol=glist.filter(g=>g>0);
-    // só conta gol se a maioria dos votantes marcou gol para este jogador
-    playerGoals[pid]=(comGol.length*2>voters.length)
-      ? Math.round(glist.reduce((s,v)=>s+v,0)/glist.length)
-      : 0;
+    playerGoals[pid]=medianGoals(voters.map(v=>v[pid]?.goals||0));
   });
   const vermScore=pids.filter(p=>getPlayerTeam(game,p)==="vermelho").reduce((s,p)=>s+(playerGoals[p]||0),0);
   const azulScore=pids.filter(p=>getPlayerTeam(game,p)==="azul").reduce((s,p)=>s+(playerGoals[p]||0),0);
@@ -316,12 +317,12 @@ function renderGameStatus(){
   const pids=getGamePlayerIds(game);
   const verm=pids.filter(pid=>getPlayerTeam(game,pid)==="vermelho").length;
   const azul=pids.filter(pid=>getPlayerTeam(game,pid)==="azul").length;
-  // Usa resultado oficial do admin; se não existir, não mostra placar
-  const officialResult=game.result||null;
-  const result=officialResult?{
-    vermScore:officialResult.v||0,
-    azulScore:officialResult.a||0,
-    scorers:Object.entries(officialResult.scorers||{}).map(([pid,goals])=>({name:playerName(pid),team:getPlayerTeam(game,pid),goals})).sort((a,b)=>b.goals-a.goals)
+  // Resultado oficial definido pelo admin; se não definido, não exibe placar
+  const res=game.result||null;
+  const result=res?{
+    vermScore:res.v||0,
+    azulScore:res.a||0,
+    scorers:Object.entries(res.scorers||{}).map(([pid,g])=>({name:playerName(pid),team:getPlayerTeam(game,pid),goals:g})).sort((a,b)=>b.goals-a.goals)
   }:null;
   el.innerHTML=card(`
     <div class="flex items-start justify-between mb-3">
