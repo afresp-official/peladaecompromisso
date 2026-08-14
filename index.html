@@ -2,7 +2,12 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1a10" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Pelada AFRESP" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <title>⚽ Pelada & Compromisso — AFRESP</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -80,10 +85,27 @@
       background-position: center center;
       background-attachment: fixed;
       background-repeat: no-repeat;
+      overscroll-behavior-y: none;
+      -webkit-overflow-scrolling: touch;
     }
+    /* iOS não suporta background-attachment:fixed com cover */
+    @supports (-webkit-touch-callout: none) {
+      body { background-attachment: scroll; }
+    }
+    /* Impede zoom em inputs no iOS (requer font-size>=16px) */
+    input, select, textarea { font-size: 16px !important; }
+    /* Remove highlight azul ao tocar em botões */
+    button, a, [onclick] { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    /* Safe area — nav e conteúdo não ficam atrás da barra home do iPhone */
+    nav.bottom-nav {
+      padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    }
+    .safe-pb { padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); }
+    /* Altura dinâmica correta no Safari mobile */
+    .min-h-dyn { min-height: 100dvh; }
   </style>
 </head>
-<body class="bg-[#0b1a10] text-white min-h-screen pb-20">
+<body class="bg-[#0b1a10] text-white min-h-dyn safe-pb">
 
 <!-- HEADER -->
 <header class="sticky top-0 z-40 bg-[#0b1a10]/95 backdrop-blur border-b border-[#1e3a27] px-4 py-3 flex items-center gap-3">
@@ -123,7 +145,7 @@
 </main>
 
 <!-- BOTTOM NAV -->
-<nav class="fixed bottom-0 left-0 right-0 z-50 flex items-stretch px-2 pt-1 pb-2"
+<nav class="bottom-nav fixed bottom-0 left-0 right-0 z-50 flex items-stretch px-2 pt-1 pb-2"
      style="background:linear-gradient(to top,#060e08 85%,rgba(6,14,8,0.95));box-shadow:0 -1px 0 rgba(255,255,255,0.04),0 -8px 24px rgba(0,0,0,0.6)">
   <button onclick="goTo('inicio')"    id="nav-inicio"    class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-1 text-[#3d5e48] mx-0.5">
     <span class="nav-icon text-xl leading-none">🏠</span><span class="nav-label text-[10px] font-bold tracking-wide">Início</span>
@@ -146,8 +168,8 @@
 </nav>
 
 <!-- MODAL -->
-<div id="modal-overlay" class="hidden fixed inset-0 z-50 bg-black/70 flex items-end justify-center" onclick="closeModal()">
-  <div id="modal-content" class="bg-[#0f2016] border border-[#2a4a35] rounded-t-2xl w-full max-w-lg p-5 pb-8" onclick="event.stopPropagation()"></div>
+<div id="modal-overlay" class="hidden fixed inset-0 z-50 bg-black/70 flex items-end justify-center" onclick="closeModal()" style="padding-bottom:env(safe-area-inset-bottom,0px)">
+  <div id="modal-content" class="bg-[#0f2016] border border-[#2a4a35] rounded-t-2xl w-full max-w-lg p-5 overflow-y-auto" style="max-height:90dvh;padding-bottom:calc(1.5rem + env(safe-area-inset-bottom,0px))" onclick="event.stopPropagation()"></div>
 </div>
 
 <script>
