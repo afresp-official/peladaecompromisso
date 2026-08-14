@@ -128,7 +128,10 @@
   <section id="page-votar"     class="page slide-in"><div id="vote-container"></div></section>
   <section id="page-ranking"   class="page slide-in">
     <div class="mb-3 flex items-center justify-between flex-wrap gap-2">
-      <h2 class="font-black text-lg">Ranking Geral</h2>
+      <div class="flex items-center gap-3">
+        <button onclick="goTo('inicio')" class="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors shadow-lg">← Voltar</button>
+        <h2 class="font-black text-lg">Ranking Geral</h2>
+      </div>
       <div class="flex gap-1 text-xs">
         <button onclick="setRankFilter('all')"         id="rf-all"    class="px-2.5 py-1 rounded-full font-semibold bg-green-600 text-white">Todos</button>
         <button onclick="setRankFilter('pelada')"      id="rf-pelada" class="px-2.5 py-1 rounded-full font-semibold bg-[#1a2e1f] text-green-400">Pelada</button>
@@ -138,7 +141,10 @@
     <div id="ranking-list"></div>
   </section>
   <section id="page-historico" class="page slide-in space-y-2">
-    <h2 class="font-black text-lg mb-3">Histórico de Jogos</h2>
+    <div class="flex items-center gap-3 mb-3">
+      <button onclick="goTo('inicio')" class="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors shadow-lg">← Voltar</button>
+      <h2 class="font-black text-lg">Histórico de Jogos</h2>
+    </div>
     <div id="historico-list"></div>
   </section>
   <section id="page-admin"     class="page slide-in"><div id="admin-container"></div></section>
@@ -635,9 +641,10 @@ async function onDragEnd(e) {
 let voteState = {gameId:null, ratings:{}};
 function renderVotar() {
   const el=document.getElementById("vote-container"); if(!el) return;
-  if(!S.uid||!S.players[S.uid]){el.innerHTML=`<div class="text-center py-16 text-green-300/40 text-sm">Escolha seu nome na aba Início para votar.</div>`;return;}
+  const backBtn=`<button onclick="goTo('inicio')" class="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors shadow-lg mb-4">← Voltar</button>`;
+  if(!S.uid||!S.players[S.uid]){el.innerHTML=backBtn+`<div class="text-center py-16 text-green-300/40 text-sm">Escolha seu nome na aba Início para votar.</div>`;return;}
   const game=latestGame();
-  if(!game){el.innerHTML=`<div class="text-center py-16 text-green-300/40 text-sm">Nenhum jogo cadastrado ainda.</div>`;return;}
+  if(!game){el.innerHTML=backBtn+`<div class="text-center py-16 text-green-300/40 text-sm">Nenhum jogo cadastrado ainda.</div>`;return;}
   if(hasVoted(game.id,S.uid)){renderMyVotes(el,game);return;}
   const allPids=getGamePlayerIds(game), others=allPids.filter(p=>p!==S.uid);
   if(voteState.gameId!==game.id){
@@ -651,7 +658,7 @@ function renderVotar() {
   if(verm.length) sections+=`<div class="mb-1 flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span><span class="text-xs font-bold text-red-400 uppercase tracking-wider">Time Vermelho</span></div><div class="space-y-3 mb-4">${verm.map(p=>renderVoteCard(p,game)).join("")}</div>`;
   if(azul.length) sections+=`<div class="mb-1 flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span><span class="text-xs font-bold text-blue-400 uppercase tracking-wider">Time Azul</span></div><div class="space-y-3 mb-4">${azul.map(p=>renderVoteCard(p,game)).join("")}</div>`;
   if(sem.length)  sections+=`<div class="space-y-3 mb-4">${sem.map(p=>renderVoteCard(p,game)).join("")}</div>`;
-  el.innerHTML=`<div class="mb-4"><div class="font-black text-base">${fmtDate(game.date)} ${badge(game.type)}</div><p class="text-xs text-green-300/50 mt-1">Avalie os ${others.length} jogadores</p></div>${sections}<button onclick="submitVotes()" class="mt-2 w-full py-4 rounded-xl bg-green-600 hover:bg-green-500 font-black text-base transition-colors">✅ Enviar votos</button>`;
+  el.innerHTML=`${backBtn}<div class="mb-4"><div class="font-black text-base">${fmtDate(game.date)} ${badge(game.type)}</div><p class="text-xs text-green-300/50 mt-1">Avalie os ${others.length} jogadores</p></div>${sections}<button onclick="submitVotes()" class="mt-2 w-full py-4 rounded-xl bg-green-600 hover:bg-green-500 font-black text-base transition-colors">✅ Enviar votos</button>`;
 }
 function renderVoteCard(pid,game){
   const v=voteState.ratings[pid]||{note:0,goals:0,assists:0,obs:""};
@@ -880,6 +887,7 @@ function renderAdmin(){
   const players=activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
   const games=Object.entries(S.games).map(([id,g])=>({id,...g})).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   el.innerHTML=`<div class="space-y-5">
+    <button onclick="goTo('inicio')" class="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors shadow-lg">← Voltar</button>
     <div class="bg-[#132218] border border-[#2a4a35] rounded-xl p-4">
       <div class="font-bold text-sm mb-3">🔐 PIN Admin</div>
       <div class="flex gap-2">
