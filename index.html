@@ -910,26 +910,36 @@ async function viewVoter(gid,vid){
   const snap=await db.ref(`ratings/${gid}/${vid}`).once("value");
   const votes=snap.val()||{};
   const rows=Object.entries(votes).sort((a,b)=>(b[1].note||0)-(a[1].note||0));
+  const renderVoterRow=([pid,v])=>{
+    const team=getPlayerTeam(g,pid);
+    return `<div class="bg-[#0b1a10] border border-[#2a4a35] rounded-xl px-4 py-3 space-y-1.5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">${teamBadge(team)}<span class="font-bold text-sm">${playerName(pid)}</span></div>
+        <div class="flex items-center gap-3">
+          <span class="font-black text-xl text-green-300">${v.note||0}<span class="text-green-300/40 text-sm font-normal">/10</span></span>
+          ${v.goals?`<span class="text-yellow-300 text-sm font-bold">⚽${v.goals}</span>`:""}
+          ${v.assists?`<span class="text-blue-300 text-sm font-bold">🅰${v.assists}</span>`:""}
+        </div>
+      </div>
+      ${v.obs?`<p class="text-xs text-green-300/60 italic border-l-2 border-green-700 pl-2">"${v.obs}"</p>`:""}
+    </div>`;
+  };
+  const verm=rows.filter(([pid])=>getPlayerTeam(g,pid)==="vermelho").sort((a,b)=>(b[1].note||0)-(a[1].note||0));
+  const azul=rows.filter(([pid])=>getPlayerTeam(g,pid)==="azul").sort((a,b)=>(b[1].note||0)-(a[1].note||0));
+  const renderSection=(arr,label,color,dot)=>arr.length?`
+    <div class="flex items-center gap-2 mb-2 mt-1">
+      <span class="w-2.5 h-2.5 rounded-full ${dot} shrink-0"></span>
+      <span class="text-xs font-black ${color} uppercase tracking-wider">${label}</span>
+    </div>
+    <div class="space-y-2 mb-4">${arr.map(renderVoterRow).join("")}</div>`:"";
   openModal(`
     <div class="flex items-center gap-2 mb-4">
       <button onclick="openGameVotes('${gid}')" class="text-green-400 text-sm font-bold">← Voltar</button>
       <span class="font-black text-sm flex-1 truncate">Votos de ${playerName(vid)}</span>
     </div>
-    <div class="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
-      ${rows.map(([pid,v])=>{
-        const team=getPlayerTeam(g,pid);
-        return `<div class="bg-[#0b1a10] border border-[#2a4a35] rounded-xl px-4 py-3 space-y-1.5">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">${teamBadge(team)}<span class="font-bold text-sm">${playerName(pid)}</span></div>
-            <div class="flex items-center gap-3">
-              <span class="font-black text-xl text-green-300">${v.note||0}<span class="text-green-300/40 text-sm font-normal">/10</span></span>
-              ${v.goals?`<span class="text-yellow-300 text-sm font-bold">⚽${v.goals}</span>`:""}
-              ${v.assists?`<span class="text-blue-300 text-sm font-bold">🅰${v.assists}</span>`:""}
-            </div>
-          </div>
-          ${v.obs?`<p class="text-xs text-green-300/60 italic border-l-2 border-green-700 pl-2">"${v.obs}"</p>`:""}
-        </div>`;
-      }).join("")}
+    <div class="max-h-[60vh] overflow-y-auto pr-1">
+      ${renderSection(verm,"Time Vermelho","text-red-400","bg-red-500")}
+      ${renderSection(azul,"Time Azul","text-blue-400","bg-blue-500")}
     </div>
   `);
 }
