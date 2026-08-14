@@ -315,10 +315,17 @@ function renderInicio(){renderPlayerSelect();renderGameStatus();renderQuickStats
 function renderPlayerSelect(){
   const el=document.getElementById("player-select-card"); if(!el) return;
   if(S.uid&&S.players[S.uid]){el.innerHTML="";return;}
+  const latest=latestGame();
   const opts=activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
-  el.innerHTML=card(`<p class="font-black text-base mb-3">Quem é você? 👋</p>
+  el.innerHTML=card(`<p class="font-black text-base mb-1">Quem é você? 👋</p>
+    <p class="text-[10px] text-green-300/30 mb-3">✅ = já votou no último jogo</p>
     <div class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
-      ${opts.map(p=>`<button onclick="selectPlayer('${p.id}')" class="text-left px-3 py-2 rounded-lg bg-[#0f2016] border border-[#2a4a35] text-sm font-semibold text-green-200 hover:border-green-500 transition-all">${p.name}</button>`).join("")}
+      ${opts.map(p=>{
+        const voted=latest&&hasVoted(latest.id,p.id);
+        return `<button onclick="selectPlayer('${p.id}')" class="text-left px-3 py-2 rounded-lg border text-sm font-semibold transition-all flex items-center justify-between gap-1 ${voted?'bg-green-950/30 border-green-800/40 text-green-300/50':'bg-[#0f2016] border-[#2a4a35] text-green-200 hover:border-green-500'}">
+          <span class="truncate">${p.name}</span>${voted?'<span class="text-green-500 text-xs shrink-0">✅</span>':''}
+        </button>`;
+      }).join("")}
     </div>`);
 }
 function selectPlayer(id){S.uid=id;localStorage.setItem("afresp_uid",id);renderAll();}
