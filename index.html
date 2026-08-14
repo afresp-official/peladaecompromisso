@@ -294,7 +294,11 @@ function calcGameResult(game){
   const playerGoals={};
   pids.forEach(pid=>{
     const glist=voters.map(v=>v[pid]?.goals||0);
-    playerGoals[pid]=Math.round(glist.reduce((s,v)=>s+v,0)/glist.length);
+    const comGol=glist.filter(g=>g>0);
+    // só conta gol se a maioria dos votantes marcou gol para este jogador
+    playerGoals[pid]=(comGol.length*2>voters.length)
+      ? Math.round(glist.reduce((s,v)=>s+v,0)/glist.length)
+      : 0;
   });
   const vermScore=pids.filter(p=>getPlayerTeam(game,p)==="vermelho").reduce((s,p)=>s+(playerGoals[p]||0),0);
   const azulScore=pids.filter(p=>getPlayerTeam(game,p)==="azul").reduce((s,p)=>s+(playerGoals[p]||0),0);
