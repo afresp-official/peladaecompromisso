@@ -321,7 +321,7 @@ function renderUserChip() {
 function resetUser(){if(!confirm("Trocar de jogador?"))return;localStorage.removeItem("afresp_uid");S.uid=null;renderAll();}
 
 // ── INÍCIO ──
-function renderInicio(){renderPlayerSelect();renderGameStatus();renderQuickStats();}
+function renderInicio(){renderPlayerSelect();renderGameStatus();}
 function renderPlayerSelect(){
   const el=document.getElementById("player-select-card"); if(!el) return;
   if(S.uid&&S.players[S.uid]){el.innerHTML="";return;}
