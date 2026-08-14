@@ -935,6 +935,11 @@ async function openEditVoter(gid,vid){
     </div>
     <button onclick="saveEditVoter()" class="w-full py-3 mt-4 rounded-xl bg-green-600 hover:bg-green-500 font-black text-sm transition-colors">💾 Salvar alterações</button>
   `);
+  // Força o valor das textareas via .value (innerHTML não garante pre-fill)
+  pids.forEach(pid=>{
+    const ta=document.getElementById("evo-"+pid);
+    if(ta) ta.value=editVoteState.ratings[pid]?.obs||"";
+  });
 }
 function renderEditVoteCard(pid,game){
   const v=editVoteState.ratings[pid]||{note:0,goals:0,assists:0,obs:""};
