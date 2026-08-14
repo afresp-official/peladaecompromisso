@@ -592,16 +592,32 @@ async function submitVotes(){
 }
 function renderMyVotes(el,game){
   const mv=S.ratings[game.id]?.[S.uid]||{};
-  const rows=Object.entries(mv).sort((a,b)=>(mv[b[0]]?.note||0)-(mv[a[0]]?.note||0));
-  el.innerHTML=`<div class="mb-3 font-black text-base">Seus votos — ${fmtDate(game.date)}</div>
-    <div class="bg-green-950/40 border border-green-800/30 rounded-xl px-4 py-2.5 mb-4 text-green-400 text-sm font-semibold">✅ Voto enviado!</div>
-    <div class="space-y-2">${rows.map(([pid,v])=>`
-      <div class="bg-[#132218] border border-[#2a4a35] rounded-xl px-4 py-3 space-y-1.5">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">${teamBadge(getPlayerTeam(game,pid))}<span class="font-semibold text-sm">${playerName(pid)}</span></div>
-          <div class="flex items-center gap-3 text-sm"><span class="font-black text-green-300">${v.note}/10</span>${v.goals?`<span class="text-yellow-300">⚽${v.goals}</span>`:""}${v.assists?`<span class="text-blue-300">🅰${v.assists}</span>`:""}</div>
+  const row=([pid,v])=>`
+    <div class="bg-[#132218] border border-[#2a4a35] rounded-xl px-4 py-3 space-y-1.5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">${teamBadge(getPlayerTeam(game,pid))}<span class="font-semibold text-sm">${playerName(pid)}</span></div>
+        <div class="flex items-center gap-3 text-sm">
+          <span class="font-black text-green-300">${v.note}/10</span>
+          ${v.goals?`<span class="text-yellow-300">⚽${v.goals}</span>`:""}
+          ${v.assists?`<span class="text-blue-300">🅰${v.assists}</span>`:""}
         </div>
-        ${v.obs?`<p class="text-xs text-green-300/50 italic border-l-2 border-green-800 pl-2">"${v.obs}"</p>`:""}</div>`).join("")}</div>`;
+      </div>
+      ${v.obs?`<p class="text-xs text-green-300/50 italic border-l-2 border-green-800 pl-2">"${v.obs}"</p>`:""}
+    </div>`;
+  const sorted=(arr)=>arr.sort((a,b)=>(b[1].note||0)-(a[1].note||0));
+  const verm=sorted(Object.entries(mv).filter(([pid])=>getPlayerTeam(game,pid)==="vermelho"));
+  const azul=sorted(Object.entries(mv).filter(([pid])=>getPlayerTeam(game,pid)==="azul"));
+  const section=(arr,label,color,dot)=>arr.length?`
+    <div class="flex items-center gap-2 mt-3 mb-2">
+      <span class="w-2.5 h-2.5 rounded-full ${dot} shrink-0"></span>
+      <span class="text-xs font-black ${color} uppercase tracking-wider">${label}</span>
+    </div>
+    <div class="space-y-2">${arr.map(row).join("")}</div>`:"";
+  el.innerHTML=`
+    <div class="mb-3 font-black text-base">Seus votos — ${fmtDate(game.date)}</div>
+    <div class="bg-green-950/40 border border-green-800/30 rounded-xl px-4 py-2.5 mb-2 text-green-400 text-sm font-semibold">✅ Voto enviado!</div>
+    ${section(verm,"Time Vermelho","text-red-400","bg-red-500")}
+    ${section(azul,"Time Azul","text-blue-400","bg-blue-500")}`;
 }
 
 // ── RANKING ──
