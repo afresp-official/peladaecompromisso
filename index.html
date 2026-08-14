@@ -319,47 +319,58 @@ function calcGameResult(game){
 
 function renderGameStatus(){
   const el=document.getElementById("game-status-card"); if(!el) return;
-  const game=latestGame();
-  if(!game){el.innerHTML=card(`<p class="text-center text-green-300/40 text-sm py-4">Nenhum jogo cadastrado ainda.</p>`);return;}
-  const voted=S.uid&&hasVoted(game.id,S.uid);
-  const voters=S.ratings[game.id]?Object.keys(S.ratings[game.id]).length:0;
-  const pids=getGamePlayerIds(game);
-  const verm=pids.filter(pid=>getPlayerTeam(game,pid)==="vermelho").length;
-  const azul=pids.filter(pid=>getPlayerTeam(game,pid)==="azul").length;
-  const result=voters>0?calcGameResult(game):null;
-  el.innerHTML=card(`
-    <div class="flex items-start justify-between mb-3">
-      <div><div class="text-[10px] text-green-400/60 uppercase tracking-widest font-semibold mb-1">Último jogo</div>
-        <div class="font-black text-xl">${fmtDate(game.date)} <span class="text-green-400">·</span> Terça</div></div>
-      ${badge(game.type)}</div>
-    <div class="flex gap-3 text-xs text-green-300/60 mb-3 flex-wrap">
-      <span>👥 ${pids.length}</span><span>🗳️ ${voters}</span>
-      ${(verm||azul)?`<span>🔴${verm} × 🔵${azul}</span>`:""}
-    </div>
-    ${result?`
-    <div class="bg-[#0b1710] border border-[#1e3a27] rounded-xl p-3 mb-3">
-      <div class="flex items-center justify-center gap-5 mb-2">
-        <div class="text-center">
-          <div class="font-black text-3xl text-red-400">${result.vermScore}</div>
-          <div class="text-[10px] text-red-400/60 font-bold uppercase tracking-wide mt-0.5">🔴 Vermelho</div>
+  const games=Object.keys(S.games)
+    .sort((a,b)=>(S.games[b].date||"").localeCompare(S.games[a].date||""))
+    .map(id=>({id,...S.games[id]}));
+  if(!games.length){el.innerHTML=card(`<p class="text-center text-green-300/40 text-sm py-4">Nenhum jogo cadastrado ainda.</p>`);return;}
+  el.innerHTML=games.map((game,idx)=>{
+    const isLatest=idx===0;
+    const voted=S.uid&&hasVoted(game.id,S.uid);
+    const voters=S.ratings[game.id]?Object.keys(S.ratings[game.id]).length:0;
+    const pids=getGamePlayerIds(game);
+    const verm=pids.filter(pid=>getPlayerTeam(game,pid)==="vermelho").length;
+    const azul=pids.filter(pid=>getPlayerTeam(game,pid)==="azul").length;
+    const result=voters>0?calcGameResult(game):null;
+    return card(`
+      <div class="flex items-start justify-between mb-3">
+        <div>
+          <div class="text-[10px] ${isLatest?"text-green-400/60":"text-green-300/30"} uppercase tracking-widest font-semibold mb-1">${isLatest?"Último jogo":"Jogo anterior"}</div>
+          <div class="font-black text-xl">${fmtDate(game.date)} <span class="text-green-400">·</span> Terça</div>
         </div>
-        <div class="text-green-300/20 font-black text-xl">×</div>
-        <div class="text-center">
-          <div class="font-black text-3xl text-blue-400">${result.azulScore}</div>
-          <div class="text-[10px] text-blue-400/60 font-bold uppercase tracking-wide mt-0.5">🔵 Azul</div>
-        </div>
+        ${badge(game.type)}
       </div>
-      ${result.scorers.length?`
-      <div class="border-t border-[#1e3a27] pt-2 mt-1">
-        <div class="text-[10px] text-green-300/30 uppercase tracking-wider mb-1.5">⚽ Artilheiros</div>
-        <div class="flex flex-wrap gap-1.5">
-          ${result.scorers.map(s=>`<span class="text-xs px-2 py-0.5 rounded-full font-semibold ${s.team==="vermelho"?"bg-red-950/70 text-red-300 border border-red-800/40":"bg-blue-950/70 text-blue-300 border border-blue-800/40"}">${s.name}${s.goals>1?` (${s.goals})`:""}</span>`).join("")}
+      <div class="flex gap-3 text-xs text-green-300/60 mb-3 flex-wrap">
+        <span>👥 ${pids.length}</span><span>🗳️ ${voters}</span>
+        ${(verm||azul)?`<span>🔴${verm} × 🔵${azul}</span>`:""}
+      </div>
+      ${result?`
+      <div class="bg-[#0b1710] border border-[#1e3a27] rounded-xl p-3 mb-3">
+        <div class="flex items-center justify-center gap-5 mb-2">
+          <div class="text-center">
+            <div class="font-black text-3xl text-red-400">${result.vermScore}</div>
+            <div class="text-[10px] text-red-400/60 font-bold uppercase tracking-wide mt-0.5">🔴 Vermelho</div>
+          </div>
+          <div class="text-green-300/20 font-black text-xl">×</div>
+          <div class="text-center">
+            <div class="font-black text-3xl text-blue-400">${result.azulScore}</div>
+            <div class="text-[10px] text-blue-400/60 font-bold uppercase tracking-wide mt-0.5">🔵 Azul</div>
+          </div>
         </div>
+        ${result.scorers.length?`
+        <div class="border-t border-[#1e3a27] pt-2 mt-1">
+          <div class="text-[10px] text-green-300/30 uppercase tracking-wider mb-1.5">⚽ Artilheiros</div>
+          <div class="flex flex-wrap gap-1.5">
+            ${result.scorers.map(s=>`<span class="text-xs px-2 py-0.5 rounded-full font-semibold ${s.team==="vermelho"?"bg-red-950/70 text-red-300 border border-red-800/40":"bg-blue-950/70 text-blue-300 border border-blue-800/40"}">${s.name}${s.goals>1?` (${s.goals})`:""}</span>`).join("")}
+          </div>
+        </div>`:""}
       </div>`:""}
-    </div>`:""}
-    ${voted?`<div class="flex items-center gap-2 text-green-400 text-sm font-semibold bg-green-950/40 border border-green-800/40 rounded-lg px-3 py-2">✅ Você já votou!</div>`
-      :S.uid?`<button onclick="goTo('votar')" class="w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 font-black text-base transition-colors">🗳️ Votar agora</button>`
-      :`<p class="text-center text-amber-400/70 text-xs">Escolha seu nome para votar</p>`}`);
+      ${isLatest?(voted
+        ?`<div class="flex items-center gap-2 text-green-400 text-sm font-semibold bg-green-950/40 border border-green-800/40 rounded-lg px-3 py-2">✅ Você já votou!</div>`
+        :S.uid
+          ?`<button onclick="goTo('votar')" class="w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 font-black text-base transition-colors">🗳️ Votar agora</button>`
+          :`<p class="text-center text-amber-400/70 text-xs">Escolha seu nome para votar</p>`)
+      :""}`);
+  }).join("");
 }
 function renderQuickStats(){
   const el=document.getElementById("quick-stats"); if(!el||!S.uid||!S.players[S.uid]){el&&(el.innerHTML="");return;}
