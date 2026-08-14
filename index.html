@@ -328,7 +328,7 @@ function renderGameStatus(){
     .sort((a,b)=>(S.games[b].date||"").localeCompare(S.games[a].date||""))
     .map(id=>({id,...S.games[id]}));
   if(!games.length){el.innerHTML=card(`<p class="text-center text-green-300/40 text-sm py-4">Nenhum jogo cadastrado ainda.</p>`);return;}
-  el.innerHTML=games.map((game,idx)=>{
+  el.innerHTML=`<div class="space-y-4">`+games.map((game,idx)=>{
     const isLatest=idx===0;
     const voted=S.uid&&hasVoted(game.id,S.uid);
     const voters=S.ratings[game.id]?Object.keys(S.ratings[game.id]).length:0;
@@ -378,7 +378,7 @@ function renderGameStatus(){
             :`<p class="text-center text-amber-400/70 text-xs flex-1 flex items-center justify-center">Escolha seu nome</p>`)
         :""}
       </div>`);
-  }).join("");
+  }).join("")+`</div>`;
 }
 function renderQuickStats(){
   const el=document.getElementById("quick-stats"); if(!el||!S.uid||!S.players[S.uid]){el&&(el.innerHTML="");return;}
