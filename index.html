@@ -197,7 +197,7 @@ const S = {
   players:{}, games:{}, ratings:{}, formations:{},
   config:{adminPin:"1234"},
   uid: localStorage.getItem("afresp_uid")||null,
-  adminOk:false, rankFilter:"all", currentPage:"inicio", selectedGameId:null,
+  adminOk:false, rankFilter:"all", currentPage:"inicio", selectedGameId:null, selectedVoteGameId:null,
 };
 
 const INITIAL_PLAYERS = [
@@ -293,6 +293,10 @@ function goTo(page) {
 function goToCampo(gid) {
   S.selectedGameId=gid;
   goTo("campo");
+}
+function goToVotar(gid) {
+  S.selectedVoteGameId=gid;
+  goTo("votar");
 }
 function renderAll() {
   renderUserChip();
@@ -422,8 +426,8 @@ function renderGameStatus(){
       <div class="flex gap-2 mt-1 flex-wrap">
         <button onclick="goToCampo('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-[#0f2016] border border-[#2a4a35] hover:border-green-600 text-green-400 font-bold text-sm transition-colors">🟩 Campo</button>
         ${voters>0?`<button onclick="openGameVotes('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-[#0f1a2a] border border-[#1e3a5f] hover:border-blue-600 text-blue-400 font-bold text-sm transition-colors">🗳️ Ver votos</button>`:""}
-        ${isLatest&&voters===0?(S.uid
-          ?`<button onclick="goTo('votar')" class="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 font-black text-sm transition-colors">🗳️ Votar</button>`
+        ${voters===0?(S.uid
+          ?`<button onclick="goToVotar('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 font-black text-sm transition-colors">🗳️ Votar</button>`
           :`<p class="text-center text-amber-400/70 text-xs flex-1 flex items-center justify-center">Escolha seu nome</p>`)
         :""}
       </div>`);
@@ -643,7 +647,8 @@ function renderVotar() {
   const el=document.getElementById("vote-container"); if(!el) return;
   const backBtn=`<button onclick="goTo('inicio')" class="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors shadow-lg mb-4">← Voltar</button>`;
   if(!S.uid||!S.players[S.uid]){el.innerHTML=backBtn+`<div class="text-center py-16 text-green-300/40 text-sm">Escolha seu nome na aba Início para votar.</div>`;return;}
-  const game=latestGame();
+  const gameRaw=S.selectedVoteGameId&&S.games[S.selectedVoteGameId]?{id:S.selectedVoteGameId,...S.games[S.selectedVoteGameId]}:latestGame();
+  const game=gameRaw;
   if(!game){el.innerHTML=backBtn+`<div class="text-center py-16 text-green-300/40 text-sm">Nenhum jogo cadastrado ainda.</div>`;return;}
   if(hasVoted(game.id,S.uid)){renderMyVotes(el,game);return;}
   const totalVoters=S.ratings[game.id]?Object.keys(S.ratings[game.id]).length:0;
