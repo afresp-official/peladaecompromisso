@@ -34,6 +34,12 @@
     .team-toggle.is-azul:hover { background:#1e3a8a; color:#bfdbfe; }
     .team-toggle.is-verm { background:#7f1d1d; border-color:#ef4444; color:#fff; }
     .team-toggle.is-verm:hover { background:#991b1b; }
+    /* chips de seleção de jogadores */
+    .pchip { cursor:pointer; border-radius:0.75rem; border:2px solid; padding:0.5rem 0.6rem; transition:all 0.15s; text-align:center; user-select:none; }
+    .pchip-off  { background:#0b1710; border-color:#1e3a27; color:#3d6349; }
+    .pchip-off:hover { border-color:#2a5a35; color:#5a8a65; }
+    .pchip-azul { background:#071220; border-color:#2563eb; color:#93c5fd; }
+    .pchip-verm { background:#1a0707; border-color:#dc2626; color:#fca5a5; }
     /* ── Campo (futebol de botão) ── */
     #page-campo { margin:0 -0.75rem -1rem; padding:1rem 0.75rem; }
     #campo-field { position:relative; touch-action:none; user-select:none; }
@@ -690,15 +696,15 @@ function checkPin(){
 }
 
 let gameTeams={}, selectedGameType="pelada";
-function setTeam(pid){
-  gameTeams[pid]=gameTeams[pid]==="vermelho"?null:"vermelho";
-  const btn=document.getElementById("tb-v-"+pid);
+function cyclePlayerTeam(pid){
+  const cur=gameTeams[pid]||null;
+  gameTeams[pid]= cur===null?"azul": cur==="azul"?"vermelho":null;
+  const btn=document.getElementById("pg-"+pid);
+  const lbl=document.getElementById("pgt-"+pid);
   if(!btn) return;
-  if(gameTeams[pid]==="vermelho"){
-    btn.className="team-toggle is-verm"; btn.textContent="🔴 Verm";
-  } else {
-    btn.className="team-toggle is-azul"; btn.textContent="🔵 Azul";
-  }
+  const t=gameTeams[pid];
+  btn.className="pchip "+(t==="azul"?"pchip-azul":t==="vermelho"?"pchip-verm":"pchip-off");
+  if(lbl) lbl.textContent=t==="azul"?"🔵 Azul":t==="vermelho"?"🔴 Verm":"—";
 }
 function setGameType(t){
   selectedGameType=t;
@@ -730,15 +736,19 @@ function renderAdmin(){
             <button onclick="setGameType('compromisso')" id="gt-comp"   class="flex-1 py-2 rounded-lg bg-[#0b1a10] border border-[#2a4a35] text-sm font-bold text-blue-400">Compromisso</button>
           </div></div>
         <div>
-          <label class="text-[10px] text-green-300/50 uppercase tracking-wider block mb-2">Jogadores — clique no time para alternar</label>
-          <div class="space-y-1.5 max-h-72 overflow-y-auto pr-1" id="player-checkboxes">
-            ${players.map(p=>`<div class="flex items-center gap-2 bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-2.5 py-2">
-              <input type="checkbox" value="${p.id}" class="accent-green-500 w-4 h-4 shrink-0" checked/>
-              <span class="flex-1 text-sm font-semibold truncate">${p.name}</span>
-              <button id="tb-v-${p.id}" onclick="setTeam('${p.id}')" class="team-toggle is-azul">🔵 Azul</button>
-            </div>`).join("")}
+          <label class="text-[10px] text-green-300/50 uppercase tracking-wider block mb-2">Jogadores — toque para selecionar</label>
+          <div class="flex gap-3 text-[10px] text-green-300/40 mb-3">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded border-2 border-[#1e3a27] bg-[#0b1710] inline-block"></span>Fora</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded border-2 border-blue-600 bg-[#071220] inline-block"></span>Azul</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded border-2 border-red-600 bg-[#1a0707] inline-block"></span>Vermelho</span>
+            <span class="text-green-300/25 ml-auto">1 toque=azul · 2=verm · 3=fora</span>
           </div>
-          <p class="text-[10px] text-green-300/30 mt-1.5">Por padrão todos são 🔵 Azul. Clique para mudar para 🔴 Verm.</p>
+          <div class="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-1" id="player-checkboxes">
+            ${players.map(p=>`<button id="pg-${p.id}" onclick="cyclePlayerTeam('${p.id}')" class="pchip pchip-off">
+              <div class="text-xs font-bold leading-tight truncate">${p.name}</div>
+              <div id="pgt-${p.id}" class="text-[10px] mt-1 opacity-60">—</div>
+            </button>`).join("")}
+          </div>
         </div>
         <button onclick="createGame()" class="w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 font-bold text-sm transition-colors">Criar Jogo</button>
       </div>
@@ -777,13 +787,14 @@ function renderAdmin(){
 async function createGame(){
   const date=document.getElementById("game-date")?.value;
   if(!date){alert("Escolha a data");return;}
-  const checked=[...document.querySelectorAll("#player-checkboxes input:checked")].map(c=>c.value);
-  if(checked.length<2){alert("Selecione ao menos 2 jogadores");return;}
+  const selected=Object.entries(gameTeams).filter(([,t])=>t==="azul"||t==="vermelho");
+  if(selected.length<2){alert("Selecione ao menos 2 jogadores (toque nos nomes)");return;}
   const players={};
-  checked.forEach(pid=>{players[pid]={team:gameTeams[pid]==="vermelho"?"vermelho":"azul"};});
+  selected.forEach(([pid,team])=>{players[pid]={team};});
   const id=db.ref("games").push().key;
   await db.ref("games/"+id).set({date,type:selectedGameType,players,createdAt:Date.now()});
   gameTeams={};
+  renderAdmin();
   alert("Jogo criado!");
 }
 async function addPlayer(){const i=document.getElementById("new-player");const n=i?.value?.trim();if(!n)return;const id=db.ref("players").push().key;await db.ref("players/"+id).set({name:n,active:true});if(i)i.value="";}
