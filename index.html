@@ -13,7 +13,11 @@
     * { font-family:'Inter',system-ui,sans-serif; box-sizing:border-box; }
     .page { display:none; }
     .page.active { display:block; }
-    .nav-btn { transition: color 0.15s; }
+    .nav-btn { border-radius:0.875rem; transition:all 0.18s ease; position:relative; }
+    .nav-btn .nav-label { transition:all 0.18s ease; }
+    .nav-active { color:#4ade80 !important; background:rgba(74,222,128,0.08); }
+    .nav-active .nav-icon { transform:translateY(-2px) scale(1.18); display:inline-block; }
+    .nav-active::before { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:24px; height:3px; background:#4ade80; border-radius:0 0 4px 4px; box-shadow:0 0 8px rgba(74,222,128,0.8); }
     .rating-btn {
       width:2.1rem; height:2.1rem; border-radius:0.4rem; font-size:0.82rem; font-weight:700;
       border:2px solid #2a4a35; color:#86efac; background:#132218; cursor:pointer; transition:all 0.12s;
@@ -108,14 +112,27 @@
   <section id="page-admin"     class="page slide-in"><div id="admin-container"></div></section>
 </main>
 
-<!-- BOTTOM NAV (6 items) -->
-<nav class="fixed bottom-0 left-0 right-0 z-50 bg-[#0d1e13]/95 backdrop-blur border-t border-[#1e3a27] flex">
-  <button onclick="goTo('inicio')"    id="nav-inicio"    class="nav-btn flex-1 py-2 flex flex-col items-center gap-0.5 text-[#4a7a5a]"><span class="text-lg">🏠</span><span class="text-[9px] font-semibold">Início</span></button>
-  <button onclick="goTo('campo')"     id="nav-campo"     class="nav-btn flex-1 py-2 flex flex-col items-center gap-0.5 text-[#4a7a5a]"><span class="text-lg">🟩</span><span class="text-[9px] font-semibold">Campo</span></button>
-  <button onclick="goTo('votar')"     id="nav-votar"     class="nav-btn flex-1 py-2 flex flex-col items-center gap-0.5 text-[#4a7a5a]"><span class="text-lg">🗳️</span><span class="text-[9px] font-semibold">Votar</span></button>
-  <button onclick="goTo('ranking')"   id="nav-ranking"   class="nav-btn flex-1 py-2 flex flex-col items-center gap-0.5 text-[#4a7a5a]"><span class="text-lg">🏆</span><span class="text-[9px] font-semibold">Ranking</span></button>
-  <button onclick="goTo('historico')" id="nav-historico" class="nav-btn flex-1 py-2 flex flex-col items-center gap-0.5 text-[#4a7a5a]"><span class="text-lg">📅</span><span class="text-[9px] font-semibold">Histórico</span></button>
-  <button onclick="goTo('admin')"     id="nav-admin"     class="nav-btn flex-1 py-2 flex flex-col items-center gap-0.5 text-[#4a7a5a]"><span class="text-lg">⚙️</span><span class="text-[9px] font-semibold">Admin</span></button>
+<!-- BOTTOM NAV -->
+<nav class="fixed bottom-0 left-0 right-0 z-50 flex items-stretch px-2 pt-1 pb-2"
+     style="background:linear-gradient(to top,#060e08 85%,rgba(6,14,8,0.95));box-shadow:0 -1px 0 rgba(255,255,255,0.04),0 -8px 24px rgba(0,0,0,0.6)">
+  <button onclick="goTo('inicio')"    id="nav-inicio"    class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-1 text-[#3d5e48] mx-0.5">
+    <span class="nav-icon text-xl leading-none">🏠</span><span class="nav-label text-[10px] font-bold tracking-wide">Início</span>
+  </button>
+  <button onclick="goTo('campo')"     id="nav-campo"     class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-1 text-[#3d5e48] mx-0.5">
+    <span class="nav-icon text-xl leading-none">🟩</span><span class="nav-label text-[10px] font-bold tracking-wide">Campo</span>
+  </button>
+  <button onclick="goTo('votar')"     id="nav-votar"     class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-1 text-[#3d5e48] mx-0.5">
+    <span class="nav-icon text-xl leading-none">🗳️</span><span class="nav-label text-[10px] font-bold tracking-wide">Votar</span>
+  </button>
+  <button onclick="goTo('ranking')"   id="nav-ranking"   class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-1 text-[#3d5e48] mx-0.5">
+    <span class="nav-icon text-xl leading-none">🏆</span><span class="nav-label text-[10px] font-bold tracking-wide">Ranking</span>
+  </button>
+  <button onclick="goTo('historico')" id="nav-historico" class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-1 text-[#3d5e48] mx-0.5">
+    <span class="nav-icon text-xl leading-none">📅</span><span class="nav-label text-[10px] font-bold tracking-wide">Histórico</span>
+  </button>
+  <button onclick="goTo('admin')"     id="nav-admin"     class="nav-btn flex-1 py-2.5 flex flex-col items-center gap-1 text-[#3d5e48] mx-0.5">
+    <span class="nav-icon text-xl leading-none">⚙️</span><span class="nav-label text-[10px] font-bold tracking-wide">Admin</span>
+  </button>
 </nav>
 
 <!-- MODAL -->
@@ -229,9 +246,9 @@ function goTo(page) {
   if(page==="admin"&&!S.adminOk){showAdminPin();return;}
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.getElementById("page-"+page).classList.add("active");
-  document.querySelectorAll(".nav-btn").forEach(b=>{b.classList.remove("text-green-400");b.classList.add("text-[#4a7a5a]");});
+  document.querySelectorAll(".nav-btn").forEach(b=>{b.classList.remove("nav-active","text-green-400");b.classList.add("text-[#3d5e48]");});
   const nb=document.getElementById("nav-"+page);
-  if(nb){nb.classList.remove("text-[#4a7a5a]");nb.classList.add("text-green-400");}
+  if(nb){nb.classList.add("nav-active","text-green-400");nb.classList.remove("text-[#3d5e48]");}
   S.currentPage=page;
   renderAll();
 }
