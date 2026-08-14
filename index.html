@@ -422,7 +422,7 @@ function renderGameStatus(){
       <div class="flex gap-2 mt-1 flex-wrap">
         <button onclick="goToCampo('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-[#0f2016] border border-[#2a4a35] hover:border-green-600 text-green-400 font-bold text-sm transition-colors">🟩 Campo</button>
         ${voters>0?`<button onclick="openGameVotes('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-[#0f1a2a] border border-[#1e3a5f] hover:border-blue-600 text-blue-400 font-bold text-sm transition-colors">🗳️ Ver votos</button>`:""}
-        ${isLatest&&voters===0?(S.uid
+        ${isLatest&&!voted?(S.uid
           ?`<button onclick="goTo('votar')" class="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 font-black text-sm transition-colors">🗳️ Votar</button>`
           :`<p class="text-center text-amber-400/70 text-xs flex-1 flex items-center justify-center">Escolha seu nome</p>`)
         :""}
@@ -646,12 +646,6 @@ function renderVotar() {
   const game=latestGame();
   if(!game){el.innerHTML=backBtn+`<div class="text-center py-16 text-green-300/40 text-sm">Nenhum jogo cadastrado ainda.</div>`;return;}
   if(hasVoted(game.id,S.uid)){renderMyVotes(el,game);return;}
-  const totalVoters=S.ratings[game.id]?Object.keys(S.ratings[game.id]).length:0;
-  if(totalVoters>0){
-    const voterName=Object.keys(S.ratings[game.id]||{}).map(vid=>S.players[vid]?.name||vid)[0];
-    el.innerHTML=backBtn+`<div class="text-center py-16 px-4"><div class="text-4xl mb-4">🔒</div><div class="font-black text-lg text-green-200 mb-2">Votação encerrada</div><p class="text-green-300/50 text-sm">A votação deste jogo já foi realizada por <span class="text-green-300 font-bold">${voterName}</span>.</p><button onclick="openGameVotes('${game.id}')" class="mt-6 px-6 py-3 rounded-xl bg-[#0f1a2a] border border-[#1e3a5f] text-blue-400 font-bold text-sm">🗳️ Ver votos</button></div>`;
-    return;
-  }
   const allPids=getGamePlayerIds(game), others=allPids.filter(p=>p!==S.uid);
   if(voteState.gameId!==game.id){
     voteState={gameId:game.id,ratings:{}};
