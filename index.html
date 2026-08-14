@@ -328,6 +328,20 @@ function medianGoals(arr){
   const m=Math.floor(s.length/2);
   return s.length%2 ? s[m] : Math.round((s[m-1]+s[m])/2);
 }
+function bestPlayerOfGame(game){
+  const gr=S.ratings[game.id]||{};
+  const voters=Object.values(gr);
+  if(!voters.length) return null;
+  const pids=getGamePlayerIds(game);
+  let best=null, bestAvg=-1;
+  pids.forEach(pid=>{
+    const notes=voters.map(v=>v[pid]?.note||0).filter(n=>n>0);
+    if(!notes.length) return;
+    const avg=notes.reduce((s,n)=>s+n,0)/notes.length;
+    if(avg>bestAvg){bestAvg=avg;best={name:playerName(pid),avg:avg.toFixed(1),team:getPlayerTeam(game,pid)};}
+  });
+  return best;
+}
 function calcGameResult(game){
   const gr=S.ratings[game.id]||{};
   const voters=Object.values(gr);
@@ -390,6 +404,7 @@ function renderGameStatus(){
             ${result.scorers.map(s=>`<span class="text-xs px-2 py-0.5 rounded-full font-semibold ${s.team==="vermelho"?"bg-red-950/70 text-red-300 border border-red-800/40":"bg-blue-950/70 text-blue-300 border border-blue-800/40"}">${s.name}${s.goals>1?` (${s.goals})`:""}</span>`).join("")}
           </div>
         </div>`:""}
+        ${(()=>{const bp=bestPlayerOfGame(game);return bp?`<div class="border-t border-[#1e3a27] pt-2 mt-2 flex items-center gap-2"><span class="text-yellow-400 text-base">⭐</span><div><div class="text-[10px] text-yellow-400/50 uppercase tracking-wider font-bold">Melhor jogador</div><div class="text-sm font-black text-yellow-300">${bp.name} <span class="text-yellow-400/50 font-normal text-xs">nota ${bp.avg}</span></div></div></div>`:""})()}
       </div>`:""}
       <div class="flex gap-2 mt-1 flex-wrap">
         <button onclick="goToCampo('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-[#0f2016] border border-[#2a4a35] hover:border-green-600 text-green-400 font-bold text-sm transition-colors">🟩 Campo</button>
