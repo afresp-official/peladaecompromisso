@@ -126,14 +126,20 @@
   </section>
   <section id="page-campo"     class="page slide-in"><div id="campo-container"></div></section>
   <section id="page-votar"     class="page slide-in"><div id="vote-container"></div></section>
-  <section id="page-ranking"   class="page slide-in">
-    <div class="mb-3 flex items-center justify-between flex-wrap gap-2">
+  <section id="page-ranking" class="page slide-in">
+    <div class="mb-3 space-y-2">
       <div class="flex items-center gap-3">
         <button onclick="goTo('inicio')" class="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors shadow-lg">← Voltar</button>
-        <h2 class="font-black text-lg">Ranking Geral</h2>
+        <h2 class="font-black text-lg">Ranking</h2>
+      </div>
+      <div class="flex gap-1.5 text-xs overflow-x-auto pb-0.5">
+        <button onclick="setRankPeriod('partida')"  id="rp-partida"  class="px-3 py-1.5 rounded-full font-semibold whitespace-nowrap bg-green-600 text-white">🏟 Partida</button>
+        <button onclick="setRankPeriod('mes')"      id="rp-mes"      class="px-3 py-1.5 rounded-full font-semibold whitespace-nowrap bg-[#1a2e1f] text-green-400">📅 Mês</button>
+        <button onclick="setRankPeriod('semestre')" id="rp-semestre" class="px-3 py-1.5 rounded-full font-semibold whitespace-nowrap bg-[#1a2e1f] text-green-400">📆 Semestre</button>
+        <button onclick="setRankPeriod('ano')"      id="rp-ano"      class="px-3 py-1.5 rounded-full font-semibold whitespace-nowrap bg-[#1a2e1f] text-green-400">🗓 Ano</button>
       </div>
       <div class="flex gap-1 text-xs">
-        <button onclick="setRankFilter('all')"         id="rf-all"    class="px-2.5 py-1 rounded-full font-semibold bg-green-600 text-white">Todos</button>
+        <button onclick="setRankFilter('all')"         id="rf-all"    class="px-2.5 py-1 rounded-full font-semibold bg-green-700 text-white">Todos</button>
         <button onclick="setRankFilter('pelada')"      id="rf-pelada" class="px-2.5 py-1 rounded-full font-semibold bg-[#1a2e1f] text-green-400">Pelada</button>
         <button onclick="setRankFilter('compromisso')" id="rf-comp"   class="px-2.5 py-1 rounded-full font-semibold bg-[#1a2e1f] text-blue-400">Compromisso</button>
       </div>
@@ -347,15 +353,13 @@ function medianGoals(arr){
 }
 function bestPlayerOfGame(game){
   const gr=S.ratings[game.id]||{};
-  const voters=Object.values(gr);
-  if(!voters.length) return null;
+  if(!Object.keys(gr).length) return null;
   const pids=getGamePlayerIds(game);
-  let best=null, bestAvg=-1;
+  let best=null, bestScore=-1;
   pids.forEach(pid=>{
-    const notes=voters.map(v=>v[pid]?.note||0).filter(n=>n>0);
-    if(!notes.length) return;
-    const avg=notes.reduce((s,n)=>s+n,0)/notes.length;
-    if(avg>bestAvg){bestAvg=avg;best={name:playerName(pid),avg:avg.toFixed(1),team:getPlayerTeam(game,pid)};}
+    const r=calcPlayerScore(pid,[game]);
+    if(!r) return;
+    if(r.score>bestScore){bestScore=r.score;best={name:playerName(pid),score:r.score.toFixed(0),note:r.note>0?r.note.toFixed(1):null,team:getPlayerTeam(game,pid)};}
   });
   return best;
 }
@@ -421,7 +425,7 @@ function renderGameStatus(){
             ${result.scorers.map(s=>`<span class="text-xs px-2 py-0.5 rounded-full font-semibold ${s.team==="vermelho"?"bg-red-950/70 text-red-300 border border-red-800/40":"bg-blue-950/70 text-blue-300 border border-blue-800/40"}">${s.name}${s.goals>1?` (${s.goals})`:""}</span>`).join("")}
           </div>
         </div>`:""}
-        ${(()=>{const bp=bestPlayerOfGame(game);return bp?`<div class="border-t border-[#1e3a27] pt-2 mt-2 flex items-center gap-2"><span class="text-yellow-400 text-base">⭐</span><div><div class="text-[10px] text-yellow-400/50 uppercase tracking-wider font-bold">Melhor jogador</div><div class="text-sm font-black text-yellow-300">${bp.name} <span class="text-yellow-400/50 font-normal text-xs">nota ${bp.avg}</span></div></div></div>`:""})()}
+        ${(()=>{const bp=bestPlayerOfGame(game);return bp?`<div class="border-t border-[#1e3a27] pt-2 mt-2 flex items-center gap-2"><span class="text-yellow-400 text-base">⭐</span><div><div class="text-[10px] text-yellow-400/50 uppercase tracking-wider font-bold">Melhor jogador</div><div class="text-sm font-black text-yellow-300">${bp.name} <span class="text-yellow-400/50 font-normal text-xs">${bp.score} pts${bp.note?` · nota ${bp.note}`:""}</span></div></div></div>`:""})()}
       </div>`:""}
       <div class="flex gap-2 mt-1 flex-wrap">
         <button onclick="goToCampo('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-[#0f2016] border border-[#2a4a35] hover:border-green-600 text-green-400 font-bold text-sm transition-colors">🟩 Campo</button>
@@ -643,6 +647,41 @@ async function onDragEnd(e) {
 
 // ── VOTAR ──
 let voteState = {gameId:null, ratings:{}};
+function emptyRating(){return{note:0,goals:0,assists:0,obs:"",garra:0,comportamento:0,passes:0,faltas:0,gravidade:0,amarelos:0,vermelhos:0};}
+function ensureRating(pid){if(!voteState.ratings[pid])voteState.ratings[pid]=emptyRating();}
+function setRating5(pid,field,val){
+  ensureRating(pid);
+  voteState.ratings[pid][field]=val;
+  const c=document.getElementById("vc-"+pid);
+  if(c) c.querySelectorAll(`[data-field="${field}"]`).forEach((b,i)=>b.classList.toggle("sel",i+1===val));
+}
+function renderGrav(pid){
+  const c=document.getElementById("grav-"+pid); if(!c) return;
+  const v=voteState.ratings[pid]||emptyRating();
+  if(v.faltas<=0){c.innerHTML="";return;}
+  const opts=["Nenhuma","Leve","Média","Grave"].map((l,i)=>`<button onclick="setGravidade('${pid}',${i})" class="px-2 py-1 rounded-lg text-[10px] font-bold border transition-all ${v.gravidade===i?"bg-orange-700 border-orange-500 text-white":"bg-[#0b1a10] border-[#2a4a35] text-orange-300/50}">${l}</button>`).join("");
+  c.innerHTML=`<div class="text-[10px] text-orange-300/50 mb-1 uppercase tracking-wider">Gravidade das faltas</div><div class="flex gap-1 flex-wrap">${opts}</div>`;
+}
+function setGravidade(pid,v){ensureRating(pid);voteState.ratings[pid].gravidade=v;renderGrav(pid);}
+function addAmarelo(pid,d){
+  ensureRating(pid);
+  voteState.ratings[pid].amarelos=Math.max(0,Math.min(3,(voteState.ratings[pid].amarelos||0)+d));
+  const e=document.getElementById("am-"+pid); if(e) e.textContent=voteState.ratings[pid].amarelos;
+  const b=document.getElementById("am-min-"+pid); if(b) b.disabled=voteState.ratings[pid].amarelos<=0;
+}
+function addVermelho(pid,d){
+  ensureRating(pid);
+  voteState.ratings[pid].vermelhos=Math.max(0,Math.min(2,(voteState.ratings[pid].vermelhos||0)+d));
+  const e=document.getElementById("vm-"+pid); if(e) e.textContent=voteState.ratings[pid].vermelhos;
+  const b=document.getElementById("vm-min-"+pid); if(b) b.disabled=voteState.ratings[pid].vermelhos<=0;
+}
+function addFalta(pid,d){
+  ensureRating(pid);
+  voteState.ratings[pid].faltas=Math.max(0,Math.min(20,(voteState.ratings[pid].faltas||0)+d));
+  const e=document.getElementById("ft-"+pid); if(e) e.textContent=voteState.ratings[pid].faltas;
+  const b=document.getElementById("ft-min-"+pid); if(b) b.disabled=voteState.ratings[pid].faltas<=0;
+  renderGrav(pid);
+}
 function renderVotar() {
   const el=document.getElementById("vote-container"); if(!el) return;
   const backBtn=`<button onclick="goTo('inicio')" class="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors shadow-lg mb-4">← Voltar</button>`;
@@ -659,7 +698,7 @@ function renderVotar() {
   const allPids=getGamePlayerIds(game), others=allPids.filter(p=>p!==S.uid);
   if(voteState.gameId!==game.id){
     voteState={gameId:game.id,ratings:{}};
-    others.forEach(pid=>{voteState.ratings[pid]={note:0,goals:0,assists:0,obs:""};});
+    others.forEach(pid=>{voteState.ratings[pid]=emptyRating();});
   }
   const verm=others.filter(p=>getPlayerTeam(game,p)==="vermelho");
   const azul=others.filter(p=>getPlayerTeam(game,p)==="azul");
@@ -671,58 +710,85 @@ function renderVotar() {
   el.innerHTML=`${backBtn}<div class="mb-4"><div class="font-black text-base">${fmtDate(game.date)} ${badge(game.type)}</div><p class="text-xs text-green-300/50 mt-1">Avalie os ${others.length} jogadores</p></div>${sections}<button onclick="submitVotes()" class="mt-2 w-full py-4 rounded-xl bg-green-600 hover:bg-green-500 font-black text-base transition-colors">✅ Enviar votos</button>`;
 }
 function renderVoteCard(pid,game){
-  const v=voteState.ratings[pid]||{note:0,goals:0,assists:0,obs:""};
+  const v=voteState.ratings[pid]||emptyRating();
   const team=getPlayerTeam(game,pid);
   const bc=team==="vermelho"?"border-red-900/60":team==="azul"?"border-blue-900/60":"border-[#2a4a35]";
-  const notes=[1,2,3,4,5,6,7,8,9,10].map(n=>`<button class="rating-btn ${v.note===n?"sel":""}" onclick="setNote('${pid}',${n})">${n}</button>`).join("");
+  const notes=[1,2,3,4,5,6,7,8,9,10].map(n=>`<button class="rating-btn ${v.note===n?"sel":""}" data-field="note" onclick="setNote('${pid}',${n})">${n}</button>`).join("");
+  const r5=(field,val)=>[1,2,3,4,5].map(n=>`<button class="rating-btn ${val===n?"sel":""}" data-field="${field}" onclick="setRating5('${pid}','${field}',${n})">${n}</button>`).join("");
   return `<div class="bg-[#132218] border ${bc} rounded-xl p-3 space-y-2.5" id="vc-${pid}">
     <div class="flex items-center gap-2">${teamBadge(team)}<span class="font-bold text-sm">${playerName(pid)}</span>${team?teamLabel(team):""}</div>
-    <div><div class="text-[10px] text-green-300/50 mb-1.5 uppercase tracking-wider">Nota</div><div class="flex flex-wrap gap-1.5">${notes}</div></div>
-    <div class="flex gap-6">
-      <div class="flex items-center gap-2"><span class="text-[10px] text-green-300/50 uppercase tracking-wider">Gols</span>
-        <button class="counter-btn" onclick="addGoal('${pid}',-1)" ${v.goals<=0?"disabled":""}>−</button>
-        <span class="font-black text-base w-4 text-center text-yellow-300" id="g-${pid}">${v.goals}</span>
+    <div><div class="text-[10px] text-green-300/50 mb-1.5 uppercase tracking-wider">⭐ Nota Geral</div><div class="flex flex-wrap gap-1.5">${notes}</div></div>
+    <div class="grid grid-cols-3 gap-x-2 gap-y-2">
+      <div><div class="text-[10px] text-green-300/50 mb-1 uppercase tracking-wider">⚡ Garra</div><div class="flex gap-1 flex-wrap">${r5("garra",v.garra)}</div></div>
+      <div><div class="text-[10px] text-green-300/50 mb-1 uppercase tracking-wider">🤝 Comport.</div><div class="flex gap-1 flex-wrap">${r5("comportamento",v.comportamento)}</div></div>
+      <div><div class="text-[10px] text-green-300/50 mb-1 uppercase tracking-wider">🎯 Passes</div><div class="flex gap-1 flex-wrap">${r5("passes",v.passes)}</div></div>
+    </div>
+    <div class="flex gap-4 flex-wrap">
+      <div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-300/50 uppercase tracking-wider">⚽ Gols</span>
+        <button class="counter-btn" id="g-min-${pid}" onclick="addGoal('${pid}',-1)" ${v.goals<=0?"disabled":""}>−</button>
+        <span class="font-black text-sm w-4 text-center text-yellow-300" id="g-${pid}">${v.goals}</span>
         <button class="counter-btn" onclick="addGoal('${pid}',1)">+</button></div>
-      <div class="flex items-center gap-2"><span class="text-[10px] text-green-300/50 uppercase tracking-wider">Assist</span>
-        <button class="counter-btn" onclick="addAssist('${pid}',-1)" ${v.assists<=0?"disabled":""}>−</button>
-        <span class="font-black text-base w-4 text-center text-blue-300" id="a-${pid}">${v.assists}</span>
+      <div class="flex items-center gap-1.5"><span class="text-[10px] text-blue-300/50 uppercase tracking-wider">🅰 Assist</span>
+        <button class="counter-btn" id="a-min-${pid}" onclick="addAssist('${pid}',-1)" ${v.assists<=0?"disabled":""}>−</button>
+        <span class="font-black text-sm w-4 text-center text-blue-300" id="a-${pid}">${v.assists}</span>
         <button class="counter-btn" onclick="addAssist('${pid}',1)">+</button></div>
     </div>
-    <div><div class="text-[10px] text-green-300/50 mb-1 uppercase tracking-wider">Observação <span class="normal-case text-green-300/30">(opcional)</span></div>
+    <div class="flex gap-3 flex-wrap items-end">
+      <div class="flex items-center gap-1.5"><span class="text-[10px] text-amber-400/60 uppercase tracking-wider">🟡 Amarelo</span>
+        <button class="counter-btn" id="am-min-${pid}" onclick="addAmarelo('${pid}',-1)" ${v.amarelos<=0?"disabled":""}>−</button>
+        <span class="font-black text-sm w-4 text-center text-amber-300" id="am-${pid}">${v.amarelos}</span>
+        <button class="counter-btn" onclick="addAmarelo('${pid}',1)">+</button></div>
+      <div class="flex items-center gap-1.5"><span class="text-[10px] text-red-400/60 uppercase tracking-wider">🔴 Verm.</span>
+        <button class="counter-btn" id="vm-min-${pid}" onclick="addVermelho('${pid}',-1)" ${v.vermelhos<=0?"disabled":""}>−</button>
+        <span class="font-black text-sm w-4 text-center text-red-300" id="vm-${pid}">${v.vermelhos}</span>
+        <button class="counter-btn" onclick="addVermelho('${pid}',1)">+</button></div>
+      <div class="flex items-center gap-1.5"><span class="text-[10px] text-orange-400/60 uppercase tracking-wider">⚠ Faltas</span>
+        <button class="counter-btn" id="ft-min-${pid}" onclick="addFalta('${pid}',-1)" ${v.faltas<=0?"disabled":""}>−</button>
+        <span class="font-black text-sm w-5 text-center text-orange-300" id="ft-${pid}">${v.faltas}</span>
+        <button class="counter-btn" onclick="addFalta('${pid}',1)">+</button></div>
+    </div>
+    <div id="grav-${pid}"></div>
+    <div><div class="text-[10px] text-green-300/50 mb-1 uppercase tracking-wider">Obs. <span class="normal-case text-green-300/30">(opcional)</span></div>
       <textarea id="obs-${pid}" rows="2" placeholder="Ex: jogou bem no 2º tempo..."
         class="w-full bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-3 py-2 text-xs text-green-200 placeholder:text-green-900/60 focus:outline-none focus:border-green-600"
         oninput="setObs('${pid}',this.value)">${v.obs||""}</textarea></div>
   </div>`;
 }
 function setNote(pid,note){
-  if(!voteState.ratings[pid]) voteState.ratings[pid]={note:0,goals:0,assists:0,obs:""};
+  ensureRating(pid);
   voteState.ratings[pid].note=note;
-  const c=document.getElementById("vc-"+pid); if(c) c.querySelectorAll(".rating-btn").forEach((b,i)=>b.classList.toggle("sel",i+1===note));
+  const c=document.getElementById("vc-"+pid);
+  if(c) c.querySelectorAll("[data-field='note']").forEach((b,i)=>b.classList.toggle("sel",i+1===note));
 }
 function addGoal(pid,d){
-  if(!voteState.ratings[pid]) voteState.ratings[pid]={note:0,goals:0,assists:0,obs:""};
+  ensureRating(pid);
   voteState.ratings[pid].goals=Math.max(0,(voteState.ratings[pid].goals||0)+d);
   const e=document.getElementById("g-"+pid); if(e) e.textContent=voteState.ratings[pid].goals;
-  const c=document.getElementById("vc-"+pid); if(c) c.querySelectorAll(".counter-btn")[0].disabled=voteState.ratings[pid].goals<=0;
+  const b=document.getElementById("g-min-"+pid); if(b) b.disabled=voteState.ratings[pid].goals<=0;
 }
 function addAssist(pid,d){
-  if(!voteState.ratings[pid]) voteState.ratings[pid]={note:0,goals:0,assists:0,obs:""};
+  ensureRating(pid);
   voteState.ratings[pid].assists=Math.max(0,(voteState.ratings[pid].assists||0)+d);
   const e=document.getElementById("a-"+pid); if(e) e.textContent=voteState.ratings[pid].assists;
-  const c=document.getElementById("vc-"+pid); if(c) c.querySelectorAll(".counter-btn")[2].disabled=voteState.ratings[pid].assists<=0;
+  const b=document.getElementById("a-min-"+pid); if(b) b.disabled=voteState.ratings[pid].assists<=0;
 }
-function setObs(pid,val){if(!voteState.ratings[pid]) voteState.ratings[pid]={note:0,goals:0,assists:0,obs:""};voteState.ratings[pid].obs=val;}
+function setObs(pid,val){ensureRating(pid);voteState.ratings[pid].obs=val;}
 async function submitVotes(){
   const gameId=voteState.gameId; if(!gameId||!S.uid) return;
   const game=S.games[gameId]; if(!game) return;
-  const missing=Object.entries(voteState.ratings).filter(([,v])=>!v.note).map(([pid])=>playerName(pid));
-  if(missing.length){alert("Faltou nota para: "+missing.slice(0,5).join(", ")+(missing.length>5?` e mais ${missing.length-5}...`:""));return;}
+  const missing=Object.entries(voteState.ratings).filter(([,v])=>!v.note||!v.garra||!v.comportamento).map(([pid])=>playerName(pid));
+  if(missing.length){alert("Faltou avaliar (nota ⭐, garra ⚡ e comportamento 🤝) para: "+missing.slice(0,4).join(", ")+(missing.length>4?` e mais ${missing.length-4}...`:""));return;}
   const btn=document.querySelector("button[onclick='submitVotes()']");
   if(btn){btn.disabled=true;btn.textContent="Enviando...";}
   try{
     const updates={};
     Object.entries(voteState.ratings).forEach(([pid,v])=>{
-      updates[`/ratings/${gameId}/${S.uid}/${pid}`]={note:v.note,goals:v.goals,assists:v.assists,obs:(v.obs||"").trim(),ts:Date.now()};
+      updates[`/ratings/${gameId}/${S.uid}/${pid}`]={
+        note:v.note,goals:v.goals,assists:v.assists,obs:(v.obs||"").trim(),
+        garra:v.garra||0,comportamento:v.comportamento||0,passes:v.passes||0,
+        faltas:v.faltas||0,gravidade:v.gravidade||0,amarelos:v.amarelos||0,vermelhos:v.vermelhos||0,
+        ts:Date.now()
+      };
     });
     await db.ref().update(updates);
     voteState={gameId:null,ratings:{}};
@@ -733,15 +799,22 @@ async function submitVotes(){
 }
 function renderMyVotes(el,game){
   const mv=S.ratings[game.id]?.[S.uid]||{};
+  const gravLabel=["Nenhuma","Leve","Média","Grave"];
   const row=([pid,v])=>`
     <div class="bg-[#132218] border border-[#2a4a35] rounded-xl px-4 py-3 space-y-1.5">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">${teamBadge(getPlayerTeam(game,pid))}<span class="font-semibold text-sm">${playerName(pid)}</span></div>
-        <div class="flex items-center gap-3 text-sm">
-          <span class="font-black text-green-300">${v.note}/10</span>
-          ${v.goals?`<span class="text-yellow-300">⚽${v.goals}</span>`:""}
-          ${v.assists?`<span class="text-blue-300">🅰${v.assists}</span>`:""}
-        </div>
+        <span class="font-black text-green-300 text-lg">${v.note||0}<span class="text-green-300/40 text-xs font-normal">/10</span></span>
+      </div>
+      <div class="flex gap-2 flex-wrap text-xs">
+        ${v.garra?`<span class="bg-green-950/60 border border-green-800/30 rounded-full px-2 py-0.5 text-green-300/70">⚡ ${v.garra}/5</span>`:""}
+        ${v.comportamento?`<span class="bg-green-950/60 border border-green-800/30 rounded-full px-2 py-0.5 text-green-300/70">🤝 ${v.comportamento}/5</span>`:""}
+        ${v.passes?`<span class="bg-green-950/60 border border-green-800/30 rounded-full px-2 py-0.5 text-green-300/70">🎯 ${v.passes}/5</span>`:""}
+        ${v.goals?`<span class="text-yellow-300 bg-yellow-950/40 border border-yellow-800/30 rounded-full px-2 py-0.5">⚽ ${v.goals}</span>`:""}
+        ${v.assists?`<span class="text-blue-300 bg-blue-950/40 border border-blue-800/30 rounded-full px-2 py-0.5">🅰 ${v.assists}</span>`:""}
+        ${v.amarelos?`<span class="text-amber-400 bg-amber-950/40 border border-amber-800/30 rounded-full px-2 py-0.5">🟡 ×${v.amarelos}</span>`:""}
+        ${v.vermelhos?`<span class="text-red-400 bg-red-950/40 border border-red-800/30 rounded-full px-2 py-0.5">🔴 ×${v.vermelhos}</span>`:""}
+        ${v.faltas?`<span class="text-orange-300 bg-orange-950/40 border border-orange-800/30 rounded-full px-2 py-0.5">⚠ ${v.faltas} falta${v.faltas!==1?"s":""} · ${gravLabel[v.gravidade||0]}</span>`:""}
       </div>
       ${v.obs?`<p class="text-xs text-green-300/50 italic border-l-2 border-green-800 pl-2">"${v.obs}"</p>`:""}
     </div>`;
@@ -763,12 +836,61 @@ function renderMyVotes(el,game){
 }
 
 // ── RANKING ──
-let rankFilter="all";
+let rankFilter="all", rankPeriod="partida";
 function setRankFilter(f){
   rankFilter=f;
-  ["all","pelada","comp"].forEach(k=>{const b=document.getElementById("rf-"+k);if(!b)return;b.className="px-2.5 py-1 rounded-full font-semibold text-xs "+(k===f?"bg-green-600 text-white":"bg-[#1a2e1f] text-green-400");});
+  ["all","pelada","comp"].forEach(k=>{const b=document.getElementById("rf-"+k);if(!b)return;b.className="px-2.5 py-1 rounded-full font-semibold text-xs "+(k===f?"bg-green-700 text-white":"bg-[#1a2e1f] text-green-400");});
   if(f==="compromisso"){const b=document.getElementById("rf-comp");if(b)b.className="px-2.5 py-1 rounded-full font-semibold text-xs bg-blue-700 text-white";}
   renderRanking();
+}
+function setRankPeriod(p){
+  rankPeriod=p;
+  ["partida","mes","semestre","ano"].forEach(k=>{const b=document.getElementById("rp-"+k);if(!b)return;b.className="px-3 py-1.5 rounded-full font-semibold whitespace-nowrap text-xs "+(k===p?"bg-green-600 text-white":"bg-[#1a2e1f] text-green-400");});
+  renderRanking();
+}
+function gamesInPeriod(period,filter){
+  const now=new Date(), yr=now.getFullYear(), mo=now.getMonth(), sem=mo<6?0:1;
+  const allIds=Object.keys(S.games).filter(id=>filter==="all"||S.games[id].type===filter).sort((a,b)=>(S.games[b].date||"").localeCompare(S.games[a].date||""));
+  if(period==="partida"){const id=allIds[0];return id?[{id,...S.games[id]}]:[];}
+  return allIds.filter(id=>{
+    const d=new Date((S.games[id].date||"")+"T12:00:00");
+    if(period==="mes") return d.getFullYear()===yr&&d.getMonth()===mo;
+    if(period==="semestre") return d.getFullYear()===yr&&(d.getMonth()<6?0:1)===sem;
+    if(period==="ano") return d.getFullYear()===yr;
+    return true;
+  }).map(id=>({id,...S.games[id]}));
+}
+function safeAvg(arr){const v=arr.filter(x=>x>0);return v.length?v.reduce((s,x)=>s+x,0)/v.length:0;}
+function calcPlayerScore(pid,games){
+  if(!games||!games.length) return null;
+  const total=games.length; let played=0; const pg=[];
+  games.forEach(game=>{
+    if(!getGamePlayerIds(game).includes(pid)) return;
+    played++;
+    const gr=S.ratings[game.id]||{};
+    const pv=Object.values(gr).map(v=>v[pid]).filter(Boolean);
+    if(!pv.length) return;
+    pg.push({
+      note:safeAvg(pv.map(v=>v.note||0)),
+      garra:safeAvg(pv.map(v=>v.garra||0)),
+      comport:safeAvg(pv.map(v=>v.comportamento||0)),
+      passes:safeAvg(pv.map(v=>v.passes||0)),
+      gols:safeAvg(pv.map(v=>v.goals||0)),
+      assists:safeAvg(pv.map(v=>v.assists||0)),
+      amarelo:safeAvg(pv.map(v=>v.amarelos||0)),
+      verm:safeAvg(pv.map(v=>v.vermelhos||0)),
+      faltas:safeAvg(pv.map(v=>v.faltas||0)),
+      grav:safeAvg(pv.map(v=>v.gravidade||0)),
+    });
+  });
+  if(!pg.length) return null;
+  const freq=played/total;
+  const a=k=>pg.reduce((s,g)=>s+(g[k]||0),0)/pg.length;
+  const note=a("note"),garra=a("garra"),comport=a("comport"),passes=a("passes");
+  const gols=a("gols"),assists=a("assists"),amarelo=a("amarelo"),verm=a("verm"),faltas=a("faltas"),grav=a("grav");
+  const gravMult=grav<=0?0.1:grav<=1?0.3:grav<=2?0.6:1;
+  const score=freq*30+(garra>0?(garra/5)*20:0)+(comport>0?(comport/5)*15:0)+(note>0?(note/10)*10:0)+(passes>0?(passes/5)*5:0)+Math.min(gols*1.5,9)+Math.min(assists,6)-amarelo-verm*3-faltas*gravMult;
+  return{score:Math.max(0,score),freq,note,garra,comport,passes,gols,assists,amarelo,verm,faltas,grav,played,total};
 }
 function getPlayerStats(pid,filter){
   const notes=[],ga=[],aa=[]; let games=0;
@@ -786,19 +908,41 @@ function getPlayerStats(pid,filter){
 }
 function renderRanking(){
   const el=document.getElementById("ranking-list"); if(!el) return;
-  const stats=activePlayers().map(p=>{
-    const{notes,goals,assists,games}=getPlayerStats(p.id,rankFilter);
-    return{...p,avg:avgNote(notes),goals,assists,games};
-  }).filter(p=>p.games>0).sort((a,b)=>parseFloat(b.avg||0)-parseFloat(a.avg||0));
-  if(!stats.length){el.innerHTML=`<div class="text-center py-12 text-green-300/40 text-sm">Nenhuma partida avaliada ainda.</div>`;return;}
+  const games=gamesInPeriod(rankPeriod,rankFilter);
+  const periodLabel=rankPeriod==="partida"?"última partida":rankPeriod==="mes"?"este mês":rankPeriod==="semestre"?"este semestre":"este ano";
+  const scores=activePlayers().map(p=>{const r=calcPlayerScore(p.id,games);return r?{...p,...r}:null;}).filter(Boolean).sort((a,b)=>b.score-a.score);
+  if(!scores.length){el.innerHTML=`<div class="text-center py-12 text-green-300/40 text-sm">Nenhuma partida avaliada ${periodLabel}.</div>`;return;}
   const medals=["🥇","🥈","🥉"];
-  el.innerHTML=`<div class="space-y-2">${stats.map((p,i)=>{
+  el.innerHTML=`<div class="text-[10px] text-green-300/30 uppercase tracking-wider mb-3 text-center">${games.length} jogo${games.length!==1?"s":""} · ${periodLabel}</div>
+  <div class="space-y-2">${scores.map((p,i)=>{
     const isMe=p.id===S.uid;
-    return `<div class="bg-[#132218] border ${isMe?"border-green-500/60":"border-[#2a4a35]"} rounded-xl px-4 py-3 flex items-center gap-3">
-      <span class="text-lg w-7 text-center">${medals[i]||`<span class="text-green-300/40 text-sm font-bold">${i+1}</span>`}</span>
-      <div class="flex-1 min-w-0"><div class="font-bold text-sm truncate ${isMe?"text-green-300":"text-white"}">${p.name}</div><div class="text-[10px] text-green-300/40">${p.games} jogo${p.games!==1?"s":""}</div></div>
-      <div class="text-right"><div class="font-black text-lg text-green-300">${p.avg||"-"}</div>
-      <div class="text-[10px] flex gap-2 justify-end">${p.goals?`<span class="text-yellow-300">⚽${p.goals}</span>`:""}${p.assists?`<span class="text-blue-300">🅰${p.assists}</span>`:""}</div></div>
+    const pct=Math.min(100,p.score).toFixed(0);
+    const barColor=parseFloat(pct)>=70?"#4ade80":parseFloat(pct)>=50?"#facc15":"#f87171";
+    return `<div class="bg-[#132218] border ${isMe?"border-green-500/60":"border-[#2a4a35]"} rounded-xl px-4 py-3">
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-lg w-7 text-center shrink-0">${medals[i]||`<span class="text-green-300/40 text-sm font-bold">${i+1}</span>`}</span>
+        <div class="flex-1 min-w-0">
+          <div class="font-bold text-sm truncate ${isMe?"text-green-300":"text-white"}">${p.name}</div>
+          <div class="text-[10px] text-green-300/40">${p.played}/${p.total} jogo${p.total!==1?"s":""} · ${Math.round(p.freq*100)}% presença</div>
+        </div>
+        <div class="text-right shrink-0">
+          <div class="font-black text-xl ${isMe?"text-green-300":"text-white"}">${pct}<span class="text-green-300/30 text-xs font-normal">pts</span></div>
+          ${p.note>0?`<div class="text-[10px] text-green-300/40">nota ${p.note.toFixed(1)}</div>`:""}
+        </div>
+      </div>
+      <div class="h-1.5 rounded-full bg-[#0b1a10] overflow-hidden mb-2">
+        <div class="h-full rounded-full transition-all" style="width:${pct}%;background:${barColor}"></div>
+      </div>
+      <div class="flex gap-2 flex-wrap text-[10px]">
+        ${p.garra>0?`<span class="text-green-300/60">⚡ Garra <b>${p.garra.toFixed(1)}</b></span>`:""}
+        ${p.comport>0?`<span class="text-green-300/60">🤝 Comport. <b>${p.comport.toFixed(1)}</b></span>`:""}
+        ${p.passes>0?`<span class="text-green-300/60">🎯 Passes <b>${p.passes.toFixed(1)}</b></span>`:""}
+        ${p.gols>0?`<span class="text-yellow-300/80">⚽ ${p.gols.toFixed(1)}</span>`:""}
+        ${p.assists>0?`<span class="text-blue-300/80">🅰 ${p.assists.toFixed(1)}</span>`:""}
+        ${p.amarelo>0?`<span class="text-amber-400/70">🟡 ×${p.amarelo.toFixed(1)}</span>`:""}
+        ${p.verm>0?`<span class="text-red-400/70">🔴 ×${p.verm.toFixed(1)}</span>`:""}
+        ${p.faltas>0?`<span class="text-orange-400/70">⚠ ${p.faltas.toFixed(1)} falta${p.faltas!==1?"s":""}</span>`:""}
+      </div>
     </div>`;
   }).join("")}</div>`;
 }
@@ -1105,16 +1249,23 @@ async function viewVoter(gid,vid){
   const snap=await db.ref(`ratings/${gid}/${vid}`).once("value");
   const votes=snap.val()||{};
   const rows=Object.entries(votes).sort((a,b)=>(b[1].note||0)-(a[1].note||0));
+  const gravLabel=["Nenhuma","Leve","Média","Grave"];
   const renderVoterRow=([pid,v])=>{
     const team=getPlayerTeam(g,pid);
     return `<div class="bg-[#0b1a10] border border-[#2a4a35] rounded-xl px-4 py-3 space-y-1.5">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">${teamBadge(team)}<span class="font-bold text-sm">${playerName(pid)}</span></div>
-        <div class="flex items-center gap-3">
-          <span class="font-black text-xl text-green-300">${v.note||0}<span class="text-green-300/40 text-sm font-normal">/10</span></span>
-          ${v.goals?`<span class="text-yellow-300 text-sm font-bold">⚽${v.goals}</span>`:""}
-          ${v.assists?`<span class="text-blue-300 text-sm font-bold">🅰${v.assists}</span>`:""}
-        </div>
+        <span class="font-black text-xl text-green-300">${v.note||0}<span class="text-green-300/40 text-sm font-normal">/10</span></span>
+      </div>
+      <div class="flex gap-1.5 flex-wrap text-xs">
+        ${v.garra?`<span class="bg-green-950/60 border border-green-800/30 rounded-full px-2 py-0.5 text-green-300/70">⚡ ${v.garra}/5</span>`:""}
+        ${v.comportamento?`<span class="bg-green-950/60 border border-green-800/30 rounded-full px-2 py-0.5 text-green-300/70">🤝 ${v.comportamento}/5</span>`:""}
+        ${v.passes?`<span class="bg-green-950/60 border border-green-800/30 rounded-full px-2 py-0.5 text-green-300/70">🎯 ${v.passes}/5</span>`:""}
+        ${v.goals?`<span class="text-yellow-300">⚽${v.goals}</span>`:""}
+        ${v.assists?`<span class="text-blue-300">🅰${v.assists}</span>`:""}
+        ${v.amarelos?`<span class="text-amber-400">🟡×${v.amarelos}</span>`:""}
+        ${v.vermelhos?`<span class="text-red-400">🔴×${v.vermelhos}</span>`:""}
+        ${v.faltas?`<span class="text-orange-300">⚠${v.faltas} · ${gravLabel[v.gravidade||0]}</span>`:""}
       </div>
       ${v.obs?`<p class="text-xs text-green-300/60 italic border-l-2 border-green-700 pl-2">"${v.obs}"</p>`:""}
     </div>`;
@@ -1154,10 +1305,9 @@ async function openEditVoter(gid,vid){
   pids.forEach(pid=>{
     const v=existing[pid]||{};
     editVoteState.ratings[pid]={
-      note: v.note ?? 0,
-      goals: v.goals ?? 0,
-      assists: v.assists ?? 0,
-      obs: v.obs ?? ""
+      note:v.note??0, goals:v.goals??0, assists:v.assists??0, obs:v.obs??"",
+      garra:v.garra??0, comportamento:v.comportamento??0, passes:v.passes??0,
+      faltas:v.faltas??0, gravidade:v.gravidade??0, amarelos:v.amarelos??0, vermelhos:v.vermelhos??0
     };
   });
   openModal(`
@@ -1174,56 +1324,106 @@ async function openEditVoter(gid,vid){
   pids.forEach(pid=>{
     const ta=document.getElementById("evo-"+pid);
     if(ta) ta.value=editVoteState.ratings[pid]?.obs||"";
+    renderEditGrav(pid);
   });
 }
+function renderEditGrav(pid){
+  const c=document.getElementById("egrav-"+pid); if(!c) return;
+  const v=editVoteState.ratings[pid]||{};
+  if(!v.faltas){c.innerHTML="";return;}
+  const opts=["Nenhuma","Leve","Média","Grave"].map((l,i)=>`<button onclick="setEditGravidade('${pid}',${i})" class="px-2 py-1 rounded-lg text-[10px] font-bold border transition-all ${(v.gravidade||0)===i?"bg-orange-700 border-orange-500 text-white":"bg-[#0b1a10] border-[#2a4a35] text-orange-300/50}">${l}</button>`).join("");
+  c.innerHTML=`<div class="text-[10px] text-orange-300/50 mb-1 uppercase tracking-wider">Gravidade</div><div class="flex gap-1 flex-wrap">${opts}</div>`;
+}
+function setEditGravidade(pid,v){editVoteState.ratings[pid].gravidade=v;renderEditGrav(pid);}
 function renderEditVoteCard(pid,game){
-  const v=editVoteState.ratings[pid]||{note:0,goals:0,assists:0,obs:""};
+  const v=editVoteState.ratings[pid]||{};
   const team=getPlayerTeam(game,pid);
   const bc=team==="vermelho"?"border-red-900/50":team==="azul"?"border-blue-900/50":"border-[#2a4a35]";
-  const notes=[1,2,3,4,5,6,7,8,9,10].map(n=>`<button class="rating-btn ${v.note===n?"sel":""}" onclick="setEditNote('${pid}',${n})">${n}</button>`).join("");
+  const notes=[1,2,3,4,5,6,7,8,9,10].map(n=>`<button class="rating-btn ${(v.note||0)===n?"sel":""}" data-ef="note" onclick="setEditNote('${pid}',${n})">${n}</button>`).join("");
+  const er5=(field,val)=>[1,2,3,4,5].map(n=>`<button class="rating-btn ${(val||0)===n?"sel":""}" data-ef="${field}" onclick="setEditR5('${pid}','${field}',${n})">${n}</button>`).join("");
   return `<div class="bg-[#0b1a10] border ${bc} rounded-xl p-3 space-y-2" id="evc-${pid}">
     <div class="flex items-center gap-2">${teamBadge(team)}<span class="font-bold text-sm">${playerName(pid)}</span></div>
-    <div class="flex flex-wrap gap-1.5">${notes}</div>
-    <div class="flex gap-6">
-      <div class="flex items-center gap-2 text-xs">
-        <span class="text-green-300/40 uppercase tracking-wide">Gols</span>
-        <button class="counter-btn" onclick="adjEditGoal('${pid}',-1)" ${v.goals<=0?"disabled":""}>−</button>
-        <span id="evg-${pid}" class="font-black text-yellow-300 w-4 text-center">${v.goals}</span>
-        <button class="counter-btn" onclick="adjEditGoal('${pid}',1)">+</button>
-      </div>
-      <div class="flex items-center gap-2 text-xs">
-        <span class="text-green-300/40 uppercase tracking-wide">Assist</span>
-        <button class="counter-btn" onclick="adjEditAssist('${pid}',-1)" ${v.assists<=0?"disabled":""}>−</button>
-        <span id="eva-${pid}" class="font-black text-blue-300 w-4 text-center">${v.assists}</span>
-        <button class="counter-btn" onclick="adjEditAssist('${pid}',1)">+</button>
-      </div>
+    <div><div class="text-[10px] text-green-300/40 mb-1">⭐ Nota Geral</div><div class="flex flex-wrap gap-1.5">${notes}</div></div>
+    <div class="grid grid-cols-3 gap-x-2 gap-y-1.5">
+      <div><div class="text-[10px] text-green-300/40 mb-1">⚡ Garra</div><div class="flex gap-1 flex-wrap">${er5("garra",v.garra)}</div></div>
+      <div><div class="text-[10px] text-green-300/40 mb-1">🤝 Comport.</div><div class="flex gap-1 flex-wrap">${er5("comportamento",v.comportamento)}</div></div>
+      <div><div class="text-[10px] text-green-300/40 mb-1">🎯 Passes</div><div class="flex gap-1 flex-wrap">${er5("passes",v.passes)}</div></div>
     </div>
+    <div class="flex gap-3 flex-wrap text-xs">
+      <div class="flex items-center gap-1.5"><span class="text-yellow-300/50">⚽</span>
+        <button class="counter-btn" id="evg-min-${pid}" onclick="adjEditGoal('${pid}',-1)" ${(v.goals||0)<=0?"disabled":""}>−</button>
+        <span id="evg-${pid}" class="font-black text-yellow-300 w-4 text-center">${v.goals||0}</span>
+        <button class="counter-btn" onclick="adjEditGoal('${pid}',1)">+</button></div>
+      <div class="flex items-center gap-1.5"><span class="text-blue-300/50">🅰</span>
+        <button class="counter-btn" id="eva-min-${pid}" onclick="adjEditAssist('${pid}',-1)" ${(v.assists||0)<=0?"disabled":""}>−</button>
+        <span id="eva-${pid}" class="font-black text-blue-300 w-4 text-center">${v.assists||0}</span>
+        <button class="counter-btn" onclick="adjEditAssist('${pid}',1)">+</button></div>
+      <div class="flex items-center gap-1.5"><span class="text-amber-400/50">🟡</span>
+        <button class="counter-btn" id="eam-min-${pid}" onclick="adjEditAmarelo('${pid}',-1)" ${(v.amarelos||0)<=0?"disabled":""}>−</button>
+        <span id="eam-${pid}" class="font-black text-amber-300 w-4 text-center">${v.amarelos||0}</span>
+        <button class="counter-btn" onclick="adjEditAmarelo('${pid}',1)">+</button></div>
+      <div class="flex items-center gap-1.5"><span class="text-red-400/50">🔴</span>
+        <button class="counter-btn" id="evm-min-${pid}" onclick="adjEditVermelho('${pid}',-1)" ${(v.vermelhos||0)<=0?"disabled":""}>−</button>
+        <span id="evm-${pid}" class="font-black text-red-300 w-4 text-center">${v.vermelhos||0}</span>
+        <button class="counter-btn" onclick="adjEditVermelho('${pid}',1)">+</button></div>
+      <div class="flex items-center gap-1.5"><span class="text-orange-400/50">⚠</span>
+        <button class="counter-btn" id="eft-min-${pid}" onclick="adjEditFalta('${pid}',-1)" ${(v.faltas||0)<=0?"disabled":""}>−</button>
+        <span id="eft-${pid}" class="font-black text-orange-300 w-5 text-center">${v.faltas||0}</span>
+        <button class="counter-btn" onclick="adjEditFalta('${pid}',1)">+</button></div>
+    </div>
+    <div id="egrav-${pid}"></div>
     <textarea id="evo-${pid}" rows="2" placeholder="Observação (opcional)..."
       class="w-full bg-[#060e08] border border-[#1e3a27] rounded-lg px-3 py-1.5 text-xs text-green-200 placeholder:text-green-900/50 focus:outline-none focus:border-green-700"
-      oninput="editVoteState.ratings['${pid}'].obs=this.value">${v.obs}</textarea>
+      oninput="editVoteState.ratings['${pid}'].obs=this.value">${v.obs||""}</textarea>
   </div>`;
 }
 function setEditNote(pid,note){
   editVoteState.ratings[pid].note=note;
   const c=document.getElementById("evc-"+pid);
-  if(c) c.querySelectorAll(".rating-btn").forEach((b,i)=>b.classList.toggle("sel",i+1===note));
+  if(c) c.querySelectorAll("[data-ef='note']").forEach((b,i)=>b.classList.toggle("sel",i+1===note));
+}
+function setEditR5(pid,field,val){
+  editVoteState.ratings[pid][field]=val;
+  const c=document.getElementById("evc-"+pid);
+  if(c) c.querySelectorAll(`[data-ef="${field}"]`).forEach((b,i)=>b.classList.toggle("sel",i+1===val));
 }
 function adjEditGoal(pid,d){
   editVoteState.ratings[pid].goals=Math.max(0,(editVoteState.ratings[pid].goals||0)+d);
   const e=document.getElementById("evg-"+pid); if(e) e.textContent=editVoteState.ratings[pid].goals;
-  const c=document.getElementById("evc-"+pid); if(c) c.querySelectorAll(".counter-btn")[0].disabled=editVoteState.ratings[pid].goals<=0;
+  const b=document.getElementById("evg-min-"+pid); if(b) b.disabled=editVoteState.ratings[pid].goals<=0;
 }
 function adjEditAssist(pid,d){
   editVoteState.ratings[pid].assists=Math.max(0,(editVoteState.ratings[pid].assists||0)+d);
   const e=document.getElementById("eva-"+pid); if(e) e.textContent=editVoteState.ratings[pid].assists;
-  const c=document.getElementById("evc-"+pid); if(c) c.querySelectorAll(".counter-btn")[2].disabled=editVoteState.ratings[pid].assists<=0;
+  const b=document.getElementById("eva-min-"+pid); if(b) b.disabled=editVoteState.ratings[pid].assists<=0;
+}
+function adjEditAmarelo(pid,d){
+  editVoteState.ratings[pid].amarelos=Math.max(0,Math.min(3,(editVoteState.ratings[pid].amarelos||0)+d));
+  const e=document.getElementById("eam-"+pid); if(e) e.textContent=editVoteState.ratings[pid].amarelos;
+  const b=document.getElementById("eam-min-"+pid); if(b) b.disabled=editVoteState.ratings[pid].amarelos<=0;
+}
+function adjEditVermelho(pid,d){
+  editVoteState.ratings[pid].vermelhos=Math.max(0,Math.min(2,(editVoteState.ratings[pid].vermelhos||0)+d));
+  const e=document.getElementById("evm-"+pid); if(e) e.textContent=editVoteState.ratings[pid].vermelhos;
+  const b=document.getElementById("evm-min-"+pid); if(b) b.disabled=editVoteState.ratings[pid].vermelhos<=0;
+}
+function adjEditFalta(pid,d){
+  editVoteState.ratings[pid].faltas=Math.max(0,Math.min(20,(editVoteState.ratings[pid].faltas||0)+d));
+  const e=document.getElementById("eft-"+pid); if(e) e.textContent=editVoteState.ratings[pid].faltas;
+  const b=document.getElementById("eft-min-"+pid); if(b) b.disabled=editVoteState.ratings[pid].faltas<=0;
+  renderEditGrav(pid);
 }
 async function saveEditVoter(){
   const{gid,vid,ratings}=editVoteState;
   if(!gid||!vid) return;
   const updates={};
   Object.entries(ratings).forEach(([pid,v])=>{
-    updates[`/ratings/${gid}/${vid}/${pid}`]={note:v.note,goals:v.goals,assists:v.assists,obs:(v.obs||"").trim(),ts:Date.now()};
+    updates[`/ratings/${gid}/${vid}/${pid}`]={
+      note:v.note,goals:v.goals,assists:v.assists,obs:(v.obs||"").trim(),
+      garra:v.garra||0,comportamento:v.comportamento||0,passes:v.passes||0,
+      faltas:v.faltas||0,gravidade:v.gravidade||0,amarelos:v.amarelos||0,vermelhos:v.vermelhos||0,
+      ts:Date.now()
+    };
   });
   await db.ref().update(updates);
   openGameVotes(gid);
