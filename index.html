@@ -1184,7 +1184,10 @@ function setRankPeriod(p){
 function gamesInPeriod(period,filter){
   const now=new Date(), yr=now.getFullYear(), mo=now.getMonth(), sem=mo<6?0:1;
   const allIds=Object.keys(S.games).filter(id=>filter==="all"||S.games[id].type===filter).sort((a,b)=>(S.games[b].date||"").localeCompare(S.games[a].date||""));
-  if(period==="partida"){const id=allIds[0];return id?[{id,...S.games[id]}]:[];}
+  if(period==="partida"){
+    const id=allIds.find(id=>S.ratings[id]&&Object.keys(S.ratings[id]).length>0)||allIds[0];
+    return id?[{id,...S.games[id]}]:[];
+  }
   return allIds.filter(id=>{
     const d=new Date((S.games[id].date||"")+"T12:00:00");
     if(period==="mes") return d.getFullYear()===yr&&d.getMonth()===mo;
