@@ -884,13 +884,15 @@ function buildShareText(){
   const dateStr=g0&&g0.date?new Date(g0.date+"T12:00:00").toLocaleDateString("pt-BR"):"";
   let txt="⚽ *Pelada & Compromisso — AFRESP*\n";
   if(dateStr&&rankPeriod==="partida")txt+="📅 "+dateStr+"\n";
-  txt+="📊 Ranking — "+periodLabel.charAt(0).toUpperCase()+periodLabel.slice(1)+"\n\n";
-  scores.slice(0,10).forEach(function(p,i){
+  txt+="📊 Ranking — "+periodLabel.charAt(0).toUpperCase()+periodLabel.slice(1)+"\n";
+  txt+="👥 "+scores.length+" jogadores\n\n";
+  scores.forEach(function(p,i){
     const pts=Math.min(100,p.score).toFixed(0);
-    txt+=(medals[i]||(i+1)+".")+" "+p.name+" — "+pts+" pts\n";
+    const pos=(i+1)+".";
+    const medal=medals[i]?" "+medals[i]:"";
+    txt+=pos+" "+p.name+" — "+pts+" pts"+medal+"\n";
   });
-  if(scores.length>10)txt+="\n...e mais "+(scores.length-10)+" jogadores";
-  txt+="\n\n🏆 Avaliação do grupo";
+  txt+="\n🏆 Avaliação do grupo — AFRESP";
   return txt;
 }
 async function shareRanking(){
