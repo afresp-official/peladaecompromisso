@@ -1470,7 +1470,36 @@ async function viewVoter(gid,vid){
       </button>
     </div>
     <div class="max-h-[60vh] overflow-y-auto pr-1" id="votes-content">
-      <div class="text-[10px] text-green-300/30 uppercase tracking-widest mb-3 hidden" id="votes-share-caption">Votos de ${playerName(vid)} · ${fmtDate(g.date)}</div>
+      ${(()=>{
+        const result=calcGameResult(g);
+        const bp=bestPlayerOfGame(g);
+        if(!result) return "";
+        return `<div class="bg-[#0b1710] border border-[#2a4a35] rounded-xl p-3 mb-3">
+          <div class="text-[9px] text-green-300/30 uppercase tracking-widest font-bold mb-2">Resultado · ${fmtDate(g.date)}</div>
+          <div class="flex items-center justify-center gap-4 mb-2">
+            <div class="text-center">
+              <div class="font-black text-2xl text-red-400">${result.vermScore}</div>
+              <div class="text-[9px] text-red-400/50 font-bold uppercase mt-0.5">🔴 Vermelho</div>
+            </div>
+            <div class="text-green-300/20 font-black text-lg">×</div>
+            <div class="text-center">
+              <div class="font-black text-2xl text-blue-400">${result.azulScore}</div>
+              <div class="text-[9px] text-blue-400/50 font-bold uppercase mt-0.5">🔵 Azul</div>
+            </div>
+          </div>
+          ${result.scorers.length?`<div class="border-t border-[#1e3a27] pt-2 mt-1">
+            <div class="text-[9px] text-green-300/30 uppercase tracking-wider mb-1.5">⚽ Artilheiros</div>
+            <div class="flex flex-wrap gap-1">${result.scorers.map(s=>`<span class="text-[10px] px-2 py-0.5 rounded-full font-semibold ${s.team==="vermelho"?"bg-red-950/70 text-red-300 border border-red-800/40":"bg-blue-950/70 text-blue-300 border border-blue-800/40"}">${s.name}${s.goals>1?` (${s.goals})`:""}</span>`).join("")}</div>
+          </div>`:""}
+          ${bp?`<div class="border-t border-[#1e3a27] pt-2 mt-2 flex items-center gap-2">
+            <span class="text-yellow-400">⭐</span>
+            <div>
+              <div class="text-[9px] text-yellow-400/50 uppercase tracking-wider font-bold">Melhor jogador</div>
+              <div class="text-xs font-black text-yellow-300">${bp.name} <span class="text-yellow-400/40 font-normal">${bp.score} pts</span></div>
+            </div>
+          </div>`:""}
+        </div>`;
+      })()}
       ${renderSection(verm,"Time Vermelho","text-red-400","bg-red-500")}
       ${renderSection(azul,"Time Azul","text-blue-400","bg-blue-500")}
     </div>
