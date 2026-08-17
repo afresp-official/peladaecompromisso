@@ -899,13 +899,16 @@ function renderVotar() {
     voteState={gameId:game.id,ratings:{}};
     others.forEach(pid=>{voteState.ratings[pid]=emptyRating();});
   }
-  const verm=others.filter(p=>getPlayerTeam(game,p)==="vermelho");
-  const azul=others.filter(p=>getPlayerTeam(game,p)==="azul");
-  const sem =others.filter(p=>!getPlayerTeam(game,p));
+  const isGoleiro=pid=>game.players?.[pid]?.goleiro===true;
+  const verm=others.filter(p=>getPlayerTeam(game,p)==="vermelho"&&!isGoleiro(p));
+  const azul=others.filter(p=>getPlayerTeam(game,p)==="azul"&&!isGoleiro(p));
+  const sem =others.filter(p=>!getPlayerTeam(game,p)&&!isGoleiro(p));
+  const goleiros=others.filter(p=>isGoleiro(p));
   let sections="";
   if(verm.length) sections+=`<div class="mb-1 flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span><span class="text-xs font-bold text-red-400 uppercase tracking-wider">Time Vermelho</span></div><div class="space-y-3 mb-4">${verm.map(p=>renderVoteCard(p,game)).join("")}</div>`;
   if(azul.length) sections+=`<div class="mb-1 flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span><span class="text-xs font-bold text-blue-400 uppercase tracking-wider">Time Azul</span></div><div class="space-y-3 mb-4">${azul.map(p=>renderVoteCard(p,game)).join("")}</div>`;
   if(sem.length)  sections+=`<div class="space-y-3 mb-4">${sem.map(p=>renderVoteCard(p,game)).join("")}</div>`;
+  if(goleiros.length) sections+=`<div class="mb-1 flex items-center gap-2"><span class="text-lg">🥅</span><span class="text-xs font-bold text-yellow-400 uppercase tracking-wider">Goleiros</span></div><div class="space-y-3 mb-4">${goleiros.map(p=>renderVoteCard(p,game)).join("")}</div>`;
   el.innerHTML=`${backBtn}<div class="mb-4"><div class="font-black text-base">${fmtDate(game.date)} ${badge(game.type)}</div><p class="text-xs text-green-300/50 mt-1">Avalie os ${others.length} jogadores</p></div>${sections}<button onclick="submitVotes()" class="mt-2 w-full py-4 rounded-xl bg-green-600 hover:bg-green-500 font-black text-base transition-colors">✅ Enviar votos</button>`;
 }
 function renderVoteCard(pid,game){
@@ -1507,14 +1510,15 @@ async function removePlayer(id){if(!confirm(`Remover ${playerName(id)}?`))return
 async function restorePlayer(id){await db.ref("players/"+id+"/active").set(true);showToast("Jogador restaurado!");}
 async function deleteGame(id){if(!confirm("Excluir este jogo e todos os votos?"))return;const u={};u["games/"+id]=null;u["ratings/"+id]=null;u["formations/"+id]=null;await db.ref().update(u);showToast("Jogo e avaliações excluídos!");}
 
-let editGameId=null, editTeams={};
+let editGameId=null, editTeams={}, editGoleiros=new Set();
 let adminPlayerSearch="", adminPlayersOpen=false, adminGamesOpen=true;
 function openEditGame(gid){
   editGameId=gid;
   const g=S.games[gid]; if(!g) return;
   const pids=getGamePlayerIds(g);
   editTeams={};
-  pids.forEach(pid=>{ editTeams[pid]=getPlayerTeam(g,pid); });
+  editGoleiros=new Set();
+  pids.forEach(pid=>{ editTeams[pid]=getPlayerTeam(g,pid); if(g.players[pid]?.goleiro) editGoleiros.add(pid); });
   const presSlots=S.presenca[gid]||{};
   const presNames=new Set(Object.values(presSlots).map(e=>e.name.toLowerCase()));
   const allActive=activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
@@ -1528,9 +1532,11 @@ function openEditGame(gid){
       ${displayPlayers.map(p=>{
         const inGame=pids.includes(p.id)||presNames.has(p.name.toLowerCase());
         const team=editTeams[p.id]||"azul";
+        const isGoleiro=editGoleiros.has(p.id);
         return `<div class="flex items-center gap-2 bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-2.5 py-2">
           <input type="checkbox" id="ep-${p.id}" value="${p.id}" ${inGame?"checked":""} class="accent-green-500 w-4 h-4 shrink-0" onchange="toggleEditPlayer('${p.id}',this.checked)"/>
           <span class="flex-1 text-sm font-semibold truncate">${p.name}</span>
+          <button id="eg-${p.id}" onclick="toggleEditGoleiro('${p.id}')" class="text-xs px-1.5 py-1 rounded-lg border transition-colors ${isGoleiro?"bg-yellow-900/60 border-yellow-600/60 text-yellow-300":"bg-[#0f2016] border-[#2a4a35] text-green-300/30"}" title="Marcar como goleiro">🥅</button>
           <button id="et-${p.id}" onclick="toggleEditTeam('${p.id}')" class="team-toggle ${team==="vermelho"?"is-verm":"is-azul"}" ${inGame?"":"disabled style='opacity:0.3'"}>
             ${team==="vermelho"?"🔴 Verm":"🔵 Azul"}
           </button>
@@ -1546,6 +1552,14 @@ function toggleEditPlayer(pid,checked){
   const btn=document.getElementById("et-"+pid);
   if(btn){ btn.disabled=!checked; btn.style.opacity=checked?"1":"0.3"; }
 }
+function toggleEditGoleiro(pid){
+  if(editGoleiros.has(pid)) editGoleiros.delete(pid); else editGoleiros.add(pid);
+  const btn=document.getElementById("eg-"+pid);
+  if(btn){
+    const on=editGoleiros.has(pid);
+    btn.className=`text-xs px-1.5 py-1 rounded-lg border transition-colors ${on?"bg-yellow-900/60 border-yellow-600/60 text-yellow-300":"bg-[#0f2016] border-[#2a4a35] text-green-300/30"}`;
+  }
+}
 function toggleEditTeam(pid){
   editTeams[pid]=editTeams[pid]==="vermelho"?"azul":"vermelho";
   const btn=document.getElementById("et-"+pid);
@@ -1559,7 +1573,7 @@ async function saveEditGame(){
   const checked=[...document.querySelectorAll("#edit-player-list input:checked")].map(c=>c.value);
   if(checked.length<2){alert("Selecione ao menos 2 jogadores");return;}
   const players={};
-  checked.forEach(pid=>{ players[pid]={team:editTeams[pid]||"azul"}; });
+  checked.forEach(pid=>{ players[pid]={team:editTeams[pid]||"azul",goleiro:editGoleiros.has(pid)?true:false}; });
   await db.ref("games/"+editGameId+"/players").set(players);
   closeModal();
   alert("Jogo atualizado!");
