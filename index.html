@@ -488,7 +488,7 @@ function resetUser(){if(!confirm("Trocar de jogador?"))return;localStorage.remov
 function renderInicio(){renderPlayerSelect();renderGameStatus();}
 function renderPlayerSelect(){
   const el=document.getElementById("player-select-card"); if(!el) return;
-  if(S.uid&&S.players[S.uid]){el.innerHTML="";return;}
+  el.innerHTML=""; return;
   const latest=latestGame();
   const opts=activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
   el.innerHTML=card(`<p class="font-black text-base mb-1">Quem é você? 👋</p>
@@ -596,10 +596,7 @@ function renderGameStatus(){
         <button onclick="goToCampo('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-[#0f2016] border border-[#2a4a35] hover:border-green-600 text-green-400 font-bold text-sm transition-colors">🟩 Campo</button>
         <button onclick="openEscalacao('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-[#1a1000] border border-[#4a3a10] hover:border-yellow-600 text-yellow-400 font-bold text-sm transition-colors">⚽ Escalação</button>
         ${voters>0?`<button onclick="openGameVotes('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-[#0f1a2a] border border-[#1e3a5f] hover:border-blue-600 text-blue-400 font-bold text-sm transition-colors">🗳️ Ver votos</button>`:""}
-        ${voters===0&&game.status==="fechado"?(S.uid
-          ?`<button onclick="goToVotar('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 font-black text-sm transition-colors">🗳️ Votar</button>`
-          :`<p class="text-center text-amber-400/70 text-xs flex-1 flex items-center justify-center">Escolha seu nome</p>`)
-        :""}
+        ${voters===0&&game.status==="fechado"?`<button onclick="goToVotar('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 font-black text-sm transition-colors">🗳️ Votar</button>`:""}
         ${game.status!=="fechado"?`<span class="flex-1 text-center text-[10px] text-amber-400/60 flex items-center justify-center gap-1">🔒 Votação liberada após o jogo</span>`:""}
       </div>
       ${voters>0?`<button onclick="shareGameResult('${game.id}')" class="share-game-btn mt-1 w-full py-2.5 rounded-xl bg-green-950/60 border border-green-700/30 hover:bg-green-900/40 text-green-400 font-bold text-sm transition-colors flex items-center justify-center gap-2">
@@ -876,7 +873,18 @@ function addFalta(pid,d){
 function renderVotar() {
   const el=document.getElementById("vote-container"); if(!el) return;
   const backBtn=`<button onclick="goTo('inicio')" class="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors shadow-lg mb-4">← Voltar</button>`;
-  if(!S.uid||!S.players[S.uid]){el.innerHTML=backBtn+`<div class="text-center py-16 text-green-300/40 text-sm">Escolha seu nome na aba Início para votar.</div>`;return;}
+  if(!S.uid||!S.players[S.uid]){
+    const opts=activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
+    const latest=latestGame();
+    el.innerHTML=backBtn+`<div class="bg-[#132218] border border-[#2a4a35] rounded-xl p-4">
+      <p class="font-black text-base mb-1">Quem é você? 👋</p>
+      <p class="text-[10px] text-green-300/30 mb-3">✅ = já votou no último jogo</p>
+      <div class="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
+        ${opts.map(p=>{const voted=latest&&hasVoted(latest.id,p.id);return`<button onclick="selectPlayer('${p.id}')" class="text-left px-3 py-2 rounded-lg border text-sm font-semibold transition-all flex items-center justify-between gap-1 ${voted?'bg-green-950/30 border-green-800/40 text-green-300/50':'bg-[#0f2016] border-[#2a4a35] text-green-200 hover:border-green-500'}"><span class="truncate">${p.name}</span>${voted?'<span class="text-green-500 text-xs shrink-0">✅</span>':''}</button>`;}).join("")}
+      </div>
+    </div>`;
+    return;
+  }
   const gameRaw=S.selectedVoteGameId&&S.games[S.selectedVoteGameId]?{id:S.selectedVoteGameId,...S.games[S.selectedVoteGameId]}:latestGame();
   const game=gameRaw;
   if(!game){el.innerHTML=backBtn+`<div class="text-center py-16 text-green-300/40 text-sm">Nenhum jogo cadastrado ainda.</div>`;return;}
