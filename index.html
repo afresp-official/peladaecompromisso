@@ -631,7 +631,10 @@ function renderCampo() {
   const game = gameRaw;
   if (!game) { el.innerHTML=`<div class="text-center py-20 text-green-300/40 text-sm">Nenhum jogo cadastrado ainda.</div>`; return; }
 
-  const pids = getGamePlayerIds(game);
+  const allPids = getGamePlayerIds(game);
+  const presSlots = S.presenca[game.id]||{};
+  const presNames = new Set(Object.values(presSlots).map(e=>e.name.toLowerCase()));
+  const pids = presNames.size>0 ? allPids.filter(pid=>presNames.has((S.players[pid]?.name||"").toLowerCase())) : allPids;
   const formation = S.formations[game.id] || {};
 
   // Calcular posições: usa formação salva ou padrão por time/índice
