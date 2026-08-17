@@ -572,8 +572,13 @@ function renderGameStatus(){
         ${result.scorers.length?`
         <div class="border-t border-[#1e3a27] pt-2 mt-1">
           <div class="text-[10px] text-green-300/30 uppercase tracking-wider mb-1.5">⚽ Artilheiros</div>
-          <div class="flex flex-wrap gap-1.5">
-            ${result.scorers.map(s=>`<span class="text-xs px-2 py-0.5 rounded-full font-semibold ${s.team==="vermelho"?"bg-red-950/70 text-red-300 border border-red-800/40":"bg-blue-950/70 text-blue-300 border border-blue-800/40"}">${s.name}${s.goals>1?` (${s.goals})`:""}</span>`).join("")}
+          <div class="flex gap-2">
+            <div class="flex-1 flex flex-col gap-1">
+              ${result.scorers.filter(s=>s.team==="vermelho").map(s=>`<span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-red-950/70 text-red-300 border border-red-800/40 text-center">${s.name}${s.goals>1?` (${s.goals})`:""}</span>`).join("")}
+            </div>
+            <div class="flex-1 flex flex-col gap-1">
+              ${result.scorers.filter(s=>s.team==="azul").map(s=>`<span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-950/70 text-blue-300 border border-blue-800/40 text-center">${s.name}${s.goals>1?` (${s.goals})`:""}</span>`).join("")}
+            </div>
           </div>
         </div>`:""}
         ${(()=>{const bp=bestPlayerOfGame(game);return bp?`<div class="border-t border-[#1e3a27] pt-2 mt-2 flex items-center gap-2"><span class="text-yellow-400 text-base">⭐</span><div><div class="text-[10px] text-yellow-400/50 uppercase tracking-wider font-bold">Melhor jogador</div><div class="text-sm font-black text-yellow-300">${bp.name} <span class="text-yellow-400/50 font-normal text-xs">${bp.score} pts${bp.note?` · nota ${bp.note}`:""}</span></div></div></div>`:""})()}
