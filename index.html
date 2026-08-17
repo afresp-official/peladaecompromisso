@@ -330,72 +330,82 @@ function renderLista() {
   const devUid = localStorage.getItem("presenca_dev_uid");
   const mySlot = devUid ? Object.keys(S.presenca).find(k => S.presenca[k]&&S.presenca[k].uid===devUid) : null;
 
-  const adminGrid = () => {
-    let slots = "";
-    for(let i=1;i<=TOTAL_VAGAS;i++){
-      const entry=S.presenca[i];
-      const isMe=entry&&entry.uid===devUid;
-      if(entry){
-        slots+=`<div class="rounded-xl px-3 py-2.5 border ${isMe?"bg-green-900/50 border-green-500":"bg-[#0d1f14] border-green-800/40"} flex items-center gap-2 min-w-0">
-          <span class="text-[11px] font-black text-green-300/30 w-5 shrink-0">${i}</span>
-          <span class="font-bold text-sm ${isMe?"text-green-300":"text-green-200/70"} truncate flex-1">${entry.name}</span>
-          ${isMe?`<button onclick="removePresenca(${i})" class="text-green-700 hover:text-red-400 text-base leading-none shrink-0">&#x2715;</button>`:`<span class="text-green-500 text-xs shrink-0">&#x2713;</span>`}
-        </div>`;
-      } else {
-        slots+=`<div class="rounded-xl px-3 py-2.5 border border-dashed border-[#1a3020] bg-[#080f0a] flex items-center gap-2">
-          <span class="text-[11px] font-black text-green-300/15 w-5 shrink-0">${i}</span>
-          <span class="text-green-300/15 text-xs">Livre</span>
-        </div>`;
-      }
+  // Left column: confirmed names list
+  let namesList = "";
+  for(let i=1;i<=TOTAL_VAGAS;i++){
+    const e=S.presenca[i];
+    if(e){
+      const isMe=e.uid===devUid;
+      namesList+=`<div class="flex items-center gap-2 py-1.5 border-b border-green-900/30 last:border-0 ${isMe?"text-green-300 font-black":"text-green-200/70 font-medium"}">
+        <span class="text-[10px] text-green-300/30 w-4 shrink-0 font-bold">${i}</span>
+        <span class="text-sm truncate flex-1">${e.name}</span>
+        ${isMe?'<span class="text-green-400 text-xs">&#x2713;</span>':""}
+      </div>`;
     }
-    return `<div class="mt-6 pt-6 border-t border-green-900/30">
-      <div class="text-[10px] text-green-300/30 uppercase tracking-widest mb-3 font-bold">Lista completa (Admin)</div>
-      <div class="grid grid-cols-2 gap-1.5 mb-3">${slots}</div>
-      <button onclick="resetPresenca()" class="w-full py-2.5 rounded-xl bg-red-950/50 border border-red-800/40 text-red-400 font-bold text-xs hover:bg-red-900/40 transition-colors">Limpar lista</button>
-    </div>`;
-  };
+  }
+  if(!namesList) namesList='<p class="text-green-300/25 text-xs text-center pt-4">Nenhum ainda</p>';
 
+  // Right column content
+  let rightCol = "";
   if(mySlot){
-    el.innerHTML=`
-      <div class="flex flex-col items-center justify-center py-14 text-center">
-        <div class="w-24 h-24 rounded-full bg-green-900/40 border-2 border-green-500 flex items-center justify-center text-5xl mb-5">&#x2705;</div>
-        <h2 class="font-black text-2xl text-green-300 mb-1">Presen&#xe7;a confirmada!</h2>
-        <p class="text-green-300/50 text-sm mb-1">${S.presenca[mySlot]&&S.presenca[mySlot].name}</p>
-        <p class="text-green-300/30 text-xs mb-8">Vaga #${mySlot} &middot; ${filled}/22 confirmados</p>
-        <button onclick="sharePresenca()" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1a3825] border border-green-700/40 text-green-400 font-bold text-sm hover:bg-green-900/40 transition-colors mb-6">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-          Compartilhar lista
-        </button>
-        <button onclick="removePresenca(${mySlot})" class="text-red-400/50 text-xs underline hover:text-red-400 transition-colors">Cancelar minha presen&#xe7;a</button>
-      </div>
-      ${S.adminOk?adminGrid():""}
-    `;
+    rightCol=`<div class="flex flex-col items-center justify-center h-full text-center px-2 py-6">
+      <div class="text-4xl mb-3">&#x2705;</div>
+      <p class="font-black text-green-300 text-sm leading-tight mb-1">Presen&#xe7;a<br>confirmada!</p>
+      <p class="text-green-300/40 text-[10px] mb-4">Vaga #${mySlot}</p>
+      <button onclick="sharePresenca()" class="w-full py-2 rounded-xl bg-[#1a3825] border border-green-700/40 text-green-400 font-bold text-xs hover:bg-green-900/40 transition-colors mb-3">
+        Compartilhar lista
+      </button>
+      <button onclick="removePresenca(${mySlot})" class="text-red-400/40 text-[10px] underline hover:text-red-400 transition-colors">Cancelar</button>
+    </div>`;
   } else if(filled>=TOTAL_VAGAS){
-    el.innerHTML=`
-      <div class="flex flex-col items-center justify-center py-14 text-center">
-        <div class="text-6xl mb-4">&#x26BD;</div>
-        <h2 class="font-black text-xl text-amber-400 mb-2">Lista cheia!</h2>
-        <p class="text-green-300/50 text-sm">22/22 jogadores j&#xe1; confirmados.</p>
-      </div>
-      ${S.adminOk?adminGrid():""}
-    `;
+    rightCol=`<div class="flex flex-col items-center justify-center h-full text-center px-2 py-6">
+      <div class="text-4xl mb-3">&#x26BD;</div>
+      <p class="font-black text-amber-400 text-sm">Lista cheia!</p>
+      <p class="text-green-300/40 text-xs mt-1">22/22 confirmados</p>
+    </div>`;
   } else {
-    el.innerHTML=`
-      <div class="flex flex-col items-center justify-center py-10 text-center">
-        <div class="text-6xl mb-5">&#x26BD;</div>
-        <h2 class="font-black text-2xl text-white mb-1">Confirmar Presen&#xe7;a</h2>
-        <p class="text-green-300/40 text-xs mb-8">${filled}/22 confirmados &middot; ${TOTAL_VAGAS-filled} vagas livres</p>
-        <div class="w-full max-w-xs">
-          <input id="presenca-nome" type="text" placeholder="Seu nome completo" maxlength="30" autocomplete="name"
-            class="w-full px-4 py-3.5 rounded-xl bg-[#0f2016] border border-[#2a4a35] text-white placeholder-green-300/25 text-center font-semibold text-base focus:border-green-500 focus:outline-none mb-3"
-            onkeydown="if(event.key==='Enter')confirmarNome()" />
-          <button onclick="confirmarNome()" class="w-full py-3.5 rounded-xl bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-black text-base transition-colors shadow-lg">
-            Confirmar
-          </button>
-        </div>
+    rightCol=`<div class="flex flex-col justify-center h-full px-2 py-6">
+      <p class="text-green-300/50 text-[10px] uppercase tracking-widest font-bold mb-3 text-center">Seu nome</p>
+      <input id="presenca-nome" type="text" placeholder="Nome completo" maxlength="30" autocomplete="name"
+        class="w-full px-3 py-3 rounded-xl bg-[#0f2016] border border-[#2a4a35] text-white placeholder-green-300/25 text-center font-semibold text-sm focus:border-green-500 focus:outline-none mb-3"
+        onkeydown="if(event.key==='Enter')confirmarNome()" />
+      <button onclick="confirmarNome()" class="w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-black text-sm transition-colors shadow-lg">
+        Confirmar
+      </button>
+    </div>`;
+  }
+
+  const adminSection = S.adminOk ? `<div class="mt-4 pt-4 border-t border-green-900/30">
+    <button onclick="resetPresenca()" class="w-full py-2 rounded-xl bg-red-950/50 border border-red-800/40 text-red-400 font-bold text-xs hover:bg-red-900/40 transition-colors">Limpar lista (Admin)</button>
+  </div>` : "";
+
+  el.innerHTML=`
+    <div class="mb-3 flex items-center justify-between px-1">
+      <div>
+        <h2 class="font-black text-base leading-none">&#x26BD; Pelada AFRESP</h2>
+        <p class="text-green-300/40 text-[10px] mt-0.5">Lista de Presen&#xe7;a</p>
       </div>
-      ${S.adminOk?adminGrid():""}
-    `;
+      <div class="text-right">
+        <span class="font-black text-xl ${filled===TOTAL_VAGAS?"text-green-400":"text-amber-400"}">${filled}</span><span class="text-green-300/30 text-sm font-normal">/22</span>
+        <p class="text-[9px] text-green-300/30 uppercase tracking-wider">confirmados</p>
+      </div>
+    </div>
+
+    <div class="flex gap-0 rounded-2xl overflow-hidden border border-green-900/40" style="min-height:340px">
+      <!-- Lista (esquerda) -->
+      <div class="flex-1 bg-[#080f0a] border-r border-green-900/30 overflow-y-auto p-3" style="max-height:400px">
+        <p class="text-[9px] text-green-300/25 uppercase tracking-widest font-bold mb-2">Confirmados</p>
+        ${namesList}
+      </div>
+      <!-- Confirmar (direita) -->
+      <div class="bg-[#0b1a10]" style="width:52%">
+        ${rightCol}
+      </div>
+    </div>
+    ${adminSection}
+  `;
+
+  if(!mySlot && filled<TOTAL_VAGAS){
     setTimeout(function(){ var inp=document.getElementById("presenca-nome"); if(inp)inp.focus(); },150);
   }
 }
