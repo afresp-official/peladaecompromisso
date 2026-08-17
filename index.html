@@ -336,7 +336,7 @@ function renderLista() {
       namesList+=`<div class="flex items-center gap-2 py-1.5 border-b border-green-900/30 last:border-0 text-green-200/80 font-medium">
         <span class="text-[10px] text-green-300/30 w-4 shrink-0 font-bold">${i}</span>
         <span class="text-sm truncate flex-1">${e.name}</span>
-        <span class="text-green-500 text-xs">&#x2713;</span>
+        ${S.adminOk?`<button onclick="removePresenca(${i})" class="text-red-500/60 hover:text-red-400 text-xs font-bold px-1 transition-colors" title="Remover">&#x2715;</button>`:'<span class="text-green-500 text-xs">&#x2713;</span>'}
       </div>`;
     }
   }
@@ -418,8 +418,9 @@ async function resetPresenca(){
 
 async function sharePresenca(){
   const filled=Object.keys(S.presenca).length;
-  const nomes=Object.values(S.presenca).map(e=>e.name).join(", ");
-  const url=location.href.split("#")[0];
+  let nomes="";for(let i=1;i<=TOTAL_VAGAS;i++){if(S.presenca[i])nomes+="
+"+i+". "+S.presenca[i].name;}
+  const url=location.href.split("#")[0]+"#lista";
   const text="⚽ *Pelada AFRESP — Lista de Presença*\n✅ "+filled+"/22 confirmados"+(nomes?"\n\n"+nomes:"")+"\n\nConfirme no link:";
   if(navigator.share){
     try{await navigator.share({title:"Presença Pelada AFRESP",text,url});}catch(e){}
