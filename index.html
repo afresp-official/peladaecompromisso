@@ -687,7 +687,7 @@ function renderCampo() {
           <span class="ml-auto text-red-300/60 text-xs font-bold">${verm}</span>
         </div>
         <div class="space-y-0.5">
-          ${vermPids.map(pid=>`<div class="text-red-200/80 text-[11px] font-semibold truncate">${playerName(pid)}</div>`).join("")||`<div class="text-red-300/20 text-xs">—</div>`}
+          ${vermPids.map(pid=>{const g=game.players?.[pid]?.goleiro;return`<div onclick="handleCampoClick('${pid}','${game.id}')" class="cursor-pointer text-[11px] font-semibold truncate ${g?"text-yellow-300":"text-red-200/80"}">${g?"🥅 ":""}${playerName(pid)}</div>`;}).join("")||`<div class="text-red-300/20 text-xs">—</div>`}
         </div>
       </div>
       <div class="bg-blue-950/40 border border-blue-800/50 rounded-xl p-3">
@@ -697,7 +697,7 @@ function renderCampo() {
           <span class="ml-auto text-blue-300/60 text-xs font-bold">${azul}</span>
         </div>
         <div class="space-y-0.5">
-          ${azulPids.map(pid=>`<div class="text-blue-200/80 text-[11px] font-semibold truncate">${playerName(pid)}</div>`).join("")||`<div class="text-blue-300/20 text-xs">—</div>`}
+          ${azulPids.map(pid=>{const g=game.players?.[pid]?.goleiro;return`<div onclick="handleCampoClick('${pid}','${game.id}')" class="cursor-pointer text-[11px] font-semibold truncate ${g?"text-yellow-300":"text-blue-200/80"}">${g?"🥅 ":""}${playerName(pid)}</div>`;}).join("")||`<div class="text-blue-300/20 text-xs">—</div>`}
         </div>
       </div>
     </div>
@@ -1492,6 +1492,20 @@ function renderAdmin(){
   </div>`;
 }
 
+const campoClicks={};
+function handleCampoClick(pid,gameId){
+  if(!campoClicks[pid]) campoClicks[pid]={count:0,timer:null};
+  campoClicks[pid].count++;
+  clearTimeout(campoClicks[pid].timer);
+  campoClicks[pid].timer=setTimeout(()=>{campoClicks[pid].count=0;},700);
+  if(campoClicks[pid].count>=3){campoClicks[pid].count=0;toggleGoleiro(pid,gameId);}
+}
+async function toggleGoleiro(pid,gameId){
+  const g=S.games[gameId]; if(!g) return;
+  const current=g.players?.[pid]?.goleiro===true;
+  await db.ref("games/"+gameId+"/players/"+pid+"/goleiro").set(!current);
+  showToast(!current?"🥅 Goleiro marcado! (3 cliques para desmarcar)":"Goleiro desmarcado.");
+}
 async function toggleGameStatus(gid){
   const g=S.games[gid]; if(!g) return;
   const next=g.status==="fechado"?"aberto":"fechado";
@@ -1532,11 +1546,9 @@ function openEditGame(gid){
       ${displayPlayers.map(p=>{
         const inGame=pids.includes(p.id)||presNames.has(p.name.toLowerCase());
         const team=editTeams[p.id]||"azul";
-        const isGoleiro=editGoleiros.has(p.id);
         return `<div class="flex items-center gap-2 bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-2.5 py-2">
           <input type="checkbox" id="ep-${p.id}" value="${p.id}" ${inGame?"checked":""} class="accent-green-500 w-4 h-4 shrink-0" onchange="toggleEditPlayer('${p.id}',this.checked)"/>
           <span class="flex-1 text-sm font-semibold truncate">${p.name}</span>
-          <button id="eg-${p.id}" onclick="toggleEditGoleiro('${p.id}')" class="text-xs px-1.5 py-1 rounded-lg border transition-colors ${isGoleiro?"bg-yellow-900/60 border-yellow-600/60 text-yellow-300":"bg-[#0f2016] border-[#2a4a35] text-green-300/30"}" title="Marcar como goleiro">🥅</button>
           <button id="et-${p.id}" onclick="toggleEditTeam('${p.id}')" class="team-toggle ${team==="vermelho"?"is-verm":"is-azul"}" ${inGame?"":"disabled style='opacity:0.3'"}>
             ${team==="vermelho"?"🔴 Verm":"🔵 Azul"}
           </button>
@@ -1551,14 +1563,6 @@ function toggleEditPlayer(pid,checked){
   else { delete editTeams[pid]; }
   const btn=document.getElementById("et-"+pid);
   if(btn){ btn.disabled=!checked; btn.style.opacity=checked?"1":"0.3"; }
-}
-function toggleEditGoleiro(pid){
-  if(editGoleiros.has(pid)) editGoleiros.delete(pid); else editGoleiros.add(pid);
-  const btn=document.getElementById("eg-"+pid);
-  if(btn){
-    const on=editGoleiros.has(pid);
-    btn.className=`text-xs px-1.5 py-1 rounded-lg border transition-colors ${on?"bg-yellow-900/60 border-yellow-600/60 text-yellow-300":"bg-[#0f2016] border-[#2a4a35] text-green-300/30"}`;
-  }
 }
 function toggleEditTeam(pid){
   editTeams[pid]=editTeams[pid]==="vermelho"?"azul":"vermelho";
