@@ -10,6 +10,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <title>⚽ Pelada & Compromisso — AFRESP</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -257,7 +258,7 @@ function abbrev(name) {
   if ([...first].length<=2) return first;
   return first.substring(0,3).toUpperCase();
 }
-function card(c,e="") { return `<div class="bg-[#132218] border border-[#2a4a35] rounded-xl p-4 ${e}">${c}</div>`; }
+function card(c,e="",id="") { const ia=id?' id="'+id+'"':""; return `<div${ia} class="bg-[#132218] border border-[#2a4a35] rounded-xl p-4 ${e}">${c}</div>`; }
 function badge(t) {
   return t==="compromisso"
     ? `<span class="badge-compromisso text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Compromisso</span>`
@@ -440,11 +441,11 @@ function renderGameStatus(){
           :`<p class="text-center text-amber-400/70 text-xs flex-1 flex items-center justify-center">Escolha seu nome</p>`)
         :""}
       </div>
-      ${voters>0?`<button onclick="shareGameResult('${game.id}')" class="mt-1 w-full py-2.5 rounded-xl bg-green-950/60 border border-green-700/30 hover:bg-green-900/40 text-green-400 font-bold text-sm transition-colors flex items-center justify-center gap-2">
+      ${voters>0?`<button onclick="shareGameResult('${game.id}')" class="share-game-btn mt-1 w-full py-2.5 rounded-xl bg-green-950/60 border border-green-700/30 hover:bg-green-900/40 text-green-400 font-bold text-sm transition-colors flex items-center justify-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         Compartilhar resultado
       </button>`:""}
-      `);
+      `, "", "game-card-"+game.id);
   }).join("")+`</div>`;
 }
 function renderQuickStats(){
@@ -951,13 +952,28 @@ function buildGameShareText(gameId){
   return txt;
 }
 async function shareGameResult(gameId){
-  const text=buildGameShareText(gameId);
-  if(!text){showToast("Nenhuma avaliação registrada ainda.");return;}
-  if(navigator.share){
-    try{await navigator.share({title:"Resultado da Pelada",text});}catch(e){}
-  }else{
-    try{await navigator.clipboard.writeText(text);showToast("📋 Copiado! Cole no grupo do WhatsApp");}
-    catch(e){showToast("Não foi possível copiar");}
+  const cardEl=document.getElementById("game-card-"+gameId);
+  if(!cardEl){showToast("Erro ao capturar a tela.");return;}
+  const shareBtn=cardEl.querySelector(".share-game-btn");
+  if(shareBtn) shareBtn.style.display="none";
+  try{
+    const canvas=await html2canvas(cardEl,{backgroundColor:"#132218",scale:2,logging:false,useCORS:true});
+    if(shareBtn) shareBtn.style.display="";
+    canvas.toBlob(async function(blob){
+      const file=new File([blob],"resultado-pelada.png",{type:"image/png"});
+      if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+        try{await navigator.share({title:"Resultado da Pelada",files:[file]});}catch(e){}
+      }else{
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement("a");
+        a.href=url;a.download="resultado-pelada.png";a.click();
+        URL.revokeObjectURL(url);
+        showToast("📥 Imagem salva!");
+      }
+    },"image/png");
+  }catch(e){
+    if(shareBtn) shareBtn.style.display="";
+    showToast("Não foi possível capturar a tela");
   }
 }
 async function shareAfterVote(){
