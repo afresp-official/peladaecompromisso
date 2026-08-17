@@ -322,65 +322,98 @@ const TOTAL_VAGAS = 22;
 
 function renderLista() {
   const el = document.getElementById("lista-container"); if(!el) return;
-  const p = S.presenca;
-  const filled = Object.keys(p).length;
-  const mySlot = Object.keys(p).find(k => p[k]&&p[k].uid===S.uid);
+  const filled = Object.keys(S.presenca).length;
+  const devUid = localStorage.getItem("presenca_dev_uid");
+  const mySlot = devUid ? Object.keys(S.presenca).find(k => S.presenca[k]&&S.presenca[k].uid===devUid) : null;
 
-  let slots = "";
-  for(let i=1;i<=TOTAL_VAGAS;i++){
-    const entry=p[i];
-    const isMe=entry&&entry.uid===S.uid;
-    if(entry){
-      slots+=`<div class="rounded-xl px-3 py-3 border ${isMe?"bg-green-900/50 border-green-500":"bg-[#0d1f14] border-green-800/40"} flex items-center gap-2 min-w-0">
-        <span class="text-[11px] font-black text-green-300/30 w-5 shrink-0">${i}</span>
-        <span class="font-bold text-sm ${isMe?"text-green-300":"text-green-200/70"} truncate flex-1">${entry.name}</span>
-        ${isMe
-          ?`<button onclick="removePresenca(${i})" class="text-green-700 hover:text-red-400 text-base leading-none shrink-0 transition-colors" title="Cancelar">✕</button>`
-          :`<span class="text-green-500 text-xs shrink-0">✓</span>`
-        }
-      </div>`;
-    } else {
-      slots+=`<button onclick="confirmPresenca(${i})" class="rounded-xl px-3 py-3 border border-dashed border-[#2a4a35] bg-[#0b1a10] hover:border-green-600 hover:bg-[#0d2016] transition-all flex items-center gap-2 text-left w-full">
-        <span class="text-[11px] font-black text-green-300/20 w-5 shrink-0">${i}</span>
-        <span class="text-green-300/20 text-xs">Confirmar</span>
-      </button>`;
+  const adminGrid = () => {
+    let slots = "";
+    for(let i=1;i<=TOTAL_VAGAS;i++){
+      const entry=S.presenca[i];
+      const isMe=entry&&entry.uid===devUid;
+      if(entry){
+        slots+=`<div class="rounded-xl px-3 py-2.5 border ${isMe?"bg-green-900/50 border-green-500":"bg-[#0d1f14] border-green-800/40"} flex items-center gap-2 min-w-0">
+          <span class="text-[11px] font-black text-green-300/30 w-5 shrink-0">${i}</span>
+          <span class="font-bold text-sm ${isMe?"text-green-300":"text-green-200/70"} truncate flex-1">${entry.name}</span>
+          ${isMe?`<button onclick="removePresenca(${i})" class="text-green-700 hover:text-red-400 text-base leading-none shrink-0">&#x2715;</button>`:`<span class="text-green-500 text-xs shrink-0">&#x2713;</span>`}
+        </div>`;
+      } else {
+        slots+=`<div class="rounded-xl px-3 py-2.5 border border-dashed border-[#1a3020] bg-[#080f0a] flex items-center gap-2">
+          <span class="text-[11px] font-black text-green-300/15 w-5 shrink-0">${i}</span>
+          <span class="text-green-300/15 text-xs">Livre</span>
+        </div>`;
+      }
     }
-  }
+    return `<div class="mt-6 pt-6 border-t border-green-900/30">
+      <div class="text-[10px] text-green-300/30 uppercase tracking-widest mb-3 font-bold">Lista completa (Admin)</div>
+      <div class="grid grid-cols-2 gap-1.5 mb-3">${slots}</div>
+      <button onclick="resetPresenca()" class="w-full py-2.5 rounded-xl bg-red-950/50 border border-red-800/40 text-red-400 font-bold text-xs hover:bg-red-900/40 transition-colors">Limpar lista</button>
+    </div>`;
+  };
 
-  el.innerHTML=`
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <h2 class="font-black text-xl">Presença</h2>
-        <div class="text-green-300/40 text-xs mt-0.5">Próxima pelada</div>
+  if(mySlot){
+    el.innerHTML=`
+      <div class="flex flex-col items-center justify-center py-14 text-center">
+        <div class="w-24 h-24 rounded-full bg-green-900/40 border-2 border-green-500 flex items-center justify-center text-5xl mb-5">&#x2705;</div>
+        <h2 class="font-black text-2xl text-green-300 mb-1">Presen&#xe7;a confirmada!</h2>
+        <p class="text-green-300/50 text-sm mb-1">${S.presenca[mySlot]&&S.presenca[mySlot].name}</p>
+        <p class="text-green-300/30 text-xs mb-8">Vaga #${mySlot} &middot; ${filled}/22 confirmados</p>
+        <button onclick="sharePresenca()" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1a3825] border border-green-700/40 text-green-400 font-bold text-sm hover:bg-green-900/40 transition-colors mb-6">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Compartilhar lista
+        </button>
+        <button onclick="removePresenca(${mySlot})" class="text-red-400/50 text-xs underline hover:text-red-400 transition-colors">Cancelar minha presen&#xe7;a</button>
       </div>
-      <div class="text-right">
-        <div class="font-black text-3xl ${filled===TOTAL_VAGAS?"text-green-400":"text-amber-400"}">${filled}<span class="text-green-300/20 font-normal text-lg">/${TOTAL_VAGAS}</span></div>
-        <div class="text-[10px] text-green-300/40 uppercase tracking-wider">confirmados</div>
+      ${S.adminOk?adminGrid():""}
+    `;
+  } else if(filled>=TOTAL_VAGAS){
+    el.innerHTML=`
+      <div class="flex flex-col items-center justify-center py-14 text-center">
+        <div class="text-6xl mb-4">&#x26BD;</div>
+        <h2 class="font-black text-xl text-amber-400 mb-2">Lista cheia!</h2>
+        <p class="text-green-300/50 text-sm">22/22 jogadores j&#xe1; confirmados.</p>
       </div>
-    </div>
-    ${filled===TOTAL_VAGAS?`<div class="bg-green-950/60 border border-green-700/40 rounded-xl p-3 mb-4 text-center text-green-300 font-bold text-sm">✅ Time completo! 22/22 confirmados</div>`:""}
-    ${mySlot?`<div class="bg-green-950/40 border border-green-700/30 rounded-xl px-3 py-2 mb-3 text-xs text-green-300/70 flex items-center gap-2"><span class="text-green-400 text-base">✅</span> Você está confirmado na vaga <strong class="text-green-300">#${mySlot}</strong> — toque no ✕ para cancelar</div>`:""}
-    <div class="grid grid-cols-2 gap-2 mb-5">${slots}</div>
-    <button onclick="sharePresenca()" class="w-full py-3 rounded-xl bg-[#1a3825] border border-green-700/40 text-green-400 font-bold text-sm flex items-center justify-center gap-2 hover:bg-green-900/40 transition-colors">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-      Compartilhar lista
-    </button>
-    ${S.adminOk?`<button onclick="resetPresenca()" class="w-full py-2.5 rounded-xl bg-red-950/50 border border-red-800/40 text-red-400 font-bold text-xs mt-2 hover:bg-red-900/40 transition-colors">🗑 Limpar lista (Admin)</button>`:""}
-  `;
+      ${S.adminOk?adminGrid():""}
+    `;
+  } else {
+    el.innerHTML=`
+      <div class="flex flex-col items-center justify-center py-10 text-center">
+        <div class="text-6xl mb-5">&#x26BD;</div>
+        <h2 class="font-black text-2xl text-white mb-1">Confirmar Presen&#xe7;a</h2>
+        <p class="text-green-300/40 text-xs mb-8">${filled}/22 confirmados &middot; ${TOTAL_VAGAS-filled} vagas livres</p>
+        <div class="w-full max-w-xs">
+          <input id="presenca-nome" type="text" placeholder="Seu nome completo" maxlength="30" autocomplete="name"
+            class="w-full px-4 py-3.5 rounded-xl bg-[#0f2016] border border-[#2a4a35] text-white placeholder-green-300/25 text-center font-semibold text-base focus:border-green-500 focus:outline-none mb-3"
+            onkeydown="if(event.key==='Enter')confirmarNome()" />
+          <button onclick="confirmarNome()" class="w-full py-3.5 rounded-xl bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-black text-base transition-colors shadow-lg">
+            Confirmar
+          </button>
+        </div>
+      </div>
+      ${S.adminOk?adminGrid():""}
+    `;
+    setTimeout(function(){ var inp=document.getElementById("presenca-nome"); if(inp)inp.focus(); },150);
+  }
 }
 
-async function confirmPresenca(slot){
-  if(!S.uid){showToast("Escolha seu nome primeiro.");goTo("inicio");return;}
-  const mySlot=Object.keys(S.presenca).find(k=>S.presenca[k]&&S.presenca[k].uid===S.uid);
-  if(mySlot){showToast("Você já está confirmado na vaga #"+mySlot+".");return;}
-  if(S.presenca[slot]){showToast("Vaga já ocupada, escolha outra.");return;}
-  const name=S.players[S.uid]?.name||"?";
-  await db.ref("presenca/"+slot).set({name,uid:S.uid});
+async function confirmarNome(){
+  const input=document.getElementById("presenca-nome");
+  const nome=(input&&input.value||"").trim();
+  if(!nome){showToast("Digite seu nome.");return;}
+  const dup=Object.values(S.presenca).find(function(e){return e.name.toLowerCase()===nome.toLowerCase();});
+  if(dup){showToast("Este nome ja esta na lista!");return;}
+  let slot=null;
+  for(let i=1;i<=TOTAL_VAGAS;i++){if(!S.presenca[i]){slot=i;break;}}
+  if(!slot){showToast("Lista cheia!");return;}
+  let devUid=localStorage.getItem("presenca_dev_uid");
+  if(!devUid){devUid="dev_"+Date.now()+"_"+Math.random().toString(36).slice(2,7);localStorage.setItem("presenca_dev_uid",devUid);}
+  await db.ref("presenca/"+slot).set({name:nome,uid:devUid});
 }
 
 async function removePresenca(slot){
+  const devUid=localStorage.getItem("presenca_dev_uid");
   const entry=S.presenca[slot];
-  if(!entry||entry.uid!==S.uid){return;}
+  if(!entry||entry.uid!==devUid){return;}
   await db.ref("presenca/"+slot).remove();
 }
 
