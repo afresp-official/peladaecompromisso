@@ -1471,8 +1471,9 @@ async function viewVoter(gid,vid){
     </div>
     <div class="max-h-[60vh] overflow-y-auto pr-1" id="votes-content">
       ${(()=>{
-        const result=calcGameResult(g);
-        const bp=bestPlayerOfGame(g);
+        const gWithId={id:gid,...g};
+        const result=calcGameResult(gWithId);
+        const bp=bestPlayerOfGame(gWithId);
         if(!result) return "";
         return `<div class="bg-[#0b1710] border border-[#2a4a35] rounded-xl p-3 mb-3">
           <div class="text-[9px] text-green-300/30 uppercase tracking-widest font-bold mb-2">Resultado · ${fmtDate(g.date)}</div>
