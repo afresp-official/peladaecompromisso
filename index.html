@@ -596,10 +596,11 @@ function renderGameStatus(){
         <button onclick="goToCampo('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-[#0f2016] border border-[#2a4a35] hover:border-green-600 text-green-400 font-bold text-sm transition-colors">🟩 Campo</button>
         <button onclick="openEscalacao('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-[#1a1000] border border-[#4a3a10] hover:border-yellow-600 text-yellow-400 font-bold text-sm transition-colors">⚽ Escalação</button>
         ${voters>0?`<button onclick="openGameVotes('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-[#0f1a2a] border border-[#1e3a5f] hover:border-blue-600 text-blue-400 font-bold text-sm transition-colors">🗳️ Ver votos</button>`:""}
-        ${voters===0?(S.uid
+        ${voters===0&&game.status==="fechado"?(S.uid
           ?`<button onclick="goToVotar('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 font-black text-sm transition-colors">🗳️ Votar</button>`
           :`<p class="text-center text-amber-400/70 text-xs flex-1 flex items-center justify-center">Escolha seu nome</p>`)
         :""}
+        ${game.status!=="fechado"?`<span class="flex-1 text-center text-[10px] text-amber-400/60 flex items-center justify-center gap-1">🔒 Votação liberada após o jogo</span>`:""}
       </div>
       ${voters>0?`<button onclick="shareGameResult('${game.id}')" class="share-game-btn mt-1 w-full py-2.5 rounded-xl bg-green-950/60 border border-green-700/30 hover:bg-green-900/40 text-green-400 font-bold text-sm transition-colors flex items-center justify-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -885,7 +886,15 @@ function renderVotar() {
     el.innerHTML=backBtn+`<div class="text-center py-20 px-4"><div class="text-5xl mb-4">🔒</div><div class="font-black text-lg text-white mb-2">Votação encerrada</div><p class="text-green-300/40 text-sm">A avaliação deste jogo já foi realizada.</p><button onclick="openGameVotes('${game.id}')" class="mt-6 px-6 py-3 rounded-xl bg-[#0f1a2a] border border-[#1e3a5f] text-blue-400 font-bold text-sm">🗳️ Ver votos</button></div>`;
     return;
   }
-  const allPids=getGamePlayerIds(game), others=allPids.filter(p=>p!==S.uid);
+  if(game.status!=="fechado"){
+    el.innerHTML=backBtn+`<div class="text-center py-20 px-4"><div class="text-5xl mb-4">🔒</div><div class="font-black text-lg text-white mb-2">Votação ainda não liberada</div><p class="text-green-300/40 text-sm">O admin libera a votação após o jogo acontecer.</p></div>`;
+    return;
+  }
+  const presSlots=S.presenca[game.id]||{};
+  const presNames=new Set(Object.values(presSlots).map(e=>e.name.toLowerCase()));
+  const rawPids=getGamePlayerIds(game);
+  const filteredPids=presNames.size>0?rawPids.filter(pid=>presNames.has((S.players[pid]?.name||"").toLowerCase())):rawPids;
+  const allPids=filteredPids, others=allPids.filter(p=>p!==S.uid);
   if(voteState.gameId!==game.id){
     voteState={gameId:game.id,ratings:{}};
     others.forEach(pid=>{voteState.ratings[pid]=emptyRating();});
@@ -1471,6 +1480,7 @@ function renderAdmin(){
             <div class="text-sm font-semibold">${fmtDate(g.date)} — ${g.type==="compromisso"?"Compromisso":"Pelada"}</div>
             <div class="text-[10px] text-green-300/40">👥${pids.length}${(v||a)?` · 🔴${v}×🔵${a}`:""} · 🗳️${voterCount}</div>
           </div>
+          <button onclick="toggleGameStatus('${g.id}')" class="px-2.5 py-1.5 rounded-lg text-xs font-bold ${g.status==='fechado'?'bg-green-900/60 border border-green-600/50 text-green-300':'bg-amber-950/60 border border-amber-700/40 text-amber-400'}">${g.status==="fechado"?"🔓":"🔒"}</button>
           <button onclick="openEditGame('${g.id}')" class="px-2.5 py-1.5 rounded-lg bg-[#1a3825] border border-green-800/50 text-green-400 text-xs font-bold">✏️</button>
           <button onclick="openGameVotes('${g.id}')" class="px-2.5 py-1.5 rounded-lg bg-amber-950/60 border border-amber-700/40 text-amber-400 text-xs font-bold">🗳️</button>
           <button onclick="deleteGame('${g.id}')" class="px-2.5 py-1.5 rounded-lg bg-red-950/60 border border-red-800/50 text-red-400 text-xs font-bold">🗑</button>
@@ -1479,11 +1489,17 @@ function renderAdmin(){
   </div>`;
 }
 
+async function toggleGameStatus(gid){
+  const g=S.games[gid]; if(!g) return;
+  const next=g.status==="fechado"?"aberto":"fechado";
+  await db.ref("games/"+gid+"/status").set(next);
+  showToast(next==="fechado"?"🔓 Votação liberada!":"🔒 Votação bloqueada.");
+}
 async function createGame(){
   const date=document.getElementById("game-date")?.value;
   if(!date){alert("Escolha a data");return;}
   const id=db.ref("games").push().key;
-  await db.ref("games/"+id).set({date,type:selectedGameType,players:{},createdAt:Date.now()});
+  await db.ref("games/"+id).set({date,type:selectedGameType,status:"aberto",players:{},createdAt:Date.now()});
   showToast("Jogo criado! Compartilhe o link #lista.");
 }
 async function addPlayer(){const i=document.getElementById("new-player");const n=i?.value?.trim();if(!n)return;const id=db.ref("players").push().key;await db.ref("players/"+id).set({name:n,active:true});if(i)i.value="";}
