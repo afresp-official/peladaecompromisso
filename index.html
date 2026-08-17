@@ -131,7 +131,11 @@
     <div class="mb-3 space-y-2">
       <div class="flex items-center gap-3">
         <button onclick="goTo('inicio')" class="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors shadow-lg">← Voltar</button>
-        <h2 class="font-black text-lg">Ranking</h2>
+        <h2 class="font-black text-lg flex-1">Ranking</h2>
+        <button onclick="shareRanking()" class="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-[#1a2e1f] hover:bg-green-800/50 border border-green-700/40 text-green-400 font-bold text-sm transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Compartilhar
+        </button>
       </div>
       <div class="flex gap-1.5 text-xs overflow-x-auto pb-0.5">
         <button onclick="setRankPeriod('partida')"  id="rp-partida"  class="px-3 py-1.5 rounded-full font-semibold whitespace-nowrap bg-green-600 text-white">🏟 Partida</button>
@@ -855,6 +859,56 @@ async function submitVotes(){
     alert("Erro ao enviar: "+e.message);
   }
 }
+function showToast(msg,dur){
+  const t=document.getElementById("toast");
+  if(!t)return;
+  t.textContent=msg;
+  t.style.opacity="1";t.style.transform="translateX(-50%) translateY(0)";
+  clearTimeout(t._t);
+  t._t=setTimeout(function(){t.style.opacity="0";t.style.transform="translateX(-50%) translateY(12px)";},dur||2800);
+}
+function buildShareText(){
+  const games=gamesInPeriod(rankPeriod,rankFilter);
+  const labels={partida:"última partida",mes:"este mês",semestre:"este semestre",ano:"este ano"};
+  const periodLabel=labels[rankPeriod]||rankPeriod;
+  const scores=activePlayers().map(function(p){const r=calcPlayerScore(p.id,games);return r?Object.assign({},p,r):null;}).filter(Boolean).sort(function(a,b){return b.score-a.score;});
+  if(!scores.length)return"Nenhuma avaliação registrada ainda.";
+  const medals=["🥇","🥈","🥉"];
+  const g0=games[0];
+  const dateStr=g0&&g0.date?new Date(g0.date+"T12:00:00").toLocaleDateString("pt-BR"):"";
+  let txt="⚽ *Pelada & Compromisso — AFRESP*\n";
+  if(dateStr&&rankPeriod==="partida")txt+="📅 "+dateStr+"\n";
+  txt+="📊 Ranking — "+periodLabel.charAt(0).toUpperCase()+periodLabel.slice(1)+"\n\n";
+  scores.slice(0,10).forEach(function(p,i){
+    const pts=Math.min(100,p.score).toFixed(0);
+    txt+=(medals[i]||(i+1)+".")+" "+p.name+" — "+pts+" pts\n";
+  });
+  if(scores.length>10)txt+="\n...e mais "+(scores.length-10)+" jogadores";
+  txt+="\n\n🏆 Avaliação do grupo";
+  return txt;
+}
+async function shareRanking(){
+  const text=buildShareText();
+  if(navigator.share){
+    try{await navigator.share({title:"Ranking Pelada & Compromisso",text});}catch(e){}
+  }else{
+    try{await navigator.clipboard.writeText(text);showToast("📋 Copiado! Cole no grupo do WhatsApp");}
+    catch(e){showToast("Não foi possível copiar");}
+  }
+}
+async function shareAfterVote(){
+  // compartilha o ranking da última partida
+  const savedPeriod=rankPeriod, savedFilter=rankFilter;
+  rankPeriod="partida"; rankFilter="all";
+  const text=buildShareText();
+  rankPeriod=savedPeriod; rankFilter=savedFilter;
+  if(navigator.share){
+    try{await navigator.share({title:"Resultado da Pelada",text});}catch(e){}
+  }else{
+    try{await navigator.clipboard.writeText(text);showToast("📋 Copiado! Cole no grupo do WhatsApp");}
+    catch(e){showToast("Não foi possível copiar");}
+  }
+}
 function showSuccessModal(){
   const m=document.getElementById("success-modal");
   if(m){m.classList.remove("hidden");m.classList.add("flex");}
@@ -1514,6 +1568,9 @@ function nextTuesday(){const d=new Date();const diff=(2-d.getDay()+7)%7||7;d.set
 (async()=>{await seedPlayersIfEmpty();initListeners();goTo("inicio");})();
 </script>
 
+<!-- Toast -->
+<div id="toast" style="position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(12px);background:#15803d;color:#fff;padding:10px 20px;border-radius:999px;font-weight:700;font-size:13px;opacity:0;transition:all .3s;z-index:200;white-space:nowrap;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,.4)"></div>
+
 <!-- Modal de sucesso -->
 <div id="success-modal" class="hidden fixed inset-0 z-50 items-center justify-center p-6">
   <div class="absolute inset-0 bg-black/75 backdrop-blur-sm" onclick="closeSuccessModal()"></div>
@@ -1524,8 +1581,13 @@ function nextTuesday(){const d=new Date();const diff=(2-d.getDay()+7)%7||7;d.set
     <div class="text-green-200/60 text-sm leading-relaxed mb-6">
       Sua avaliação foi registrada com sucesso.<br>Que venha a próxima pelada! ⚽
     </div>
+    <button onclick="shareAfterVote()"
+      class="w-full py-3.5 rounded-2xl bg-green-700 hover:bg-green-600 font-black text-base text-white transition-colors shadow-lg shadow-green-900/40 flex items-center justify-center gap-2 mb-3">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Compartilhar resultado
+    </button>
     <button onclick="closeSuccessModal()"
-      class="w-full py-3.5 rounded-2xl bg-green-600 hover:bg-green-500 font-black text-base text-white transition-colors shadow-lg shadow-green-900/40">
+      class="w-full py-3 rounded-2xl bg-[#1a2e1f] hover:bg-[#243d29] font-bold text-sm text-green-400 transition-colors">
       Ir para o início
     </button>
   </div>
