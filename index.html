@@ -99,6 +99,10 @@
     input, select, textarea { font-size: 16px !important; }
     /* Remove highlight azul ao tocar em botões */
     button, a, [onclick] { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    /* Guest mode: acesso pelo link de presença — esconde nav e header */
+    body.guest-mode nav.bottom-nav { display:none!important; }
+    body.guest-mode header { display:none!important; }
+    body.guest-mode { padding-bottom:0!important; }
     /* Safe area — nav e conteúdo não ficam atrás da barra home do iPhone */
     nav.bottom-nav {
       padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
@@ -1828,7 +1832,7 @@ function closeModal(){document.getElementById("modal-overlay").classList.add("hi
 function nextTuesday(){const d=new Date();const diff=(2-d.getDay()+7)%7||7;d.setDate(d.getDate()+diff);return d.toISOString().split("T")[0];}
 
 // ── Init ──
-(async()=>{await seedPlayersIfEmpty();initListeners();const _h=location.hash.slice(1);goTo(["inicio","lista","campo","votar","ranking","historico"].includes(_h)?_h:"inicio");})();
+(async()=>{await seedPlayersIfEmpty();initListeners();const _h=location.hash.slice(1);if(_h==="lista")document.body.classList.add("guest-mode");goTo(["inicio","lista","campo","votar","ranking","historico"].includes(_h)?_h:"inicio");})();
 </script>
 
 <!-- Toast -->
