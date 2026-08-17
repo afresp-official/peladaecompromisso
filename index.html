@@ -298,6 +298,7 @@ async function seedPlayersIfEmpty() {
 // ── Router ──
 function goTo(page) {
   if(page==="admin"&&!S.adminOk){showAdminPin();return;}
+  history.replaceState(null,"","#"+page);
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.getElementById("page-"+page).classList.add("active");
   document.querySelectorAll(".nav-btn").forEach(b=>{b.classList.remove("nav-active","text-green-400");b.classList.add("text-[#3d5e48]");});
@@ -1794,7 +1795,7 @@ function closeModal(){document.getElementById("modal-overlay").classList.add("hi
 function nextTuesday(){const d=new Date();const diff=(2-d.getDay()+7)%7||7;d.setDate(d.getDate()+diff);return d.toISOString().split("T")[0];}
 
 // ── Init ──
-(async()=>{await seedPlayersIfEmpty();initListeners();goTo("inicio");})();
+(async()=>{await seedPlayersIfEmpty();initListeners();const _h=location.hash.slice(1);goTo(["inicio","lista","campo","votar","ranking","historico"].includes(_h)?_h:"inicio");})();
 </script>
 
 <!-- Toast -->
