@@ -336,7 +336,7 @@ function renderLista() {
       namesList+=`<div class="flex items-center gap-2 py-1.5 border-b border-green-900/30 last:border-0 text-green-200/80 font-medium">
         <span class="text-[10px] text-green-300/30 w-4 shrink-0 font-bold">${i}</span>
         <span class="text-sm truncate flex-1">${e.name}</span>
-        ${S.adminOk?`<button onclick="removePresenca(${i})" class="text-red-500/60 hover:text-red-400 text-xs font-bold px-1 transition-colors" title="Remover">&#x2715;</button>`:'<span class="text-green-500 text-xs">&#x2713;</span>'}
+        ${S.adminOk?'<button onclick="removePresenca('+i+')" class="text-red-500/60 hover:text-red-400 text-xs font-bold px-1" title="Remover">&#x2715;</button>':'<span class="text-green-500 text-xs">&#x2713;</span>'}
       </div>`;
     }
   }
@@ -418,15 +418,347 @@ async function resetPresenca(){
 
 async function sharePresenca(){
   const filled=Object.keys(S.presenca).length;
+  let nomes="";for(let i=1;i<=TOTAL_VAGAS;i++){if(S.presenca[i])nomes+="\n"+i+". "+S.presenca[i].name;}
   const url=location.href.split("#")[0]+"#lista";
-  let nomes="";
-  for(let i=1;i<=TOTAL_VAGAS;i++){if(S.presenca[i])nomes+="\n"+i+". "+S.presenca[i].name;}
-  const text="\u26BD *Pelada AFRESP \u2014 Lista de Presen\u00E7a*\n\u2705 "+filled+"/22 confirmados"+(nomes?"\n"+nomes:"")+"\n\nConfirme no link:";
+  const text="⚽ *Pelada AFRESP — Lista de Presença*\n✅ "+filled+"/22 confirmados"+(nomes?"\n"+nomes:"")+"\n\nConfirme no link:";
   if(navigator.share){
-    try{await navigator.share({title:"Presen\u00E7a Pelada AFRESP",text,url});}catch(e){}
+    try{await navigator.share({title:"Presença Pelada AFRESP",text,url});}catch(e){}
   }else{
     try{await navigator.clipboard.writeText(url);showToast("Link copiado!");}catch(e){}
   }
+}
+
+function renderAll() {
+  renderUserChip();
+  if(S.currentPage==="inicio")    renderInicio();
+  if(S.currentPage==="lista")     renderLista();
+  if(S.currentPage==="campo")     renderCampo();
+  if(S.currentPage==="votar")     renderVotar();
+  if(S.currentPage==="ranking")   renderRanking();
+  if(S.currentPage==="historico") renderHistorico();
+  if(S.currentPage==="admin")     renderAdmin();
+}
+
+// ── User chip ──
+function renderUserChip() {
+  const el=document.getElementById("user-chip"); if(!el) return;
+  if(S.uid&&S.players[S.uid]) {
+    el.innerHTML=`<button onclick="resetUser()" class="flex items-center gap-1.5 bg-[#1a3825] border border-[#2a4a35] rounded-full px-3 py-1.5 text-xs font-semibold text-green-300">
+      <span class="w-2 h-2 rounded-full bg-green-400"></span>${S.players[S.uid].name}</button>`;
+  } else {
+    el.innerHTML=`<button onclick="goTo('inicio')" class="text-[10px] text-amber-400 border border-amber-800/40 rounded-full px-2.5 py-1">Escolha seu nome</button>`;
+  }
+}
+function resetUser(){if(!confirm("Trocar de jogador?"))return;localStorage.removeItem("afresp_uid");S.uid=null;renderAll();}
+
+// ── INÍCIO ──
+function renderInicio(){renderPlayerSelect();renderGameStatus();}
+function renderPlayerSelect(){
+  const el=document.getElementById("player-select-card"); if(!el) return;
+  if(S.uid&&S.players[S.uid]){el.innerHTML="";return;}
+  const latest=latestGame();
+  const opts=activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
+  el.innerHTML=card(`<p class="font-black text-base mb-1">Quem é você? 👋</p>
+    <p class="text-[10px] text-green-300/30 mb-3">✅ = já votou no último jogo</p>
+    <div class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
+      ${opts.map(p=>{
+        const voted=latest&&hasVoted(latest.id,p.id);
+        return `<button onclick="selectPlayer('${p.id}')" class="text-left px-3 py-2 rounded-lg border text-sm font-semibold transition-all flex items-center justify-between gap-1 ${voted?'bg-green-950/30 border-green-800/40 text-green-300/50':'bg-[#0f2016] border-[#2a4a35] text-green-200 hover:border-green-500'}">
+          <span class="truncate">${p.name}</span>${voted?'<span class="text-green-500 text-xs shrink-0">✅</span>':''}
+        </button>`;
+      }).join("")}
+    </div>`);
+}
+function selectPlayer(id){S.uid=id;localStorage.setItem("afresp_uid",id);renderAll();}
+function medianGoals(arr){
+  if(!arr.length) return 0;
+  const s=[...arr].sort((a,b)=>a-b);
+  const m=Math.floor(s.length/2);
+  return s.length%2 ? s[m] : Math.round((s[m-1]+s[m])/2);
+}
+function bestPlayerOfGame(game){
+  const gr=S.ratings[game.id]||{};
+  if(!Object.keys(gr).length) return null;
+  const pids=getGamePlayerIds(game);
+  let best=null, bestScore=-1;
+  pids.forEach(pid=>{
+    const r=calcPlayerScore(pid,[game]);
+    if(!r) return;
+    if(r.score>bestScore){bestScore=r.score;best={name:playerName(pid),score:r.score.toFixed(0),note:r.note>0?r.note.toFixed(1):null,team:getPlayerTeam(game,pid)};}
+  });
+  return best;
+}
+function calcGameResult(game){
+  const gr=S.ratings[game.id]||{};
+  const voters=Object.values(gr);
+  if(!voters.length) return null;
+  const pids=getGamePlayerIds(game);
+  const playerGoals={};
+  pids.forEach(pid=>{
+    playerGoals[pid]=medianGoals(voters.map(v=>v[pid]?.goals||0));
+  });
+  const vermScore=pids.filter(p=>getPlayerTeam(game,p)==="vermelho").reduce((s,p)=>s+(playerGoals[p]||0),0);
+  const azulScore=pids.filter(p=>getPlayerTeam(game,p)==="azul").reduce((s,p)=>s+(playerGoals[p]||0),0);
+  const scorers=pids.filter(p=>playerGoals[p]>0).map(p=>({name:playerName(p),team:getPlayerTeam(game,p),goals:playerGoals[p]}))
+    .sort((a,b)=>b.goals-a.goals);
+  return{vermScore,azulScore,scorers};
+}
+
+function renderGameStatus(){
+  const el=document.getElementById("game-status-card"); if(!el) return;
+  const games=Object.keys(S.games)
+    .sort((a,b)=>(S.games[b].date||"").localeCompare(S.games[a].date||""))
+    .map(id=>({id,...S.games[id]}));
+  if(!games.length){el.innerHTML=card(`<p class="text-center text-green-300/40 text-sm py-4">Nenhum jogo cadastrado ainda.</p>`);return;}
+  el.innerHTML=`<div class="space-y-4">`+games.map((game,idx)=>{
+    const isLatest=idx===0;
+    const voted=S.uid&&hasVoted(game.id,S.uid);
+    const voters=S.ratings[game.id]?Object.keys(S.ratings[game.id]).length:0;
+    const pids=getGamePlayerIds(game);
+    const verm=pids.filter(pid=>getPlayerTeam(game,pid)==="vermelho").length;
+    const azul=pids.filter(pid=>getPlayerTeam(game,pid)==="azul").length;
+    const result=voters>0?calcGameResult(game):null;
+    return card(`
+      <div class="flex items-start justify-between mb-3">
+        <div>
+          <div class="text-[10px] ${isLatest?"text-green-400/60":"text-green-300/30"} uppercase tracking-widest font-semibold mb-1">${isLatest?"Último jogo":"Jogo anterior"}</div>
+          <div class="font-black text-xl">${fmtDate(game.date)} <span class="text-green-400">·</span> Terça</div>
+        </div>
+        ${badge(game.type)}
+      </div>
+      <div class="flex gap-3 text-xs text-green-300/60 mb-3 flex-wrap">
+        <span>👥 ${pids.length}</span><span>🗳️ ${voters}</span>
+        ${(verm||azul)?`<span>🔴${verm} × 🔵${azul}</span>`:""}
+      </div>
+      ${result?`
+      <div class="bg-[#0b1710] border border-[#1e3a27] rounded-xl p-3 mb-3">
+        <div class="flex items-center justify-center gap-5 mb-2">
+          <div class="text-center">
+            <div class="font-black text-3xl text-red-400">${result.vermScore}</div>
+            <div class="text-[10px] text-red-400/60 font-bold uppercase tracking-wide mt-0.5">🔴 Vermelho</div>
+          </div>
+          <div class="text-green-300/20 font-black text-xl">×</div>
+          <div class="text-center">
+            <div class="font-black text-3xl text-blue-400">${result.azulScore}</div>
+            <div class="text-[10px] text-blue-400/60 font-bold uppercase tracking-wide mt-0.5">🔵 Azul</div>
+          </div>
+        </div>
+        ${result.scorers.length?`
+        <div class="border-t border-[#1e3a27] pt-2 mt-1">
+          <div class="text-[10px] text-green-300/30 uppercase tracking-wider mb-1.5">⚽ Artilheiros</div>
+          <div class="flex flex-wrap gap-1.5">
+            ${result.scorers.map(s=>`<span class="text-xs px-2 py-0.5 rounded-full font-semibold ${s.team==="vermelho"?"bg-red-950/70 text-red-300 border border-red-800/40":"bg-blue-950/70 text-blue-300 border border-blue-800/40"}">${s.name}${s.goals>1?` (${s.goals})`:""}</span>`).join("")}
+          </div>
+        </div>`:""}
+        ${(()=>{const bp=bestPlayerOfGame(game);return bp?`<div class="border-t border-[#1e3a27] pt-2 mt-2 flex items-center gap-2"><span class="text-yellow-400 text-base">⭐</span><div><div class="text-[10px] text-yellow-400/50 uppercase tracking-wider font-bold">Melhor jogador</div><div class="text-sm font-black text-yellow-300">${bp.name} <span class="text-yellow-400/50 font-normal text-xs">${bp.score} pts${bp.note?` · nota ${bp.note}`:""}</span></div></div></div>`:""})()}
+      </div>`:""}
+      <div class="flex gap-2 mt-1 flex-wrap">
+        <button onclick="goToCampo('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-[#0f2016] border border-[#2a4a35] hover:border-green-600 text-green-400 font-bold text-sm transition-colors">🟩 Campo</button>
+        ${voters>0?`<button onclick="openGameVotes('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-[#0f1a2a] border border-[#1e3a5f] hover:border-blue-600 text-blue-400 font-bold text-sm transition-colors">🗳️ Ver votos</button>`:""}
+        ${voters===0?(S.uid
+          ?`<button onclick="goToVotar('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 font-black text-sm transition-colors">🗳️ Votar</button>`
+          :`<p class="text-center text-amber-400/70 text-xs flex-1 flex items-center justify-center">Escolha seu nome</p>`)
+        :""}
+      </div>
+      ${voters>0?`<button onclick="shareGameResult('${game.id}')" class="share-game-btn mt-1 w-full py-2.5 rounded-xl bg-green-950/60 border border-green-700/30 hover:bg-green-900/40 text-green-400 font-bold text-sm transition-colors flex items-center justify-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Compartilhar resultado
+      </button>`:""}
+      `, "", "game-card-"+game.id);
+  }).join("")+`</div>`;
+}
+function renderQuickStats(){
+  const el=document.getElementById("quick-stats"); if(!el||!S.uid||!S.players[S.uid]){el&&(el.innerHTML="");return;}
+  const{notes,goals,assists,games}=getPlayerStats(S.uid,"all");
+  if(!games){el.innerHTML="";return;}
+  el.innerHTML=card(`<div class="text-[10px] text-green-400/60 uppercase tracking-widest font-semibold mb-3">Suas stats</div>
+    <div class="grid grid-cols-4 gap-2 text-center">
+      <div><div class="font-black text-2xl text-green-300">${avgNote(notes)||"-"}</div><div class="text-[10px] text-green-300/50">Média</div></div>
+      <div><div class="font-black text-2xl text-yellow-300">${goals}</div><div class="text-[10px] text-green-300/50">Gols</div></div>
+      <div><div class="font-black text-2xl text-blue-300">${assists}</div><div class="text-[10px] text-green-300/50">Assist.</div></div>
+      <div><div class="font-black text-2xl text-white">${games}</div><div class="text-[10px] text-green-300/50">Jogos</div></div>
+    </div>`);
+}
+
+// ══════════════════════════════════════════════
+// ── CAMPO (futebol de botão) ──
+// ══════════════════════════════════════════════
+let dragState = null;
+
+function renderCampo() {
+  const el = document.getElementById("campo-container");
+  if (!el) return;
+  const gameRaw = S.selectedGameId&&S.games[S.selectedGameId] ? {id:S.selectedGameId,...S.games[S.selectedGameId]} : latestGame();
+  const game = gameRaw;
+  if (!game) { el.innerHTML=`<div class="text-center py-20 text-green-300/40 text-sm">Nenhum jogo cadastrado ainda.</div>`; return; }
+
+  const pids = getGamePlayerIds(game);
+  const formation = S.formations[game.id] || {};
+
+  // Calcular posições: usa formação salva ou padrão por time/índice
+  const vermPids = pids.filter(p=>getPlayerTeam(game,p)==="vermelho");
+  const azulPids = pids.filter(p=>getPlayerTeam(game,p)==="azul");
+  const semPids  = pids.filter(p=>!getPlayerTeam(game,p));
+
+  function posOf(pid) {
+    if (formation[pid]) return formation[pid];
+    const team = getPlayerTeam(game, pid);
+    const arr = team==="vermelho" ? vermPids : team==="azul" ? azulPids : semPids;
+    const idx = arr.indexOf(pid);
+    if (team==="vermelho" || team==="azul") return defaultPos(team, idx);
+    return { x: 0.5, y: 0.5 - 0.06*(semPids.length/2 - idx) };
+  }
+
+  const tokens = pids.map(pid => {
+    const team = getPlayerTeam(game, pid);
+    const pos  = posOf(pid);
+    const discClass = team==="vermelho"?"disc-red":team==="azul"?"disc-blue":"disc-gray";
+    const name = playerName(pid);
+    const ab = abbrev(name);
+    return `<div id="tk-${pid}" class="player-token" style="left:${pos.x*100}%;top:${pos.y*100}%"
+      onmousedown="startDrag(event,'${pid}')" ontouchstart="startDrag(event,'${pid}')">
+      <div class="token-disc ${discClass}" title="${name}"><span>${ab}</span></div>
+    </div>`;
+  }).join("");
+
+  const verm = vermPids.length, azul = azulPids.length;
+
+  el.innerHTML = `
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-3 px-1">
+      <div class="flex items-center gap-3">
+        <button onclick="goTo('inicio')" class="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors shadow-lg" title="Voltar">← Voltar</button>
+        <div class="font-black text-base leading-tight">Escalação</div>
+      </div>
+      <div class="flex items-center gap-2"></div>
+    </div>
+
+    <!-- Placar de times -->
+    <div class="grid grid-cols-2 gap-2 mb-3">
+      <div class="bg-red-950/40 border border-red-800/50 rounded-xl p-3">
+        <div class="flex items-center gap-1.5 mb-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0"></span>
+          <span class="text-red-400 font-black text-xs uppercase tracking-wider">Vermelho</span>
+          <span class="ml-auto text-red-300/60 text-xs font-bold">${verm}</span>
+        </div>
+        <div class="space-y-0.5">
+          ${vermPids.map(pid=>`<div class="text-red-200/80 text-[11px] font-semibold truncate">${playerName(pid)}</div>`).join("")||`<div class="text-red-300/20 text-xs">—</div>`}
+        </div>
+      </div>
+      <div class="bg-blue-950/40 border border-blue-800/50 rounded-xl p-3">
+        <div class="flex items-center gap-1.5 mb-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0"></span>
+          <span class="text-blue-400 font-black text-xs uppercase tracking-wider">Azul</span>
+          <span class="ml-auto text-blue-300/60 text-xs font-bold">${azul}</span>
+        </div>
+        <div class="space-y-0.5">
+          ${azulPids.map(pid=>`<div class="text-blue-200/80 text-[11px] font-semibold truncate">${playerName(pid)}</div>`).join("")||`<div class="text-blue-300/20 text-xs">—</div>`}
+        </div>
+      </div>
+    </div>
+
+    <!-- Campo landscape: vermelho esquerda, azul direita -->
+    <div id="campo-field" class="relative mx-auto rounded-2xl overflow-hidden shadow-2xl border-2 border-[#1e4a1e]"
+         style="width:100%;aspect-ratio:105/68">
+
+      <svg viewBox="0 0 105 68" xmlns="http://www.w3.org/2000/svg"
+           style="position:absolute;inset:0;width:100%;height:100%;display:block">
+        <!-- listras verticais do gramado -->
+        <rect x="0"     y="0" width="8.75" height="68" fill="#2d7a2d"/>
+        <rect x="8.75"  y="0" width="8.75" height="68" fill="#296e29"/>
+        <rect x="17.5"  y="0" width="8.75" height="68" fill="#2d7a2d"/>
+        <rect x="26.25" y="0" width="8.75" height="68" fill="#296e29"/>
+        <rect x="35"    y="0" width="8.75" height="68" fill="#2d7a2d"/>
+        <rect x="43.75" y="0" width="8.75" height="68" fill="#296e29"/>
+        <rect x="52.5"  y="0" width="8.75" height="68" fill="#2d7a2d"/>
+        <rect x="61.25" y="0" width="8.75" height="68" fill="#296e29"/>
+        <rect x="70"    y="0" width="8.75" height="68" fill="#2d7a2d"/>
+        <rect x="78.75" y="0" width="8.75" height="68" fill="#296e29"/>
+        <rect x="87.5"  y="0" width="8.75" height="68" fill="#2d7a2d"/>
+        <rect x="96.25" y="0" width="8.75" height="68" fill="#296e29"/>
+        <!-- borda -->
+        <rect x="0" y="0" width="105" height="68" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.8"/>
+        <!-- linha do meio vertical -->
+        <line x1="52.5" y1="0" x2="52.5" y2="68" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
+        <!-- círculo central -->
+        <circle cx="52.5" cy="34" r="9.15" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
+        <circle cx="52.5" cy="34" r="0.7" fill="rgba(255,255,255,0.9)"/>
+        <!-- área grande esquerda (vermelho defende) -->
+        <rect x="0" y="13.84" width="16.5" height="40.32" fill="rgba(255,100,100,0.05)" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
+        <!-- área pequena esquerda -->
+        <rect x="0" y="24.84" width="5.5" height="18.32" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6"/>
+        <!-- pênalti esquerda -->
+        <circle cx="11" cy="34" r="0.7" fill="rgba(255,255,255,0.9)"/>
+        <!-- arco pênalti esquerda -->
+        <path d="M 16.5 26.5 A 9.15 9.15 0 0 1 16.5 41.5" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
+        <!-- gol esquerda -->
+        <rect x="-2.5" y="27.34" width="2.5" height="13.32" fill="rgba(255,100,100,0.15)" stroke="rgba(255,255,255,0.7)" stroke-width="0.5"/>
+        <!-- área grande direita (azul defende) -->
+        <rect x="88.5" y="13.84" width="16.5" height="40.32" fill="rgba(100,100,255,0.05)" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
+        <!-- área pequena direita -->
+        <rect x="99.5" y="24.84" width="5.5" height="18.32" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6"/>
+        <!-- pênalti direita -->
+        <circle cx="94" cy="34" r="0.7" fill="rgba(255,255,255,0.9)"/>
+        <!-- arco pênalti direita -->
+        <path d="M 88.5 26.5 A 9.15 9.15 0 0 0 88.5 41.5" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
+        <!-- gol direita -->
+        <rect x="105" y="27.34" width="2.5" height="13.32" fill="rgba(100,100,255,0.15)" stroke="rgba(255,255,255,0.7)" stroke-width="0.5"/>
+        <!-- cantos -->
+        <path d="M 0 3 A 3 3 0 0 1 3 0"    fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6"/>
+        <path d="M 102 0 A 3 3 0 0 1 105 3" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6"/>
+        <path d="M 0 65 A 3 3 0 0 0 3 68"    fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6"/>
+        <path d="M 102 68 A 3 3 0 0 0 105 65" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6"/>
+        <!-- labels times no campo -->
+        <text x="26" y="5.5" text-anchor="middle" fill="rgba(255,120,120,0.5)" font-size="3.8" font-weight="bold" font-family="system-ui">VERMELHO</text>
+        <text x="79" y="5.5" text-anchor="middle" fill="rgba(120,160,255,0.5)" font-size="3.8" font-weight="bold" font-family="system-ui">AZUL</text>
+      </svg>
+
+      <!-- Tokens dos jogadores -->
+      ${tokens}
+    </div>
+  `;
+
+  // Reattach drag listeners (after innerHTML)
+  attachDragListeners();
+}
+
+// ── Drag & Drop ──
+function attachDragListeners() {
+  document.addEventListener("mousemove",  onDragMove,   {passive:false});
+  document.addEventListener("mouseup",    onDragEnd,    {passive:false});
+  document.addEventListener("touchmove",  onDragMove,   {passive:false});
+  document.addEventListener("touchend",   onDragEnd,    {passive:false});
+}
+
+function startDrag(e, pid) {
+  e.preventDefault();
+  const pt = e.touches ? e.touches[0] : e;
+  const field = document.getElementById("campo-field");
+  if (!field) return;
+  const rect = field.getBoundingClientRect();
+  const tok = document.getElementById("tk-"+pid);
+  dragState = {
+    pid,
+    rect,
+    startX: pt.clientX,
+    startY: pt.clientY,
+    initX: parseFloat(tok.style.left)/100,
+    initY: parseFloat(tok.style.top)/100,
+  };
+  tok.style.zIndex = 100;
+  tok.style.transition = "none";
+}
+
+function onDragMove(e) {
+  if (!dragState) return;
+  e.preventDefault();
+  const pt = e.touches ? e.touches[0] : e;
+  const dx = (pt.clientX - dragState.startX) / dragState.rect.width;
+  const dy = (pt.clientY - dragState.startY) / dragState.rect.height;
+  const newX = Math.max(0.01, Math.min(0.99, dragState.initX + dx));
+  const newY = Math.max(0.01, Math.min(0.99, dragState.initY + dy));
+  const tok = document.getElementById("tk-"+dragState.pid);
+  if (tok) { tok.style.left = newX*100+"%"; tok.style.top = newY*100+"%"; }
 }
 
 async function onDragEnd(e) {
