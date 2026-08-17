@@ -10,6 +10,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <title>⚽ Pelada & Compromisso — AFRESP</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -1478,105 +1479,50 @@ async function viewVoter(gid,vid){
   `);
 }
 async function shareVoterScreen(gid,vid){
-  const g=S.games[gid];if(!g)return;
-  showToast("Gerando PDF...",4000);
-  const snap=await db.ref("ratings/"+gid+"/"+vid).once("value");
-  const votes=snap.val()||{};
-  const gravLabel=["Nenhuma","Leve","Media","Grave"];
-  const {jsPDF}=window.jspdf;
-  const doc=new jsPDF({unit:"pt",format:"a4"});
-  const PW=doc.internal.pageSize.getWidth();
-  const PH=doc.internal.pageSize.getHeight();
-  const M=32;const CW=PW-M*2;
-  let y=0;
+  const content=document.getElementById("votes-content");
+  if(!content){showToast("Abra os votos primeiro.");return;}
+  showToast("Gerando PDF...",5000);
 
-  // Cabeçalho
-  doc.setFillColor(7,42,18);
-  doc.rect(0,0,PW,72,"F");
-  doc.setFont("helvetica","bold");doc.setFontSize(15);doc.setTextColor(74,222,128);
-  doc.text("Pelada & Compromisso - AFRESP",M,26);
-  doc.setFont("helvetica","normal");doc.setFontSize(11);doc.setTextColor(187,247,208);
-  doc.text("Votos de "+playerName(vid)+" - "+fmtDate(g.date||""),M,46);
-  doc.setFontSize(8);doc.setTextColor(134,239,172);
-  doc.text(Object.keys(votes).length+" jogadores avaliados",M,62);
-  y=88;
+  // Clonar o conteúdo fora do modal (sem restrição de altura)
+  const wrap=document.createElement("div");
+  wrap.style.cssText="position:fixed;left:-9999px;top:0;width:420px;background:#0f2016;padding:16px 12px;z-index:-999;";
+  const clone=content.cloneNode(true);
+  clone.style.maxHeight="none";
+  clone.style.overflow="visible";
+  // remover o caption escondido do clone
+  const cap=clone.querySelector("#votes-share-caption");
+  if(cap)cap.remove();
+  wrap.appendChild(clone);
+  document.body.appendChild(wrap);
 
-  const all=Object.entries(votes).sort(function(a,b){return(b[1].note||0)-(a[1].note||0);});
-  const verm=all.filter(function(r){return getPlayerTeam(g,r[0])==="vermelho";});
-  const azul=all.filter(function(r){return getPlayerTeam(g,r[0])==="azul";});
-  const out=all.filter(function(r){var t=getPlayerTeam(g,r[0]);return t!=="vermelho"&&t!=="azul";});
+  try{
+    const canvas=await html2canvas(wrap,{backgroundColor:"#0f2016",scale:2,logging:false,useCORS:true,allowTaint:true});
+    document.body.removeChild(wrap);
 
-  function cardH(v){var h=46;if(v.goals||v.assists||v.amarelos||v.vermelhos||v.faltas)h+=14;if(v.obs)h+=14;return h;}
+    const imgData=canvas.toDataURL("image/png");
+    const {jsPDF}=window.jspdf;
+    // PDF com largura fixa e altura proporcional à imagem
+    const pdfW=595;
+    const pdfH=Math.round((canvas.height/canvas.width)*pdfW);
+    const doc=new jsPDF({unit:"pt",format:[pdfW,pdfH],orientation:"portrait"});
+    doc.addImage(imgData,"PNG",0,0,pdfW,pdfH);
 
-  function section(arr,label,hr,hg,hb,br,bg,bb,tr,tg,tb){
-    if(!arr.length)return;
-    if(y>PH-100){doc.addPage();y=M;}
-    doc.setFillColor(hr,hg,hb);doc.roundedRect(M,y,CW,22,3,3,"F");
-    doc.setFont("helvetica","bold");doc.setFontSize(9);doc.setTextColor(255,255,255);
-    doc.text(label.toUpperCase(),M+10,y+14);
-    y+=28;
-    arr.forEach(function(row){
-      var pid=row[0],v=row[1];
-      var ch=cardH(v);
-      if(y+ch>PH-M){doc.addPage();y=M;}
-      doc.setFillColor(br,bg,bb);doc.roundedRect(M,y,CW,ch,4,4,"F");
-      doc.setFillColor(hr,hg,hb);doc.rect(M,y,4,ch,"F");
-      // Nome
-      doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(tr,tg,tb);
-      doc.text(playerName(pid),M+10,y+15);
-      // Nota
-      doc.setFont("helvetica","bold");doc.setFontSize(17);doc.setTextColor(hr,hg,hb);
-      doc.text(String(v.note||"-"),PW-M-30,y+16);
-      doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(130,150,130);
-      doc.text("/10",PW-M-8,y+16);
-      // Stats linha 1
-      var s1=[];
-      if(v.garra)s1.push("Garra "+v.garra+"/5");
-      if(v.comportamento)s1.push("Comport. "+v.comportamento+"/5");
-      if(v.passes)s1.push("Passes err. "+v.passes+"/5");
-      doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(80,110,85);
-      doc.text(s1.join("   "),M+10,y+30);
-      // Stats linha 2
-      var ly=y+30;
-      var s2=[];
-      if(v.goals)s2.push("Gols: "+v.goals);
-      if(v.assists)s2.push("Assist.: "+v.assists);
-      if(v.amarelos)s2.push("Amarelo x"+v.amarelos);
-      if(v.vermelhos)s2.push("Vermelho x"+v.vermelhos);
-      if(v.faltas)s2.push("Faltas: "+v.faltas+" ("+gravLabel[v.gravidade||0]+")");
-      if(s2.length){ly+=14;doc.setTextColor(120,100,50);doc.text(s2.join("   "),M+10,ly);}
-      // Observação
-      if(v.obs){ly+=14;doc.setFont("helvetica","italic");doc.setFontSize(8);doc.setTextColor(100,120,100);doc.text('"'+v.obs+'"',M+10,ly,{maxWidth:CW-50});}
-      y+=ch+6;
-    });
-    y+=10;
-  }
-
-  section(verm,"Time Vermelho",160,30,30,255,248,248,50,10,10);
-  section(azul,"Time Azul",30,80,180,248,250,255,10,30,80);
-  if(out.length)section(out,"Jogadores",40,120,70,248,255,250,10,40,20);
-
-  // Rodapé em todas as páginas
-  var pages=doc.internal.getNumberOfPages();
-  for(var i=1;i<=pages;i++){
-    doc.setPage(i);
-    doc.setFont("helvetica","normal");doc.setFontSize(7);doc.setTextColor(170,185,170);
-    doc.text("Pelada & Compromisso - AFRESP",M,PH-12);
-    doc.text("Pag. "+i+"/"+pages,PW-M,PH-12,{align:"right"});
-  }
-
-  var blob=doc.output("blob");
-  var safeName=(playerName(vid)||"jogador").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]/gi,"-").toLowerCase();
-  var fname="votos-"+safeName+".pdf";
-  var file=new File([blob],fname,{type:"application/pdf"});
-  if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-    try{await navigator.share({title:"Votos de "+playerName(vid),files:[file]});}catch(e){}
-  }else{
-    var url=URL.createObjectURL(blob);
-    var a=document.createElement("a");
-    a.href=url;a.download=fname;a.click();
-    URL.revokeObjectURL(url);
-    showToast("PDF salvo!");
+    const blob=doc.output("blob");
+    const safeName=(playerName(vid)||"jogador").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]/gi,"-").toLowerCase();
+    const fname="votos-"+safeName+".pdf";
+    const file=new File([blob],fname,{type:"application/pdf"});
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      try{await navigator.share({title:"Votos de "+playerName(vid),files:[file]});}catch(e){}
+    }else{
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url;a.download=fname;a.click();
+      URL.revokeObjectURL(url);
+      showToast("PDF salvo!");
+    }
+  }catch(e){
+    if(document.body.contains(wrap))document.body.removeChild(wrap);
+    showToast("Erro ao gerar PDF");
   }
 }
 async function deleteVoter(gid,vid){
