@@ -1536,7 +1536,7 @@ function openEditGame(gid){
   const presSlots=S.presenca[gid]||{};
   const presNames=new Set(Object.values(presSlots).map(e=>e.name.toLowerCase()));
   const allActive=activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
-  const confirmed=allActive.filter(p=>presNames.has(p.name.toLowerCase())||pids.includes(p.id));
+  const confirmed=allActive.filter(p=>presNames.has(p.name.toLowerCase()));
   const displayPlayers=confirmed.length>0?confirmed:allActive;
   const filterNote=confirmed.length>0?`Confirmados na lista (${confirmed.length})`:"Todos os jogadores ativos";
   openModal(`
