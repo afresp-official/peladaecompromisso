@@ -245,8 +245,8 @@ function getGamePlayerIds(g) {
   return g.playerIds||[];
 }
 function getPlayerTeam(g, pid) {
-  if (g.players && g.players[pid]) return g.players[pid].team||"azul";
-  return "azul";
+  if (g.players && g.players[pid]) return g.players[pid].team||"";
+  return "";
 }
 function teamBadge(t) {
   if (t==="vermelho") return `<span class="inline-block w-2.5 h-2.5 rounded-full bg-red-500 shrink-0"></span>`;
@@ -324,13 +324,6 @@ function goToVotar(gid) {
 // ══════════════════════════════════════════════
 const TOTAL_VAGAS = 22;
 
-let presencaTeam="azul";
-function setPresencaTeam(t){
-  presencaTeam=t;
-  const ba=document.getElementById("team-azul"),bv=document.getElementById("team-verm");
-  if(ba)ba.className=t==="azul"?"flex-1 py-2 rounded-xl bg-blue-900 border border-blue-600 text-blue-300 text-xs font-bold":"flex-1 py-2 rounded-xl bg-[#0f2016] border border-[#2a4a35] text-blue-400/50 text-xs font-bold";
-  if(bv)bv.className=t==="vermelho"?"flex-1 py-2 rounded-xl bg-red-900 border border-red-600 text-red-300 text-xs font-bold":"flex-1 py-2 rounded-xl bg-[#0f2016] border border-[#2a4a35] text-red-400/50 text-xs font-bold";
-}
 function renderLista() {
   const el = document.getElementById("lista-container"); if(!el) return;
   const filled = Object.keys(S.presenca).length;
@@ -340,10 +333,8 @@ function renderLista() {
   for(let i=1;i<=TOTAL_VAGAS;i++){
     const e=S.presenca[i];
     if(e){
-      const td=e.team==="vermelho"?'<span class="w-2 h-2 rounded-full bg-red-500 shrink-0 inline-block"></span>':e.team==="azul"?'<span class="w-2 h-2 rounded-full bg-blue-500 shrink-0 inline-block"></span>':'';
       namesList+=`<div class="flex items-center gap-2 py-1.5 border-b border-green-900/30 last:border-0 text-green-200/80 font-medium">
         <span class="text-[10px] text-green-300/30 w-4 shrink-0 font-bold">${i}</span>
-        ${td}
         <span class="text-sm truncate flex-1">${e.name}</span>
         ${S.adminOk?'<button onclick="removePresenca('+i+')" class="text-red-500/60 hover:text-red-400 text-xs font-bold px-1" title="Remover">&#x2715;</button>':'<span class="text-green-500 text-xs">&#x2713;</span>'}
       </div>`;
@@ -364,10 +355,6 @@ function renderLista() {
         <input id="presenca-nome" type="text" placeholder="Nome completo" maxlength="30" autocomplete="name"
           class="w-full px-3 py-3 rounded-xl bg-[#0f2016] border border-[#2a4a35] text-white placeholder-green-300/25 text-center font-semibold text-sm focus:border-green-500 focus:outline-none"
           onkeydown="if(event.key==='Enter')confirmarNome()" />
-        <div class="flex gap-2">
-          <button id="team-azul" onclick="setPresencaTeam('azul')" class="${presencaTeam==='azul'?'flex-1 py-2 rounded-xl bg-blue-900 border border-blue-600 text-blue-300 text-xs font-bold':'flex-1 py-2 rounded-xl bg-[#0f2016] border border-[#2a4a35] text-blue-400/50 text-xs font-bold'}"><span class="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1"></span>Azul</button>
-          <button id="team-verm" onclick="setPresencaTeam('vermelho')" class="${presencaTeam==='vermelho'?'flex-1 py-2 rounded-xl bg-red-900 border border-red-600 text-red-300 text-xs font-bold':'flex-1 py-2 rounded-xl bg-[#0f2016] border border-[#2a4a35] text-red-400/50 text-xs font-bold'}"><span class="inline-block w-2 h-2 rounded-full bg-red-500 mr-1"></span>Verm.</button>
-        </div>
         <button onclick="confirmarNome()" class="w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-black text-sm transition-colors shadow-lg">
           Confirmar
         </button>
@@ -416,8 +403,8 @@ async function confirmarNome(){
   let pid=Object.entries(S.players).find(([,p])=>p.name&&p.name.toLowerCase()===nome.toLowerCase())?.[0];
   if(!pid){pid=db.ref("players").push().key;await db.ref("players/"+pid).set({name:nome,active:true});}
   const game=latestGame();
-  if(game&&!game.players?.[pid])await db.ref("games/"+game.id+"/players/"+pid).set({team:presencaTeam});
-  await db.ref("presenca/"+slot).set({name:nome,uid:"guest_"+Date.now(),team:presencaTeam});
+  if(game&&!game.players?.[pid])await db.ref("games/"+game.id+"/players/"+pid).set({team:""});
+  await db.ref("presenca/"+slot).set({name:nome,uid:"guest_"+Date.now()});
   showToast("✅ "+nome+" confirmado!");
   if(input) input.value="";
 }
@@ -733,10 +720,19 @@ function renderCampo() {
       <!-- Tokens dos jogadores -->
       ${tokens}
     </div>
+    ${semPids.length?`<div class="mt-3 bg-[#0b1a10] border border-[#2a4a35] rounded-xl p-3">
+      <p class="text-[10px] text-amber-300/50 uppercase tracking-wider font-bold mb-2">&#x23F3; Aguardando time (${semPids.length})</p>
+      <div class="space-y-1.5">${semPids.map(pid=>`<div class="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-[#0d1f14] border border-[#1e3325]"><span class="flex-1 text-sm font-semibold text-white truncate">${playerName(pid)}</span><button onclick="assignTeam('${pid}','vermelho','${game.id}')" class="px-2 py-1 rounded-lg bg-red-950/60 border border-red-800/50 text-red-300 text-xs font-bold hover:bg-red-900/40">&#x1F534; Verm</button><button onclick="assignTeam('${pid}','azul','${game.id}')" class="px-2 py-1 rounded-lg bg-blue-950/60 border border-blue-800/50 text-blue-300 text-xs font-bold hover:bg-blue-900/40">&#x1F535; Azul</button></div>`).join("")}</div>
+    </div>`:""}
   `;
 
   // Reattach drag listeners (after innerHTML)
   attachDragListeners();
+}
+
+async function assignTeam(pid,team,gameId){
+  if(!gameId||!S.games[gameId])return;
+  await db.ref("games/"+gameId+"/players/"+pid).set({team});
 }
 
 // ── Drag & Drop ──
