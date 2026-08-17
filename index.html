@@ -659,8 +659,15 @@ function renderGrav(pid){
   const c=document.getElementById("grav-"+pid); if(!c) return;
   const v=voteState.ratings[pid]||emptyRating();
   if(v.faltas<=0){c.innerHTML="";return;}
-  const opts=["Nenhuma","Leve","Média","Grave"].map((l,i)=>`<button onclick="setGravidade('${pid}',${i})" class="px-2 py-1 rounded-lg text-[10px] font-bold border transition-all ${v.gravidade===i?"bg-orange-700 border-orange-500 text-white":"bg-[#0b1a10] border-[#2a4a35] text-orange-300/50"}">${l}</button>`).join("");
-  c.innerHTML=`<div class="text-[10px] text-orange-300/50 mb-1 uppercase tracking-wider">Gravidade das faltas</div><div class="flex gap-1 flex-wrap">${opts}</div>`;
+  const opts=["Nenhuma","Leve","Média","Grave"].map(function(l,i){
+    const sel=v.gravidade===i;
+    const cls=sel?'bg-orange-700 border-orange-500 text-white':'bg-[#0b1a10] border-[#2a4a35] text-orange-300/50';
+    return '<button onclick="setGravidade(\''+pid+'\','+i+')" class="flex-1 py-1.5 rounded-lg text-[10px] font-bold border transition-all text-center '+cls+'">'+l+'</button>';
+  }).join('');
+  c.innerHTML='<div class="mt-2 p-3 rounded-xl bg-orange-950/30 border border-orange-900/30">'
+    +'<div class="text-[9px] font-bold text-orange-300/40 uppercase tracking-widest mb-2">Gravidade das faltas</div>'
+    +'<div class="flex gap-1.5">'+opts+'</div>'
+    +'</div>';
 }
 function setGravidade(pid,v){ensureRating(pid);voteState.ratings[pid].gravidade=v;renderGrav(pid);}
 function addAmarelo(pid,d){
@@ -712,47 +719,96 @@ function renderVotar() {
 function renderVoteCard(pid,game){
   const v=voteState.ratings[pid]||emptyRating();
   const team=getPlayerTeam(game,pid);
-  const bc=team==="vermelho"?"border-red-900/60":team==="azul"?"border-blue-900/60":"border-[#2a4a35]";
-  const notes=[1,2,3,4,5,6,7,8,9,10].map(n=>`<button class="rating-btn ${v.note===n?"sel":""}" data-field="note" onclick="setNote('${pid}',${n})">${n}</button>`).join("");
-  const r5=(field,val)=>[1,2,3,4,5].map(n=>`<button class="rating-btn ${val===n?"sel":""}" data-field="${field}" onclick="setRating5('${pid}','${field}',${n})">${n}</button>`).join("");
-  return `<div class="bg-[#132218] border ${bc} rounded-xl p-3 space-y-2.5" id="vc-${pid}">
-    <div class="flex items-center gap-2">${teamBadge(team)}<span class="font-bold text-sm">${playerName(pid)}</span>${team?teamLabel(team):""}</div>
-    <div><div class="text-[10px] text-green-300/50 mb-1.5 uppercase tracking-wider">⭐ Nota Geral</div><div class="flex flex-wrap gap-1.5">${notes}</div></div>
-    <div class="grid grid-cols-3 gap-x-2 gap-y-2">
-      <div><div class="text-[10px] text-green-300/50 mb-1 uppercase tracking-wider">⚡ Garra</div><div class="flex gap-1 flex-wrap">${r5("garra",v.garra)}</div></div>
-      <div><div class="text-[10px] text-green-300/50 mb-1 uppercase tracking-wider">🤝 Comport.</div><div class="flex gap-1 flex-wrap">${r5("comportamento",v.comportamento)}</div></div>
-      <div><div class="text-[10px] text-green-300/50 mb-1 uppercase tracking-wider">🎯 Passes</div><div class="flex gap-1 flex-wrap">${r5("passes",v.passes)}</div></div>
-    </div>
-    <div class="flex gap-4 flex-wrap">
-      <div class="flex items-center gap-1.5"><span class="text-[10px] text-yellow-300/50 uppercase tracking-wider">⚽ Gols</span>
-        <button class="counter-btn" id="g-min-${pid}" onclick="addGoal('${pid}',-1)" ${v.goals<=0?"disabled":""}>−</button>
-        <span class="font-black text-sm w-4 text-center text-yellow-300" id="g-${pid}">${v.goals}</span>
-        <button class="counter-btn" onclick="addGoal('${pid}',1)">+</button></div>
-      <div class="flex items-center gap-1.5"><span class="text-[10px] text-blue-300/50 uppercase tracking-wider">🅰 Assist</span>
-        <button class="counter-btn" id="a-min-${pid}" onclick="addAssist('${pid}',-1)" ${v.assists<=0?"disabled":""}>−</button>
-        <span class="font-black text-sm w-4 text-center text-blue-300" id="a-${pid}">${v.assists}</span>
-        <button class="counter-btn" onclick="addAssist('${pid}',1)">+</button></div>
-    </div>
-    <div class="flex gap-3 flex-wrap items-end">
-      <div class="flex items-center gap-1.5"><span class="text-[10px] text-amber-400/60 uppercase tracking-wider">🟡 Amarelo</span>
-        <button class="counter-btn" id="am-min-${pid}" onclick="addAmarelo('${pid}',-1)" ${v.amarelos<=0?"disabled":""}>−</button>
-        <span class="font-black text-sm w-4 text-center text-amber-300" id="am-${pid}">${v.amarelos}</span>
-        <button class="counter-btn" onclick="addAmarelo('${pid}',1)">+</button></div>
-      <div class="flex items-center gap-1.5"><span class="text-[10px] text-red-400/60 uppercase tracking-wider">🔴 Verm.</span>
-        <button class="counter-btn" id="vm-min-${pid}" onclick="addVermelho('${pid}',-1)" ${v.vermelhos<=0?"disabled":""}>−</button>
-        <span class="font-black text-sm w-4 text-center text-red-300" id="vm-${pid}">${v.vermelhos}</span>
-        <button class="counter-btn" onclick="addVermelho('${pid}',1)">+</button></div>
-      <div class="flex items-center gap-1.5"><span class="text-[10px] text-orange-400/60 uppercase tracking-wider">⚠ Faltas</span>
-        <button class="counter-btn" id="ft-min-${pid}" onclick="addFalta('${pid}',-1)" ${v.faltas<=0?"disabled":""}>−</button>
-        <span class="font-black text-sm w-5 text-center text-orange-300" id="ft-${pid}">${v.faltas}</span>
-        <button class="counter-btn" onclick="addFalta('${pid}',1)">+</button></div>
-    </div>
-    <div id="grav-${pid}"></div>
-    <div><div class="text-[10px] text-green-300/50 mb-1 uppercase tracking-wider">Obs. <span class="normal-case text-green-300/30">(opcional)</span></div>
-      <textarea id="obs-${pid}" rows="2" placeholder="Ex: jogou bem no 2º tempo..."
-        class="w-full bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-3 py-2 text-xs text-green-200 placeholder:text-green-900/60 focus:outline-none focus:border-green-600"
-        oninput="setObs('${pid}',this.value)">${v.obs||""}</textarea></div>
-  </div>`;
+  const bc=team==="vermelho"?"border-red-800/50":team==="azul"?"border-blue-800/50":"border-[#2a4a35]";
+  const hdr=team==="vermelho"?"bg-red-950/60":team==="azul"?"bg-blue-950/60":"bg-[#0d1a10]";
+
+  // 10-button note row (string concat — safe)
+  const notes=[1,2,3,4,5,6,7,8,9,10].map(function(n){
+    const sel=v.note===n?'sel':'';
+    return '<button class="rating-btn '+sel+'" data-field="note" onclick="setNote(\''+pid+'\','+n+')">'+n+'</button>';
+  }).join('');
+
+  // 1–5 rating row helper
+  function r5row(icon,label,field,val){
+    const btns=[1,2,3,4,5].map(function(n){
+      const sel=val===n?'sel':'';
+      return '<button class="rating-btn '+sel+'" data-field="'+field+'" onclick="setRating5(\''+pid+'\',\''+field+'\','+n+')">'+n+'</button>';
+    }).join('');
+    return '<div class="flex items-center gap-3 py-2 border-b border-[#1d3527]/50 last:border-0">'
+      +'<span class="text-xs text-green-200/50 w-28 shrink-0">'+icon+' '+label+'</span>'
+      +'<div class="flex gap-1">'+btns+'</div>'
+      +'</div>';
+  }
+
+  // Counter row helper
+  function ctrRow(icon,label,numCls,valId,minId,onMinus,onPlus,val){
+    const dis=val<=0?'disabled':'';
+    return '<div class="flex items-center justify-between py-2.5 border-b border-[#1d3527]/50 last:border-0">'
+      +'<span class="text-sm text-green-200/60">'+icon+' '+label+'</span>'
+      +'<div class="flex items-center gap-3">'
+      +'<button class="counter-btn" id="'+minId+'" onclick="'+onMinus+'" '+dis+'>−</button>'
+      +'<span class="font-black text-base w-6 text-center '+numCls+'" id="'+valId+'">'+val+'</span>'
+      +'<button class="counter-btn" onclick="'+onPlus+'">+</button>'
+      +'</div></div>';
+  }
+
+  // Section divider helper
+  function sec(label){
+    return '<div class="flex items-center gap-2 pt-4 pb-1">'
+      +'<span class="text-[9px] font-bold text-green-300/30 uppercase tracking-widest whitespace-nowrap">'+label+'</span>'
+      +'<div class="flex-1 h-px bg-[#2a4a35]/50"></div>'
+      +'</div>';
+  }
+
+  return '<div class="bg-[#0d1710] border '+bc+' rounded-2xl overflow-hidden shadow-lg" id="vc-'+pid+'">'
+    // ── Header ──
+    +'<div class="'+hdr+' px-4 py-3 flex items-center gap-2.5 border-b border-[#2a4a35]/30">'
+    +teamBadge(team)
+    +'<span class="font-black text-sm flex-1">'+playerName(pid)+'</span>'
+    +(team?teamLabel(team):'')
+    +'</div>'
+    // ── Body ──
+    +'<div class="px-4 pb-5">'
+
+    // Nota Geral
+    +sec('⭐ Nota Geral')
+    +'<div class="flex flex-wrap gap-1.5 pt-1 pb-2">'+notes+'</div>'
+
+    // Atitude & Habilidade
+    +sec('Atitude &amp; Habilidade')
+    +'<div class="mt-1">'
+    +r5row('⚡','Garra','garra',v.garra)
+    +r5row('🤝','Comportamento','comportamento',v.comportamento)
+    +r5row('🎯','Passes certos','passes',v.passes)
+    +'</div>'
+
+    // Estatísticas
+    +sec('Estatísticas')
+    +'<div class="mt-1">'
+    +ctrRow('⚽','Gols','text-yellow-300','g-'+pid,'g-min-'+pid,"addGoal('"+pid+"',-1)","addGoal('"+pid+"',1)",v.goals)
+    +ctrRow('🅰','Assistências','text-blue-300','a-'+pid,'a-min-'+pid,"addAssist('"+pid+"',-1)","addAssist('"+pid+"',1)",v.assists)
+    +'</div>'
+
+    // Disciplina
+    +sec('Disciplina')
+    +'<div class="mt-1">'
+    +ctrRow('🟡','Cartão Amarelo','text-amber-300','am-'+pid,'am-min-'+pid,"addAmarelo('"+pid+"',-1)","addAmarelo('"+pid+"',1)",v.amarelos)
+    +ctrRow('🔴','Cartão Vermelho','text-red-300','vm-'+pid,'vm-min-'+pid,"addVermelho('"+pid+"',-1)","addVermelho('"+pid+"',1)",v.vermelhos)
+    +ctrRow('⚠','Faltas cometidas','text-orange-300','ft-'+pid,'ft-min-'+pid,"addFalta('"+pid+"',-1)","addFalta('"+pid+"',1)",v.faltas)
+    +'</div>'
+    +'<div id="grav-'+pid+'"></div>'
+
+    // Observação
+    +'<div class="mt-4 pt-4 border-t border-[#2a4a35]/40">'
+    +'<div class="text-[9px] font-bold text-green-300/30 uppercase tracking-widest mb-2">'
+    +'Observação <span class="normal-case font-normal text-green-300/20">(opcional)</span></div>'
+    +'<textarea id="obs-'+pid+'" rows="2" placeholder="Ex: jogou bem no 2° tempo..."'
+    +' class="w-full bg-[#0b1a10] border border-[#2a4a35] rounded-xl px-3 py-2 text-xs text-green-200 placeholder:text-green-900/60 focus:outline-none focus:border-green-600 resize-none"'
+    +' oninput="setObs(\''+pid+'\',this.value)">'+(v.obs||'')+'</textarea>'
+    +'</div>'
+
+    +'</div>'
+    +'</div>';
 }
 function setNote(pid,note){
   ensureRating(pid);
