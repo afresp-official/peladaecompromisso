@@ -954,29 +954,11 @@ function buildGameShareText(gameId){
   return txt;
 }
 async function shareGameResult(gameId){
-  const cardEl=document.getElementById("game-card-"+gameId);
-  if(!cardEl){showToast("Erro ao capturar a tela.");return;}
-  const shareBtn=cardEl.querySelector(".share-game-btn");
-  if(shareBtn) shareBtn.style.display="none";
-  try{
-    const canvas=await html2canvas(cardEl,{backgroundColor:"#132218",scale:2,logging:false,useCORS:true});
-    if(shareBtn) shareBtn.style.display="";
-    canvas.toBlob(async function(blob){
-      const file=new File([blob],"resultado-pelada.png",{type:"image/png"});
-      if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-        try{await navigator.share({title:"Resultado da Pelada",files:[file]});}catch(e){}
-      }else{
-        const url=URL.createObjectURL(blob);
-        const a=document.createElement("a");
-        a.href=url;a.download="resultado-pelada.png";a.click();
-        URL.revokeObjectURL(url);
-        showToast("📥 Imagem salva!");
-      }
-    },"image/png");
-  }catch(e){
-    if(shareBtn) shareBtn.style.display="";
-    showToast("Não foi possível capturar a tela");
-  }
+  if(!S.uid){showToast("Escolha seu nome primeiro.");return;}
+  if(!hasVoted(gameId,S.uid)){showToast("Você ainda não votou neste jogo.");return;}
+  await viewVoter(gameId,S.uid);
+  await new Promise(function(r){setTimeout(r,150);});
+  await shareVoterScreen(gameId,S.uid);
 }
 async function shareAfterVote(){
   // usa o jogo que acabou de ser votado
