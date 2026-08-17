@@ -431,7 +431,14 @@ async function confirmarNome(){
 
 async function removePresenca(gameId,slot){
   if(!S.adminOk)return;
-  await db.ref("presenca/"+gameId+"/"+slot).remove();
+  const entry=(S.presenca[gameId]||{})[slot];
+  const updates={};
+  updates["presenca/"+gameId+"/"+slot]=null;
+  if(entry){
+    const pid=Object.entries(S.players).find(([,p])=>p.name&&p.name.toLowerCase()===entry.name.toLowerCase())?.[0];
+    if(pid) updates["games/"+gameId+"/players/"+pid]=null;
+  }
+  await db.ref().update(updates);
 }
 
 async function resetPresenca(gameId){
