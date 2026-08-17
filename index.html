@@ -1479,19 +1479,28 @@ async function viewVoter(gid,vid){
 }
 async function shareVoterScreen(gid,vid){
   const content=document.getElementById("votes-content");
-  const caption=document.getElementById("votes-share-caption");
-  const uiBtns=document.querySelectorAll(".votes-ui-btn");
   if(!content){showToast("Erro ao capturar a tela.");return;}
-  uiBtns.forEach(function(b){b.style.display="none";});
+  const caption=document.getElementById("votes-share-caption");
   if(caption) caption.classList.remove("hidden");
-  const prevMaxH=content.style.maxHeight;
-  content.style.maxHeight="none";
-  content.style.overflow="visible";
+
+  // Clone the full content into an off-screen wrapper with no height limit
+  const wrap=document.createElement("div");
+  wrap.style.cssText="position:fixed;left:-9999px;top:0;width:390px;background:#0f2016;padding:16px;border-radius:16px;z-index:-1;";
+  const title=document.createElement("div");
+  title.style.cssText="font-size:13px;font-weight:900;color:#fff;margin-bottom:12px;";
+  title.textContent="Votos de "+playerName(vid)+" · "+fmtDate(S.games[gid]&&S.games[gid].date||"");
+  wrap.appendChild(title);
+  const clone=content.cloneNode(true);
+  clone.style.maxHeight="none";
+  clone.style.overflow="visible";
+  const cap=clone.querySelector("#votes-share-caption");
+  if(cap) cap.remove();
+  wrap.appendChild(clone);
+  document.body.appendChild(wrap);
+
   try{
-    const canvas=await html2canvas(document.getElementById("modal-content"),{backgroundColor:"#0f2016",scale:2,logging:false,useCORS:true});
-    content.style.maxHeight=prevMaxH;
-    content.style.overflow="";
-    uiBtns.forEach(function(b){b.style.display="";});
+    const canvas=await html2canvas(wrap,{backgroundColor:"#0f2016",scale:2,logging:false,useCORS:true});
+    document.body.removeChild(wrap);
     if(caption) caption.classList.add("hidden");
     canvas.toBlob(async function(blob){
       const name=(playerName(vid)||"votos").replace(/\s+/g,"-").toLowerCase();
@@ -1507,9 +1516,7 @@ async function shareVoterScreen(gid,vid){
       }
     },"image/png");
   }catch(e){
-    content.style.maxHeight=prevMaxH;
-    content.style.overflow="";
-    uiBtns.forEach(function(b){b.style.display="";});
+    if(document.body.contains(wrap)) document.body.removeChild(wrap);
     if(caption) caption.classList.add("hidden");
     showToast("Não foi possível capturar a tela");
   }
