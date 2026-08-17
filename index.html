@@ -327,53 +327,41 @@ const TOTAL_VAGAS = 22;
 function renderLista() {
   const el = document.getElementById("lista-container"); if(!el) return;
   const filled = Object.keys(S.presenca).length;
-  const devUid = localStorage.getItem("presenca_dev_uid");
-  const mySlot = devUid ? Object.keys(S.presenca).find(k => S.presenca[k]&&S.presenca[k].uid===devUid) : null;
 
-  // Left column: confirmed names list
+  // Lista de confirmados (coluna esquerda)
   let namesList = "";
   for(let i=1;i<=TOTAL_VAGAS;i++){
     const e=S.presenca[i];
     if(e){
-      const isMe=e.uid===devUid;
-      namesList+=`<div class="flex items-center gap-2 py-1.5 border-b border-green-900/30 last:border-0 ${isMe?"text-green-300 font-black":"text-green-200/70 font-medium"}">
+      namesList+=`<div class="flex items-center gap-2 py-1.5 border-b border-green-900/30 last:border-0 text-green-200/80 font-medium">
         <span class="text-[10px] text-green-300/30 w-4 shrink-0 font-bold">${i}</span>
         <span class="text-sm truncate flex-1">${e.name}</span>
-        ${isMe?'<span class="text-green-400 text-xs">&#x2713;</span>':""}
+        <span class="text-green-500 text-xs">&#x2713;</span>
       </div>`;
     }
   }
-  if(!namesList) namesList='<p class="text-green-300/25 text-xs text-center pt-4">Nenhum ainda</p>';
+  if(!namesList) namesList='<p class="text-green-300/25 text-xs text-center pt-6">Nenhum confirmado ainda</p>';
 
-  // Right column content
-  let rightCol = "";
-  if(mySlot){
-    rightCol=`<div class="flex flex-col items-center justify-center h-full text-center px-2 py-6">
-      <div class="text-4xl mb-3">&#x2705;</div>
-      <p class="font-black text-green-300 text-sm leading-tight mb-1">Presen&#xe7;a<br>confirmada!</p>
-      <p class="text-green-300/40 text-[10px] mb-4">Vaga #${mySlot}</p>
-      <button onclick="sharePresenca()" class="w-full py-2 rounded-xl bg-[#1a3825] border border-green-700/40 text-green-400 font-bold text-xs hover:bg-green-900/40 transition-colors mb-3">
-        Compartilhar lista
-      </button>
-      <button onclick="removePresenca(${mySlot})" class="text-red-400/40 text-[10px] underline hover:text-red-400 transition-colors">Cancelar</button>
-    </div>`;
-  } else if(filled>=TOTAL_VAGAS){
-    rightCol=`<div class="flex flex-col items-center justify-center h-full text-center px-2 py-6">
-      <div class="text-4xl mb-3">&#x26BD;</div>
-      <p class="font-black text-amber-400 text-sm">Lista cheia!</p>
-      <p class="text-green-300/40 text-xs mt-1">22/22 confirmados</p>
-    </div>`;
-  } else {
-    rightCol=`<div class="flex flex-col justify-center h-full px-2 py-6">
-      <p class="text-green-300/50 text-[10px] uppercase tracking-widest font-bold mb-3 text-center">Seu nome</p>
-      <input id="presenca-nome" type="text" placeholder="Nome completo" maxlength="30" autocomplete="name"
-        class="w-full px-3 py-3 rounded-xl bg-[#0f2016] border border-[#2a4a35] text-white placeholder-green-300/25 text-center font-semibold text-sm focus:border-green-500 focus:outline-none mb-3"
-        onkeydown="if(event.key==='Enter')confirmarNome()" />
-      <button onclick="confirmarNome()" class="w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-black text-sm transition-colors shadow-lg">
-        Confirmar
-      </button>
-    </div>`;
-  }
+  // Coluna direita: form sempre visivel (lista cheia = desabilitado)
+  const isFull = filled >= TOTAL_VAGAS;
+  const rightCol = isFull
+    ? `<div class="flex flex-col items-center justify-center h-full text-center px-2 py-6">
+        <div class="text-4xl mb-3">&#x26BD;</div>
+        <p class="font-black text-amber-400 text-sm">Lista cheia!</p>
+        <p class="text-green-300/40 text-xs mt-1">22/22 confirmados</p>
+      </div>`
+    : `<div class="flex flex-col justify-center h-full px-3 py-6 gap-3">
+        <p class="text-green-300/50 text-[10px] uppercase tracking-widest font-bold text-center">Confirmar presen&#xe7;a</p>
+        <input id="presenca-nome" type="text" placeholder="Nome completo" maxlength="30" autocomplete="name"
+          class="w-full px-3 py-3 rounded-xl bg-[#0f2016] border border-[#2a4a35] text-white placeholder-green-300/25 text-center font-semibold text-sm focus:border-green-500 focus:outline-none"
+          onkeydown="if(event.key==='Enter')confirmarNome()" />
+        <button onclick="confirmarNome()" class="w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-black text-sm transition-colors shadow-lg">
+          Confirmar
+        </button>
+        <button onclick="sharePresenca()" class="w-full py-2 rounded-xl bg-[#0f2016] border border-green-800/30 text-green-400/70 font-bold text-xs hover:bg-[#1a3825] transition-colors">
+          Compartilhar lista
+        </button>
+      </div>`;
 
   const adminSection = S.adminOk ? `<div class="mt-4 pt-4 border-t border-green-900/30">
     <button onclick="resetPresenca()" class="w-full py-2 rounded-xl bg-red-950/50 border border-red-800/40 text-red-400 font-bold text-xs hover:bg-red-900/40 transition-colors">Limpar lista (Admin)</button>
@@ -390,44 +378,35 @@ function renderLista() {
         <p class="text-[9px] text-green-300/30 uppercase tracking-wider">confirmados</p>
       </div>
     </div>
-
     <div class="flex gap-0 rounded-2xl overflow-hidden border border-green-900/40" style="min-height:340px">
-      <!-- Lista (esquerda) -->
-      <div class="flex-1 bg-[#080f0a] border-r border-green-900/30 overflow-y-auto p-3" style="max-height:400px">
-        <p class="text-[9px] text-green-300/25 uppercase tracking-widest font-bold mb-2">Confirmados</p>
+      <div class="flex-1 bg-[#080f0a] border-r border-green-900/30 overflow-y-auto p-3" style="max-height:420px">
+        <p class="text-[9px] text-green-300/25 uppercase tracking-widest font-bold mb-2">Confirmados (${filled}/22)</p>
         ${namesList}
       </div>
-      <!-- Confirmar (direita) -->
-      <div class="bg-[#0b1a10]" style="width:52%">
-        ${rightCol}
-      </div>
+      <div class="bg-[#0b1a10]" style="width:52%">${rightCol}</div>
     </div>
     ${adminSection}
   `;
 
-  if(!mySlot && filled<TOTAL_VAGAS){
-    setTimeout(function(){ var inp=document.getElementById("presenca-nome"); if(inp)inp.focus(); },150);
-  }
+  if(!isFull) setTimeout(function(){ var inp=document.getElementById("presenca-nome"); if(inp)inp.focus(); },150);
 }
 
 async function confirmarNome(){
   const input=document.getElementById("presenca-nome");
   const nome=(input&&input.value||"").trim();
-  if(!nome){showToast("Digite seu nome.");return;}
+  if(!nome){showToast("Digite o nome.");return;}
   const dup=Object.values(S.presenca).find(function(e){return e.name.toLowerCase()===nome.toLowerCase();});
-  if(dup){showToast("Este nome ja esta na lista!");return;}
+  if(dup){showToast(nome+" já está na lista!");return;}
   let slot=null;
   for(let i=1;i<=TOTAL_VAGAS;i++){if(!S.presenca[i]){slot=i;break;}}
   if(!slot){showToast("Lista cheia!");return;}
-  let devUid=localStorage.getItem("presenca_dev_uid");
-  if(!devUid){devUid="dev_"+Date.now()+"_"+Math.random().toString(36).slice(2,7);localStorage.setItem("presenca_dev_uid",devUid);}
-  await db.ref("presenca/"+slot).set({name:nome,uid:devUid});
+  await db.ref("presenca/"+slot).set({name:nome,uid:"guest_"+Date.now()});
+  showToast("✅ "+nome+" confirmado!");
+  if(input) input.value="";
 }
 
 async function removePresenca(slot){
-  const devUid=localStorage.getItem("presenca_dev_uid");
-  const entry=S.presenca[slot];
-  if(!entry||entry.uid!==devUid){return;}
+  if(!S.adminOk)return;
   await db.ref("presenca/"+slot).remove();
 }
 
