@@ -548,6 +548,8 @@ function renderGameStatus(){
     const voted=S.uid&&hasVoted(game.id,S.uid);
     const voters=S.ratings[game.id]?Object.keys(S.ratings[game.id]).length:0;
     const pids=getGamePlayerIds(game);
+    const presCount=Object.keys(S.presenca[game.id]||{}).length;
+    const displayCount=presCount>0?presCount:pids.length;
     const verm=pids.filter(pid=>getPlayerTeam(game,pid)==="vermelho").length;
     const azul=pids.filter(pid=>getPlayerTeam(game,pid)==="azul").length;
     const result=voters>0?calcGameResult(game):null;
@@ -560,7 +562,7 @@ function renderGameStatus(){
         ${badge(game.type)}
       </div>
       <div class="flex gap-3 text-xs text-green-300/60 mb-3 flex-wrap">
-        <span>👥 ${pids.length}</span><span>🗳️ ${voters}</span>
+        <span>👥 ${displayCount}</span><span>🗳️ ${voters}</span>
         ${(verm||azul)?`<span>🔴${verm} × 🔵${azul}</span>`:""}
       </div>
       ${result?`
