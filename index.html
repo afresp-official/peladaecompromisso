@@ -278,6 +278,13 @@ function latestGame() {
   const ids=Object.keys(S.games); if(!ids.length) return null;
   return ids.sort((a,b)=>(S.games[b].date||"").localeCompare(S.games[a].date||"")).map(id=>({id,...S.games[id]}))[0];
 }
+function nextGame(){
+  const today=new Date().toISOString().split('T')[0];
+  const ids=Object.keys(S.games); if(!ids.length) return null;
+  const upcoming=ids.filter(id=>S.games[id].date>=today).sort((a,b)=>(S.games[a].date||"").localeCompare(S.games[b].date||""));
+  if(upcoming.length) return{id:upcoming[0],...S.games[upcoming[0]]};
+  return latestGame();
+}
 function hasVoted(gid,uid) { return !!(S.ratings[gid]&&S.ratings[gid][uid]); }
 function activePlayers() { return Object.entries(S.players).filter(([,p])=>p.active!==false).map(([id,p])=>({id,...p})); }
 
@@ -326,23 +333,27 @@ const TOTAL_VAGAS = 22;
 
 function renderLista() {
   const el = document.getElementById("lista-container"); if(!el) return;
-  const filled = Object.keys(S.presenca).length;
+  const game = nextGame();
+  if(!game){
+    el.innerHTML=`<div class="text-center py-20 text-green-300/40 text-sm px-6">Nenhum jogo cadastrado.<br><span class="text-xs">O admin precisa criar um jogo primeiro.</span></div>`;
+    return;
+  }
+  const gp = S.presenca[game.id]||{};
+  const filled = Object.keys(gp).length;
 
-  // Lista de confirmados (coluna esquerda)
   let namesList = "";
   for(let i=1;i<=TOTAL_VAGAS;i++){
-    const e=S.presenca[i];
+    const e=gp[i];
     if(e){
       namesList+=`<div class="flex items-center gap-2 py-1.5 border-b border-green-900/30 last:border-0 text-green-200/80 font-medium">
         <span class="text-[10px] text-green-300/30 w-4 shrink-0 font-bold">${i}</span>
         <span class="text-sm truncate flex-1">${e.name}</span>
-        ${S.adminOk?'<button onclick="removePresenca('+i+')" class="text-red-500/60 hover:text-red-400 text-xs font-bold px-1" title="Remover">&#x2715;</button>':'<span class="text-green-500 text-xs">&#x2713;</span>'}
+        ${S.adminOk?'<button onclick="removePresenca(\''+game.id+'\','+i+')" class="text-red-500/60 hover:text-red-400 text-xs font-bold px-1" title="Remover">&#x2715;</button>':'<span class="text-green-500 text-xs">&#x2713;</span>'}
       </div>`;
     }
   }
   if(!namesList) namesList='<p class="text-green-300/25 text-xs text-center pt-6">Nenhum confirmado ainda</p>';
 
-  // Coluna direita: form sempre visivel (lista cheia = desabilitado)
   const isFull = filled >= TOTAL_VAGAS;
   const rightCol = isFull
     ? `<div class="flex flex-col items-center justify-center h-full text-center px-2 py-6">
@@ -364,14 +375,14 @@ function renderLista() {
       </div>`;
 
   const adminSection = S.adminOk ? `<div class="mt-4 pt-4 border-t border-green-900/30">
-    <button onclick="resetPresenca()" class="w-full py-2 rounded-xl bg-red-950/50 border border-red-800/40 text-red-400 font-bold text-xs hover:bg-red-900/40 transition-colors">Limpar lista (Admin)</button>
+    <button onclick="resetPresenca('${game.id}')" class="w-full py-2 rounded-xl bg-red-950/50 border border-red-800/40 text-red-400 font-bold text-xs hover:bg-red-900/40 transition-colors">Limpar lista (Admin)</button>
   </div>` : "";
 
   el.innerHTML=`
     <div class="mb-3 flex items-center justify-between px-1">
       <div>
         <h2 class="font-black text-base leading-none">Pelada é Compromisso</h2>
-        <p class="text-green-300/40 text-[10px] mt-0.5">AFRESP &#x2022; Lista de Presen&#xe7;a</p>
+        <p class="text-green-300/40 text-[10px] mt-0.5">AFRESP &#x2022; ${fmtDate(game.date)}</p>
       </div>
       <div class="text-right">
         <span class="font-black text-xl ${filled===TOTAL_VAGAS?"text-green-400":"text-amber-400"}">${filled}</span><span class="text-green-300/30 text-sm font-normal">/22</span>
@@ -395,34 +406,38 @@ async function confirmarNome(){
   const input=document.getElementById("presenca-nome");
   const nome=(input&&input.value||"").trim();
   if(!nome){showToast("Digite o nome.");return;}
-  const dup=Object.values(S.presenca).find(function(e){return e.name.toLowerCase()===nome.toLowerCase();});
+  const game=nextGame();
+  if(!game){showToast("Nenhum jogo disponível.");return;}
+  const gp=S.presenca[game.id]||{};
+  const dup=Object.values(gp).find(function(e){return e.name.toLowerCase()===nome.toLowerCase();});
   if(dup){showToast(nome+" já está na lista!");return;}
   let slot=null;
-  for(let i=1;i<=TOTAL_VAGAS;i++){if(!S.presenca[i]){slot=i;break;}}
+  for(let i=1;i<=TOTAL_VAGAS;i++){if(!gp[i]){slot=i;break;}}
   if(!slot){showToast("Lista cheia!");return;}
   let pid=Object.entries(S.players).find(([,p])=>p.name&&p.name.toLowerCase()===nome.toLowerCase())?.[0];
   if(!pid){pid=db.ref("players").push().key;await db.ref("players/"+pid).set({name:nome,active:true});}
-  const game=latestGame();
-  if(game&&!game.players?.[pid])await db.ref("games/"+game.id+"/players/"+pid).set({team:""});
-  await db.ref("presenca/"+slot).set({name:nome,uid:"guest_"+Date.now()});
+  if(!game.players?.[pid])await db.ref("games/"+game.id+"/players/"+pid).set({team:""});
+  await db.ref("presenca/"+game.id+"/"+slot).set({name:nome,uid:"guest_"+Date.now()});
   showToast("✅ "+nome+" confirmado!");
   if(input) input.value="";
 }
 
-async function removePresenca(slot){
+async function removePresenca(gameId,slot){
   if(!S.adminOk)return;
-  await db.ref("presenca/"+slot).remove();
+  await db.ref("presenca/"+gameId+"/"+slot).remove();
 }
 
-async function resetPresenca(){
+async function resetPresenca(gameId){
   if(!S.adminOk)return;
-  if(!confirm("Limpar toda a lista de presença?"))return;
-  await db.ref("presenca").remove();
+  if(!confirm("Limpar toda a lista de presença deste jogo?"))return;
+  await db.ref("presenca/"+gameId).remove();
 }
 
 async function sharePresenca(){
-  const filled=Object.keys(S.presenca).length;
-  let nomes="";for(let i=1;i<=TOTAL_VAGAS;i++){if(S.presenca[i])nomes+="\n"+i+". "+S.presenca[i].name;}
+  const game=nextGame();
+  const gp=game?(S.presenca[game.id]||{}):{};
+  const filled=Object.keys(gp).length;
+  let nomes="";for(let i=1;i<=TOTAL_VAGAS;i++){if(gp[i])nomes+="\n"+i+". "+gp[i].name;}
   const url=location.href.split("#")[0]+"#lista";
   const text="⚽ *Pelada AFRESP — Lista de Presença*\n✅ "+filled+"/22 confirmados"+(nomes?"\n"+nomes:"")+"\n\nConfirme no link:";
   if(navigator.share){
