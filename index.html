@@ -779,7 +779,7 @@ function renderVoteCard(pid,game){
     +'<div class="mt-1">'
     +r5row('⚡','Garra','garra',v.garra)
     +r5row('🤝','Comportamento','comportamento',v.comportamento)
-    +r5row('🎯','Passes certos','passes',v.passes)
+    +r5row('❌','Passes errados','passes',v.passes)
     +'</div>'
 
     // Estatísticas
@@ -865,7 +865,7 @@ function renderMyVotes(el,game){
       <div class="flex gap-2 flex-wrap text-xs">
         ${v.garra?`<span class="bg-green-950/60 border border-green-800/30 rounded-full px-2 py-0.5 text-green-300/70">⚡ ${v.garra}/5</span>`:""}
         ${v.comportamento?`<span class="bg-green-950/60 border border-green-800/30 rounded-full px-2 py-0.5 text-green-300/70">🤝 ${v.comportamento}/5</span>`:""}
-        ${v.passes?`<span class="bg-green-950/60 border border-green-800/30 rounded-full px-2 py-0.5 text-green-300/70">🎯 ${v.passes}/5</span>`:""}
+        ${v.passes?`<span class="bg-orange-950/40 border border-orange-800/30 rounded-full px-2 py-0.5 text-orange-300/70">❌ ${v.passes}/5</span>`:""}
         ${v.goals?`<span class="text-yellow-300 bg-yellow-950/40 border border-yellow-800/30 rounded-full px-2 py-0.5">⚽ ${v.goals}</span>`:""}
         ${v.assists?`<span class="text-blue-300 bg-blue-950/40 border border-blue-800/30 rounded-full px-2 py-0.5">🅰 ${v.assists}</span>`:""}
         ${v.amarelos?`<span class="text-amber-400 bg-amber-950/40 border border-amber-800/30 rounded-full px-2 py-0.5">🟡 ×${v.amarelos}</span>`:""}
@@ -945,7 +945,7 @@ function calcPlayerScore(pid,games){
   const note=a("note"),garra=a("garra"),comport=a("comport"),passes=a("passes");
   const gols=a("gols"),assists=a("assists"),amarelo=a("amarelo"),verm=a("verm"),faltas=a("faltas"),grav=a("grav");
   const gravMult=grav<=0?0.1:grav<=1?0.3:grav<=2?0.6:1;
-  const score=freq*30+(garra>0?(garra/5)*20:0)+(comport>0?(comport/5)*15:0)+(note>0?(note/10)*10:0)+(passes>0?(passes/5)*5:0)+Math.min(gols*1.5,9)+Math.min(assists,6)-amarelo-verm*3-faltas*gravMult;
+  const score=freq*30+(garra>0?(garra/5)*20:0)+(comport>0?(comport/5)*15:0)+(note>0?(note/10)*10:0)-passes*0.8+Math.min(gols*1.5,9)+Math.min(assists,6)-amarelo-verm*3-faltas*gravMult;
   return{score:Math.max(0,score),freq,note,garra,comport,passes,gols,assists,amarelo,verm,faltas,grav,played,total};
 }
 function getPlayerStats(pid,filter){
@@ -975,7 +975,7 @@ function rankPlayerCard(p,i){
   const tags=[
     p.garra>0?('<span class="text-green-300/60">⚡ Garra <b>'+p.garra.toFixed(1)+'</b></span>'):"",
     p.comport>0?('<span class="text-green-300/60">🤝 Comport. <b>'+p.comport.toFixed(1)+'</b></span>'):"",
-    p.passes>0?('<span class="text-green-300/60">🎯 Passes <b>'+p.passes.toFixed(1)+'</b></span>'):"",
+    p.passes>0?('<span class="text-orange-400/70">❌ P.errados <b>'+p.passes.toFixed(1)+'</b></span>'):"",
     p.gols>0?('<span class="text-yellow-300/80">⚽ '+p.gols.toFixed(1)+'</span>'):"",
     p.assists>0?('<span class="text-blue-300/80">🅰 '+p.assists.toFixed(1)+'</span>'):"",
     p.amarelo>0?('<span class="text-amber-400/70">🟡 ×'+p.amarelo.toFixed(1)+'</span>'):"",
@@ -1323,7 +1323,7 @@ async function viewVoter(gid,vid){
       <div class="flex gap-1.5 flex-wrap text-xs">
         ${v.garra?`<span class="bg-green-950/60 border border-green-800/30 rounded-full px-2 py-0.5 text-green-300/70">⚡ ${v.garra}/5</span>`:""}
         ${v.comportamento?`<span class="bg-green-950/60 border border-green-800/30 rounded-full px-2 py-0.5 text-green-300/70">🤝 ${v.comportamento}/5</span>`:""}
-        ${v.passes?`<span class="bg-green-950/60 border border-green-800/30 rounded-full px-2 py-0.5 text-green-300/70">🎯 ${v.passes}/5</span>`:""}
+        ${v.passes?`<span class="bg-orange-950/40 border border-orange-800/30 rounded-full px-2 py-0.5 text-orange-300/70">❌ ${v.passes}/5</span>`:""}
         ${v.goals?`<span class="text-yellow-300">⚽${v.goals}</span>`:""}
         ${v.assists?`<span class="text-blue-300">🅰${v.assists}</span>`:""}
         ${v.amarelos?`<span class="text-amber-400">🟡×${v.amarelos}</span>`:""}
@@ -1410,7 +1410,7 @@ function renderEditVoteCard(pid,game){
     <div class="grid grid-cols-3 gap-x-2 gap-y-1.5">
       <div><div class="text-[10px] text-green-300/40 mb-1">⚡ Garra</div><div class="flex gap-1 flex-wrap">${er5("garra",v.garra)}</div></div>
       <div><div class="text-[10px] text-green-300/40 mb-1">🤝 Comport.</div><div class="flex gap-1 flex-wrap">${er5("comportamento",v.comportamento)}</div></div>
-      <div><div class="text-[10px] text-green-300/40 mb-1">🎯 Passes</div><div class="flex gap-1 flex-wrap">${er5("passes",v.passes)}</div></div>
+      <div><div class="text-[10px] text-orange-300/40 mb-1">❌ P.errados</div><div class="flex gap-1 flex-wrap">${er5("passes",v.passes)}</div></div>
     </div>
     <div class="flex gap-3 flex-wrap text-xs">
       <div class="flex items-center gap-1.5"><span class="text-yellow-300/50">⚽</span>
