@@ -439,7 +439,12 @@ function renderGameStatus(){
           ?`<button onclick="goToVotar('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 font-black text-sm transition-colors">🗳️ Votar</button>`
           :`<p class="text-center text-amber-400/70 text-xs flex-1 flex items-center justify-center">Escolha seu nome</p>`)
         :""}
-      </div>`);
+      </div>
+      ${voters>0?`<button onclick="shareGameResult('${game.id}')" class="mt-1 w-full py-2.5 rounded-xl bg-green-950/60 border border-green-700/30 hover:bg-green-900/40 text-green-400 font-bold text-sm transition-colors flex items-center justify-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Compartilhar resultado
+      </button>`:""}
+      `);
   }).join("")+`</div>`;
 }
 function renderQuickStats(){
@@ -896,18 +901,69 @@ async function shareRanking(){
     catch(e){showToast("Não foi possível copiar");}
   }
 }
-async function shareAfterVote(){
-  // compartilha o ranking da última partida
-  const savedPeriod=rankPeriod, savedFilter=rankFilter;
-  rankPeriod="partida"; rankFilter="all";
-  const text=buildShareText();
-  rankPeriod=savedPeriod; rankFilter=savedFilter;
+function buildGameShareText(gameId){
+  const game=S.games[gameId]; if(!game) return "";
+  const gr=S.ratings[gameId]||{};
+  const voters=Object.keys(gr).length;
+  if(!voters) return "";
+
+  const result=calcGameResult(game);
+  const bp=bestPlayerOfGame(game);
+  const pids=getGamePlayerIds(game);
+  const dayNames=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+  const d=new Date((game.date||"")+"T12:00:00");
+  const dateStr=game.date?d.toLocaleDateString("pt-BR")+" · "+dayNames[d.getDay()]:"";
+  const typeLabel=game.type==="compromisso"?"Compromisso":"Pelada";
+
+  let txt="⚽ *Pelada & Compromisso — AFRESP*\n";
+  txt+="📅 "+dateStr+" · "+typeLabel+"\n\n";
+
+  if(result){
+    txt+="🔴 VERMELHO *"+result.vermScore+"* × *"+result.azulScore+"* AZUL 🔵\n";
+    if(result.scorers.length){
+      const vScorers=result.scorers.filter(function(s){return s.team==="vermelho";});
+      const aScorers=result.scorers.filter(function(s){return s.team==="azul";});
+      txt+="\n⚽ *Artilheiros:*\n";
+      if(vScorers.length) txt+="🔴 "+vScorers.map(function(s){return s.name+(s.goals>1?" ("+s.goals+")":"");}).join(", ")+"\n";
+      if(aScorers.length) txt+="🔵 "+aScorers.map(function(s){return s.name+(s.goals>1?" ("+s.goals+")":"");}).join(", ")+"\n";
+    }
+  }
+
+  if(bp){
+    txt+="\n⭐ *Melhor jogador:* "+bp.name+" — "+bp.score+" pts"+(bp.note?" · nota "+bp.note:"")+"\n";
+  }
+
+  // top 5
+  const scores=pids.map(function(pid){
+    const r=calcPlayerScore(pid,[Object.assign({id:gameId},game)]);
+    return r?Object.assign({name:playerName(pid)},r):null;
+  }).filter(Boolean).sort(function(a,b){return b.score-a.score;});
+
+  if(scores.length){
+    txt+="\n📊 *Top "+Math.min(5,scores.length)+" da partida:*\n";
+    const medals=["🥇","🥈","🥉"];
+    scores.slice(0,5).forEach(function(p,i){
+      txt+=(medals[i]||(i+1)+".")+" "+p.name+" — "+Math.min(100,p.score).toFixed(0)+" pts\n";
+    });
+  }
+
+  txt+="\n👥 "+voters+" votante"+(voters!==1?"s":"")+"\n🏆 Avaliação do grupo";
+  return txt;
+}
+async function shareGameResult(gameId){
+  const text=buildGameShareText(gameId);
+  if(!text){showToast("Nenhuma avaliação registrada ainda.");return;}
   if(navigator.share){
     try{await navigator.share({title:"Resultado da Pelada",text});}catch(e){}
   }else{
     try{await navigator.clipboard.writeText(text);showToast("📋 Copiado! Cole no grupo do WhatsApp");}
     catch(e){showToast("Não foi possível copiar");}
   }
+}
+async function shareAfterVote(){
+  // usa o jogo que acabou de ser votado
+  const gameIds=Object.keys(S.games).sort(function(a,b){return(S.games[b].date||"").localeCompare(S.games[a].date||"");});
+  if(gameIds.length) await shareGameResult(gameIds[0]);
 }
 function showSuccessModal(){
   const m=document.getElementById("success-modal");
