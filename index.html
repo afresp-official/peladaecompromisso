@@ -2347,11 +2347,35 @@ async function compartilharEscalacao(gameId){
     +'<div style="background:rgba(8,15,100,0.9);padding:7px">'+azulPids.map(p=>pRow(p,"rgba(20,40,180,0.9)")).join("")+'</div>'
     +'</div>'
     +'</div>'
-    +'<div style="margin-top:12px;text-align:center;font-size:9px;color:rgba(255,255,255,0.15)">AFRESP · Pelada é Compromisso</div>'
     +'</div>';
   const wrap=document.createElement("div");
   wrap.style.cssText="position:fixed;left:-9999px;top:0;z-index:-999;";
   wrap.innerHTML=html;
+  // Clone the live campo field (SVG + player tokens) into the PDF wrapper
+  const campoLive=document.getElementById("campo-field");
+  const mainDiv=wrap.firstElementChild;
+  if(campoLive&&mainDiv){
+    const fieldHeader=document.createElement("div");
+    fieldHeader.style.cssText="text-align:center;font-size:9px;font-weight:700;color:rgba(74,222,128,0.5);letter-spacing:2px;text-transform:uppercase;margin:12px 0 6px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08)";
+    fieldHeader.textContent="CAMPO";
+    mainDiv.appendChild(fieldHeader);
+    const fieldClone=campoLive.cloneNode(true);
+    fieldClone.removeAttribute("id");
+    fieldClone.style.cssText="position:relative;width:100%;aspect-ratio:105/68;border-radius:12px;overflow:hidden;border:2px solid #1e4a1e;box-shadow:0 4px 20px rgba(0,0,0,0.6)";
+    // Remove drag handlers from cloned tokens
+    fieldClone.querySelectorAll("[id^='tk-']").forEach(t=>{t.removeAttribute("id");t.style.cursor="default";t.removeAttribute("onmousedown");t.removeAttribute("ontouchstart");});
+    mainDiv.appendChild(fieldClone);
+    const footer=document.createElement("div");
+    footer.style.cssText="margin-top:10px;text-align:center;font-size:9px;color:rgba(255,255,255,0.15)";
+    footer.textContent="AFRESP · Pelada é Compromisso";
+    mainDiv.appendChild(footer);
+  } else {
+    // No campo available — add footer directly
+    const footer=document.createElement("div");
+    footer.style.cssText="margin-top:12px;text-align:center;font-size:9px;color:rgba(255,255,255,0.15)";
+    footer.textContent="AFRESP · Pelada é Compromisso";
+    if(mainDiv)mainDiv.appendChild(footer);
+  }
   document.body.appendChild(wrap);
   try{
     const canvas=await html2canvas(wrap,{backgroundColor:"#081510",scale:2,logging:false,useCORS:true,allowTaint:true});
