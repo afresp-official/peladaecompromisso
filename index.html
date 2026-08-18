@@ -752,7 +752,9 @@ function renderCampo() {
         <button onclick="goTo('inicio')" class="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors shadow-lg" title="Voltar">← Voltar</button>
         <div class="font-black text-base leading-tight">Escalação</div>
       </div>
-      <div class="flex items-center gap-2"></div>
+      <div class="flex items-center gap-2">
+        <button onclick="sortearTimes('${game.id}')" class="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-purple-900/60 border border-purple-700/50 hover:bg-purple-800/60 text-purple-300 font-bold text-sm transition-colors">🎲 Sortear</button>
+      </div>
     </div>
 
     <!-- Placar de times -->
@@ -1616,6 +1618,59 @@ function renderAdmin(){
   </div>`;
 }
 
+function sortearTimes(gameId){
+  const g=S.games[gameId]; if(!g) return;
+  const allPids=getGamePlayerIds(g);
+  const presSlots=S.presenca[gameId]||{};
+  const presNames=new Set(Object.values(presSlots).map(e=>e.name.toLowerCase()));
+  const pids=presNames.size>0?allPids.filter(pid=>presNames.has((S.players[pid]?.name||"").toLowerCase())):allPids;
+  if(pids.length<2){showToast("Poucos jogadores para sortear.");return;}
+
+  function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+  function showPreview(){
+    const shuffled=shuffle(pids);
+    const mid=Math.ceil(shuffled.length/2);
+    const verm=shuffled.slice(0,mid);
+    const azul=shuffled.slice(mid);
+    openModal(`
+      <h3 class="font-black text-base mb-4">🎲 Sorteio de Times</h3>
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="bg-red-950/40 border border-red-800/40 rounded-xl p-3">
+          <div class="flex items-center gap-1.5 mb-2">
+            <span class="w-2 h-2 rounded-full bg-red-500"></span>
+            <span class="text-red-400 font-black text-xs uppercase">Vermelho (${verm.length})</span>
+          </div>
+          <div class="space-y-1">
+            ${verm.map(pid=>`<p class="text-sm text-red-200/80 font-semibold truncate">${playerName(pid)}</p>`).join("")}
+          </div>
+        </div>
+        <div class="bg-blue-950/40 border border-blue-800/40 rounded-xl p-3">
+          <div class="flex items-center gap-1.5 mb-2">
+            <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+            <span class="text-blue-400 font-black text-xs uppercase">Azul (${azul.length})</span>
+          </div>
+          <div class="space-y-1">
+            ${azul.map(pid=>`<p class="text-sm text-blue-200/80 font-semibold truncate">${playerName(pid)}</p>`).join("")}
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="(${showPreview.toString()})()" class="flex-1 py-2.5 rounded-xl bg-purple-900/60 border border-purple-700/50 text-purple-300 font-bold text-sm hover:bg-purple-800/60">🔀 Ressortear</button>
+        <button onclick="confirmarSorteio('${gameId}',${JSON.stringify(verm)},${JSON.stringify(azul)})" class="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 font-black text-sm">✅ Confirmar</button>
+      </div>
+    `);
+  }
+  showPreview();
+}
+async function confirmarSorteio(gameId,verm,azul){
+  const updates={};
+  verm.forEach(pid=>{ updates["games/"+gameId+"/players/"+pid+"/team"]="vermelho"; });
+  azul.forEach(pid=>{ updates["games/"+gameId+"/players/"+pid+"/team"]="azul"; });
+  await db.ref().update(updates);
+  closeModal();
+  showToast("Times sorteados! Ajuste se necessário.");
+}
 const campoClicks={};
 function handleCampoClick(pid,gameId){
   if(!campoClicks[pid]) campoClicks[pid]={count:0,timer:null};
