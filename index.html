@@ -518,14 +518,22 @@ async function removeAusencia(gameId,pid){
 async function sharePresenca(){
   const game=nextGame();
   const gp=game?(S.presenca[game.id]||{}):{};
+  const ga=game?(S.ausencia[game.id]||{}):{};
   const filled=Object.keys(gp).length;
-  let nomes="";for(let i=1;i<=TOTAL_VAGAS;i++){if(gp[i])nomes+="\n"+i+". "+gp[i].name;}
+  let nomes="";
+  for(let i=1;i<=TOTAL_VAGAS;i++){if(gp[i])nomes+="\n"+i+". "+gp[i].name;}
+  const ausentes=Object.values(ga);
+  let ausentesText="";
+  if(ausentes.length){
+    ausentesText="\n\n❌ *Não vão ("+ausentes.length+")*";
+    ausentes.forEach((e,i)=>{ausentesText+="\n"+(i+1)+". "+e.name+(e.motivo?" — "+e.motivo:"");});
+  }
   const url=location.href.split("#")[0]+"#lista";
-  const text="⚽ *Pelada AFRESP — Lista de Presença*\n✅ "+filled+"/22 confirmados"+(nomes?"\n"+nomes:"")+"\n\nConfirme no link:";
+  const text="⚽ *Pelada AFRESP — Lista de Presença*"+(game?"\n📅 "+fmtDate(game.date):"")+"\n✅ "+filled+"/22 confirmados"+(nomes?"\n"+nomes:"")+ausentesText+"\n\nConfirme no link:";
   if(navigator.share){
     try{await navigator.share({title:"Presença Pelada AFRESP",text,url});}catch(e){}
   }else{
-    try{await navigator.clipboard.writeText(url);showToast("Link copiado!");}catch(e){}
+    try{await navigator.clipboard.writeText(text+"\n"+url);showToast("Lista copiada!");}catch(e){}
   }
 }
 
