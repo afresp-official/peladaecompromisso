@@ -1672,6 +1672,28 @@ function renderAdmin(){
         <button onclick="addCraque()" class="px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-white text-sm font-bold whitespace-nowrap">+ Adicionar</button>
       </div>
     </div>
+    <!-- Rivais -->
+    <div class="bg-[#132218] border border-[#2a4a35] rounded-xl p-4">
+      <div class="font-bold text-sm mb-1">🚫 Nunca no mesmo time</div>
+      <p class="text-[10px] text-green-300/30 mb-3">Pares que o sorteio sempre separa em times diferentes.</p>
+      <div class="flex flex-col gap-2 mb-3">
+        ${(S.config.rivais||[]).map(([n1,n2],i)=>`<span class="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#0b1a10] border border-[#2a4a35] text-sm">
+          <span class="text-white/70 font-semibold flex-1">${n1} <span class="text-white/25 font-normal">vs</span> ${n2}</span>
+          <button onclick="removeRival(${i})" class="text-white/20 hover:text-red-400 font-black text-base leading-none">×</button>
+        </span>`).join("")||'<p class="text-green-300/20 text-xs">Nenhum par configurado</p>'}
+      </div>
+      <div class="flex gap-2">
+        <select id="rival1" class="flex-1 bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-green-500">
+          <option value="">Jogador 1</option>
+          ${activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR")).map(p=>`<option value="${p.name}">${p.name}</option>`).join("")}
+        </select>
+        <select id="rival2" class="flex-1 bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-green-500">
+          <option value="">Jogador 2</option>
+          ${activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR")).map(p=>`<option value="${p.name}">${p.name}</option>`).join("")}
+        </select>
+        <button onclick="addRival()" class="px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-white text-sm font-bold whitespace-nowrap">+</button>
+      </div>
+    </div>
     <div class="bg-[#132218] border border-[#2a4a35] rounded-xl p-4">
       <div class="font-bold text-sm mb-3">🔐 PIN Admin</div>
       <div class="flex gap-2">
@@ -1772,6 +1794,29 @@ function mostrarSorteio(){
   normaisPids.forEach(pid=>{ if(verm.length<targetVerm) verm.push(pid); else azul.push(pid); });
 
   _sorteioVerm=verm; _sorteioAzul=azul;
+
+  // Regras de rivais: nunca no mesmo time
+  (S.config.rivais||[]).forEach(([n1,n2])=>{
+    const pid1=_sorteioPids.find(pid=>(S.players[pid]?.name||"").toLowerCase()===n1.toLowerCase());
+    const pid2=_sorteioPids.find(pid=>(S.players[pid]?.name||"").toLowerCase()===n2.toLowerCase());
+    if(!pid1||!pid2) return;
+    const v1=_sorteioVerm.includes(pid1), v2=_sorteioVerm.includes(pid2);
+    if(v1===v2){
+      // Estão no mesmo time — troca pid2 para o outro time, move um normal para compensar
+      if(v1){
+        _sorteioVerm=_sorteioVerm.filter(p=>p!==pid2);
+        const swap=_sorteioAzul.filter(p=>p!==pid1&&p!==pid2).pop();
+        if(swap){_sorteioAzul=_sorteioAzul.filter(p=>p!==swap);_sorteioVerm.push(swap);}
+        _sorteioAzul.push(pid2);
+      } else {
+        _sorteioAzul=_sorteioAzul.filter(p=>p!==pid2);
+        const swap=_sorteioVerm.filter(p=>p!==pid1&&p!==pid2).pop();
+        if(swap){_sorteioVerm=_sorteioVerm.filter(p=>p!==swap);_sorteioAzul.push(swap);}
+        _sorteioVerm.push(pid2);
+      }
+    }
+  });
+
 
   openModal(`
     <h3 class="font-black text-base mb-4">🎲 Sorteio de Times</h3>
@@ -2204,6 +2249,22 @@ function openModal(h){document.getElementById("modal-content").innerHTML=h;docum
 function closeModal(){document.getElementById("modal-overlay").classList.add("hidden");document.getElementById("modal-overlay").classList.remove("flex");}
 
 // ── Utils ──
+async function addRival(){
+  const n1=(document.getElementById("rival1")?.value||"").trim();
+  const n2=(document.getElementById("rival2")?.value||"").trim();
+  if(!n1||!n2){showToast("Escolha os dois jogadores.");return;}
+  if(n1.toLowerCase()===n2.toLowerCase()){showToast("Escolha jogadores diferentes.");return;}
+  const rivais=S.config.rivais||[];
+  const dup=rivais.find(([a,b])=>(a.toLowerCase()===n1.toLowerCase()&&b.toLowerCase()===n2.toLowerCase())||(a.toLowerCase()===n2.toLowerCase()&&b.toLowerCase()===n1.toLowerCase()));
+  if(dup){showToast("Par já existe.");return;}
+  await db.ref("config/rivais").set([...rivais,[n1,n2]]);
+  showToast("Regra adicionada.");
+}
+async function removeRival(i){
+  const rivais=(S.config.rivais||[]).filter((_,idx)=>idx!==i);
+  await db.ref("config/rivais").set(rivais.length?rivais:null);
+  showToast("Regra removida.");
+}
 async function addCraque(){
   const sel=document.getElementById("craque-select");
   const nome=(sel&&sel.value||"").trim();
