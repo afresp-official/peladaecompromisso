@@ -388,20 +388,28 @@ function renderLista() {
 
   const ga=S.ausencia[game.id]||{};
   const ausentesEntries=Object.entries(ga);
-  const ausentesSection=`<div class="mt-4 pt-4 border-t border-red-900/20">
-    <p class="text-[10px] text-red-400/50 uppercase tracking-wider font-bold mb-2">❌ Não vão (${ausentesEntries.length})</p>
-    ${ausentesEntries.length?`<div class="space-y-1 mb-3">${ausentesEntries.map(([pid,e])=>`<div class="flex items-center gap-2 py-1 text-red-300/50 text-sm">
-      <div class="flex-1 min-w-0">
-        <span class="font-semibold">${e.name}</span>
-        ${e.motivo?`<span class="text-xs text-red-300/70 ml-1">· ${e.motivo}</span>`:""}
+  const ausentesSection=`<div class="mt-3 rounded-2xl overflow-hidden border border-red-900/30 bg-[#110808]">
+    <div class="flex items-center justify-between px-4 py-2.5 border-b border-red-900/20">
+      <span class="text-[10px] text-red-400/60 uppercase tracking-widest font-bold">❌ Não vão (${ausentesEntries.length})</span>
+    </div>
+    <div class="flex gap-0" style="min-height:${ausentesEntries.length>0?'auto':'120px'}">
+      <div class="flex-1 border-r border-red-900/20 overflow-y-auto p-3" style="max-height:200px">
+        ${ausentesEntries.length?ausentesEntries.map(([pid,e],i)=>`
+          <div class="flex items-center gap-2 py-1.5 border-b border-red-900/10 last:border-0">
+            <span class="text-[10px] text-red-400/30 w-4 shrink-0 font-bold">${i+1}</span>
+            <div class="flex-1 min-w-0">
+              <span class="text-sm font-semibold text-red-200/80">${e.name}</span>
+              ${e.motivo?`<span class="text-[10px] text-red-400/50 ml-1.5 font-medium">${e.motivo}</span>`:""}
+            </div>
+            ${S.adminOk?`<button onclick="removeAusencia('${game.id}','${pid}')" class="text-red-500/40 hover:text-red-400 text-xs px-1 shrink-0">✕</button>`:'<span class="text-red-500/40 text-xs">✕</span>'}
+          </div>`).join("")
+        :`<p class="text-red-400/20 text-xs text-center pt-4">Nenhuma ausência registrada</p>`}
       </div>
-      ${S.adminOk?`<button onclick="removeAusencia('${game.id}','${pid}')" class="text-red-500/60 hover:text-red-400 text-xs px-1 shrink-0">✕</button>`:""}
-    </div>`).join("")}</div>`:""}
-    <div class="space-y-2">
-      <input id="ausencia-nome" type="text" placeholder="Seu nome" maxlength="30" autocomplete="name"
-        class="w-full px-3 py-2.5 rounded-xl bg-[#1a0a0a] border border-red-900/40 text-white placeholder-red-300/25 text-sm focus:border-red-600 focus:outline-none"/>
-      <div class="flex gap-2">
-        <select id="ausencia-motivo" class="flex-1 px-3 py-2.5 rounded-xl bg-[#1a0a0a] border border-red-900/40 text-red-200 text-sm focus:border-red-600 focus:outline-none">
+      <div class="p-3 flex flex-col gap-2 justify-center" style="width:52%">
+        <p class="text-[9px] text-red-400/40 uppercase tracking-widest font-bold text-center mb-1">Registrar ausência</p>
+        <input id="ausencia-nome" type="text" placeholder="Seu nome" maxlength="30" autocomplete="name"
+          class="w-full px-3 py-2 rounded-xl bg-[#1a0808] border border-red-900/40 text-white placeholder-red-300/20 text-sm focus:border-red-600 focus:outline-none"/>
+        <select id="ausencia-motivo" class="w-full px-3 py-2 rounded-xl bg-[#1a0808] border border-red-900/40 text-red-200/70 text-sm focus:border-red-600 focus:outline-none">
           <option value="">Motivo (opcional)</option>
           <option value="Viagem">✈️ Viagem</option>
           <option value="Trabalho">💼 Trabalho</option>
@@ -410,7 +418,9 @@ function renderLista() {
           <option value="Aniversário">🎂 Aniversário</option>
           <option value="Outro">❓ Outro</option>
         </select>
-        <button onclick="registrarAusencia()" class="px-4 py-2.5 rounded-xl bg-red-900/60 border border-red-700/40 text-red-300 font-bold text-sm hover:bg-red-800/60 shrink-0">Não vou</button>
+        <button onclick="registrarAusencia()" class="w-full py-2.5 rounded-xl bg-red-900/70 hover:bg-red-800/70 border border-red-700/40 text-red-200 font-black text-sm transition-colors">
+          Não vou
+        </button>
       </div>
     </div>
   </div>`;
