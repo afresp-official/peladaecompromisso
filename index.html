@@ -812,9 +812,30 @@ function renderCampo() {
   const azulPids = pids.filter(p=>getPlayerTeam(game,p)==="azul");
   const semPids  = pids.filter(p=>!getPlayerTeam(game,p));
 
+  // Posições por função no campo
+  const ROLE_SLOTS = {
+    GK:  [{x:.04,y:.50}],
+    ZAG: [{x:.17,y:.25},{x:.17,y:.75},{x:.17,y:.50},{x:.13,y:.38},{x:.13,y:.62}],
+    LAT: [{x:.20,y:.07},{x:.20,y:.93}],
+    VOL: [{x:.29,y:.35},{x:.29,y:.65},{x:.32,y:.50}],
+    MEI: [{x:.36,y:.22},{x:.36,y:.50},{x:.36,y:.78}],
+    ATA: [{x:.43,y:.35},{x:.43,y:.65},{x:.46,y:.50}],
+    PNT: [{x:.44,y:.10},{x:.44,y:.90}],
+  };
+  const roleCounts={};
+  function posOfByRole(team,role){
+    if(!ROLE_SLOTS[role]) return null;
+    const key=team+"_"+role;
+    const idx=roleCounts[key]||0; roleCounts[key]=idx+1;
+    const base=ROLE_SLOTS[role][Math.min(idx,ROLE_SLOTS[role].length-1)];
+    return team==="vermelho"?{...base}:{x:1-base.x,y:base.y};
+  }
+
   function posOf(pid) {
     if (formation[pid]) return formation[pid];
     const team = getPlayerTeam(game, pid);
+    const role = game.players?.[pid]?.pos||"";
+    if(role&&team){const rp=posOfByRole(team,role);if(rp)return rp;}
     const arr = team==="vermelho" ? vermPids : team==="azul" ? azulPids : semPids;
     const idx = arr.indexOf(pid);
     if (team==="vermelho" || team==="azul") return defaultPos(team, idx);
@@ -834,21 +855,32 @@ function renderCampo() {
   }).join("");
 
   const verm = vermPids.length, azul = azulPids.length;
+  const semPidsOrdered = pids.filter(p=>!getPlayerTeam(game,p));
 
-  const semPidsOrdered=pids.filter(p=>!getPlayerTeam(game,p));
-  const pidsOrdered=[...vermPids,...azulPids,...semPidsOrdered];
-  const playerTeamRows = pidsOrdered.map(pid=>{
-    const t=getPlayerTeam(game,pid)||'';
-    const gk=game.players?.[pid]?.goleiro===true;
-    const isVerm=t==="vermelho",isAzul=t==="azul";
-    const cardBg=gk?'bg-yellow-900/30 border-yellow-700/40':isVerm?'bg-red-900/25 border-red-700/30':isAzul?'bg-blue-900/25 border-blue-700/30':'bg-[#0f1e14] border-[#1a3020]';
-    const btnCls=gk?'bg-yellow-500 text-black':isVerm?'bg-red-600 text-white':isAzul?'bg-blue-600 text-white':'bg-[#1a2e1f] text-white/30';
-    const btnLbl=gk?'🥅':isVerm?'🔴':isAzul?'🔵':'—';
+  const POS_LABELS={"GK":"🥅 Goleiro","ZAG":"🛡 Zagueiro","LAT":"↕ Lateral","VOL":"🔄 Volante","MEI":"🎯 Meia","ATA":"⚡ Atacante","PNT":"🔥 Ponta"};
+  function playerCard(pid,team){
+    const role=game.players?.[pid]?.pos||"";
+    const posLabel=POS_LABELS[role]||"— posição";
+    const cardBg=team==="vermelho"?"bg-red-900/20 border-red-700/25":"bg-blue-900/20 border-blue-700/25";
+    const posCls=team==="vermelho"?"text-red-300/60 bg-red-900/30 hover:bg-red-800/50":"text-blue-300/60 bg-blue-900/30 hover:bg-blue-800/50";
     return '<div class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg border '+cardBg+'">'
-      +'<span class="flex-1 text-xs font-semibold text-white/90 truncate leading-tight">'+playerName(pid)+'</span>'
-      +'<button onclick="ciclarJogador(\''+pid+'\',\''+game.id+'\')" class="shrink-0 w-8 h-7 flex items-center justify-center rounded-lg font-black text-sm transition-all '+btnCls+'">'+btnLbl+'</button>'
+      +'<div class="flex-1 min-w-0">'
+      +'<p class="text-xs font-bold text-white/90 truncate leading-tight">'+playerName(pid)+'</p>'
+      +'<button onclick="ciclarPosicao(\''+pid+'\',\''+game.id+'\')" class="text-[10px] px-1.5 py-0.5 rounded-full mt-0.5 font-semibold transition-colors '+posCls+'">'+posLabel+'</button>'
+      +'</div>'
+      +'<button onclick="ciclarJogador(\''+pid+'\',\''+game.id+'\')" class="shrink-0 text-white/20 hover:text-white/50 text-lg leading-none px-1">⇄</button>'
       +'</div>';
-  }).join('');
+  }
+
+  const vermPanel = vermPids.length
+    ? vermPids.map(pid=>playerCard(pid,"vermelho")).join("")
+    : '<p class="text-xs text-red-400/20 text-center py-3">vazio</p>';
+  const azulPanel = azulPids.length
+    ? azulPids.map(pid=>playerCard(pid,"azul")).join("")
+    : '<p class="text-xs text-blue-400/20 text-center py-3">vazio</p>';
+  const semChips = semPidsOrdered.map(pid=>
+    '<button onclick="ciclarJogador(\''+pid+'\',\''+game.id+'\')" class="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white/50 font-semibold active:opacity-70">'+playerName(pid)+'</button>'
+  ).join("");
 
   el.innerHTML = `
     <!-- Header -->
@@ -863,16 +895,31 @@ function renderCampo() {
       </div>
     </div>
 
-    <!-- Times: grid 2 colunas compacto -->
-    <div class="bg-[#0b1a10] border border-[#2a4a35] rounded-xl p-2 mb-3">
-      <div class="flex items-center gap-3 px-1 mb-2">
-        <span class="text-[10px] text-red-400 font-black uppercase tracking-wider">🔴 ${verm} Verm</span>
-        <span class="text-white/20 text-[10px]">·</span>
-        <span class="text-[10px] text-blue-400 font-black uppercase tracking-wider">🔵 ${azul} Azul</span>
-        ${semPidsOrdered.length?`<span class="text-white/20 text-[10px]">·</span><span class="text-[10px] text-white/30 font-bold uppercase tracking-wider">${semPidsOrdered.length} sem time</span>`:''}
+    <!-- Dois painéis de time -->
+    <div class="grid grid-cols-2 gap-2 mb-2">
+      <div class="bg-red-950/20 border border-red-800/30 rounded-xl overflow-hidden">
+        <div class="px-3 py-2 border-b border-red-900/30 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
+          <span class="text-[11px] font-black text-red-400 uppercase tracking-wider flex-1">Vermelho</span>
+          <span class="text-xs font-black text-red-300/50">${verm}</span>
+        </div>
+        <div class="p-1.5 space-y-1">${vermPanel}</div>
       </div>
-      <div class="grid grid-cols-2 gap-1">${playerTeamRows}</div>
+      <div class="bg-blue-950/20 border border-blue-800/30 rounded-xl overflow-hidden">
+        <div class="px-3 py-2 border-b border-blue-900/30 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
+          <span class="text-[11px] font-black text-blue-400 uppercase tracking-wider flex-1">Azul</span>
+          <span class="text-xs font-black text-blue-300/50">${azul}</span>
+        </div>
+        <div class="p-1.5 space-y-1">${azulPanel}</div>
+      </div>
     </div>
+    ${semPidsOrdered.length?`
+    <div class="mb-2 px-1">
+      <p class="text-[10px] text-white/25 uppercase tracking-wider font-bold mb-1.5">Sem time — toque para atribuir</p>
+      <div class="flex flex-wrap gap-1.5">${semChips}</div>
+    </div>`:""}
+
 
     <!-- Campo landscape: vermelho esquerda, azul direita -->
     <div id="campo-field" class="relative mx-auto rounded-2xl overflow-hidden shadow-2xl border-2 border-[#1e4a1e]"
@@ -2249,6 +2296,14 @@ function openModal(h){document.getElementById("modal-content").innerHTML=h;docum
 function closeModal(){document.getElementById("modal-overlay").classList.add("hidden");document.getElementById("modal-overlay").classList.remove("flex");}
 
 // ── Utils ──
+const POSICOES=["","GK","ZAG","LAT","VOL","MEI","ATA","PNT"];
+async function ciclarPosicao(pid,gameId){
+  const g=S.games[gameId]; if(!g) return;
+  const cur=g.players?.[pid]?.pos||"";
+  const idx=POSICOES.indexOf(cur);
+  const next=POSICOES[(idx+1)%POSICOES.length];
+  await db.ref("games/"+gameId+"/players/"+pid+"/pos").set(next||null);
+}
 async function addRival(){
   const n1=(document.getElementById("rival1")?.value||"").trim();
   const n2=(document.getElementById("rival2")?.value||"").trim();
