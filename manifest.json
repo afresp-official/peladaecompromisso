@@ -2,7 +2,7 @@
   "name": "Pelada é Compromisso",
   "short_name": "Pelada",
   "description": "AFRESP — Gestão de Pelada Semanal",
-  "start_url": "/peladaecompromisso/#lista",
+  "start_url": "/peladaecompromisso/#inicio",
   "scope": "/peladaecompromisso/",
   "display": "standalone",
   "background_color": "#081510",
