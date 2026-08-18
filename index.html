@@ -747,24 +747,16 @@ function renderCampo() {
 
   const semPidsOrdered=pids.filter(p=>!getPlayerTeam(game,p));
   const pidsOrdered=[...vermPids,...azulPids,...semPidsOrdered];
-  let lastGroup='';
   const playerTeamRows = pidsOrdered.map(pid=>{
-    const t=getPlayerTeam(game,pid)||'sem';
+    const t=getPlayerTeam(game,pid);
+    const gk=game.players?.[pid]?.goleiro===true;
     const isVerm=t==="vermelho",isAzul=t==="azul";
-    const gk=game.players?.[pid]?.goleiro;
-    const rowCls=isVerm?'bg-red-900/60 border-red-700/60':isAzul?'bg-blue-900/60 border-blue-700/60':'bg-[#0d1f14] border-[#1e3325]';
-    const nameCls=gk?'text-yellow-300':isVerm?'text-red-200':isAzul?'text-blue-200':'text-white/60';
-    const tag=isVerm?'🔴':isAzul?'🔵':'⚪';
-    let header='';
-    if(t!==lastGroup){
-      lastGroup=t;
-      const lbl=isVerm?'🔴 Vermelho ('+vermPids.length+')':isAzul?'🔵 Azul ('+azulPids.length+')':'Sem time ('+semPidsOrdered.length+')';
-      header='<div class="text-[10px] font-black uppercase tracking-wider mt-2 mb-1 px-1 '+(isVerm?'text-red-400':isAzul?'text-blue-400':'text-white/30')+'">'+lbl+'</div>';
-    }
-    return header+'<button onclick="handleCampoClick(\''+pid+'\',\''+game.id+'\')" class="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg border '+rowCls+' transition-all mb-0.5">'
-      +'<span class="text-xs">'+tag+'</span>'
-      +'<span class="flex-1 text-sm font-semibold text-left '+nameCls+'">'+(gk?'🥅 ':'')+playerName(pid)+'</span>'
-      +'</button>';
+    const btnCls=gk?'bg-yellow-500 border-yellow-400 text-black':isVerm?'bg-red-600 border-red-500 text-white':isAzul?'bg-blue-600 border-blue-500 text-white':'bg-[#1a2e1f] border-[#2a4a35] text-white/30';
+    const btnLbl=gk?'🥅 Gol':isVerm?'🔴 Verm':isAzul?'🔵 Azul':'—';
+    return '<div class="flex items-center gap-2 px-1 py-1">'
+      +'<span class="flex-1 text-sm font-semibold text-white truncate">'+playerName(pid)+'</span>'
+      +'<button onclick="ciclarJogador(\''+pid+'\',\''+game.id+'\')" class="min-w-[80px] text-center px-3 py-1.5 rounded-xl border font-bold text-xs transition-all '+btnCls+'">'+btnLbl+'</button>'
+      +'</div>';
   }).join('');
 
   el.innerHTML = `
@@ -863,6 +855,25 @@ async function cyclePlayerTeam(pid,gameId){
   const cur=(g.players?.[pid]?.team)||"";
   const next=cur===""?"vermelho":cur==="vermelho"?"azul":null;
   await db.ref("games/"+gameId+"/players/"+pid+"/team").set(next);
+}
+async function ciclarJogador(pid,gameId){
+  const g=S.games[gameId]; if(!g) return;
+  const team=(g.players?.[pid]?.team)||"";
+  const gol=g.players?.[pid]?.goleiro===true;
+  const updates={};
+  if(!team&&!gol){
+    updates["games/"+gameId+"/players/"+pid+"/team"]="vermelho";
+    updates["games/"+gameId+"/players/"+pid+"/goleiro"]=null;
+  } else if(team==="vermelho"&&!gol){
+    updates["games/"+gameId+"/players/"+pid+"/team"]="azul";
+    updates["games/"+gameId+"/players/"+pid+"/goleiro"]=null;
+  } else if(team==="azul"&&!gol){
+    updates["games/"+gameId+"/players/"+pid+"/goleiro"]=true;
+  } else {
+    updates["games/"+gameId+"/players/"+pid+"/team"]=null;
+    updates["games/"+gameId+"/players/"+pid+"/goleiro"]=null;
+  }
+  await db.ref().update(updates);
 }
 async function limparTimes(gameId){
   const g=S.games[gameId]; if(!g||!g.players) return;
