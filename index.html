@@ -405,25 +405,33 @@ function renderLista() {
 
   const ga=S.ausencia[game.id]||{};
   const ausentesEntries=Object.entries(ga);
-  const ausentesSection=`<div class="rounded-2xl overflow-hidden border border-red-900/30 bg-[#110808] mb-3">
+  const ausentesSection=`<div class="rounded-2xl overflow-hidden border border-red-800/40 mb-3" style="background:linear-gradient(160deg,#180606 0%,#0e0404 100%)">
     <!-- Header colapsável -->
     <button onclick="this.nextElementSibling.classList.toggle('hidden');this.querySelector('.chevron').classList.toggle('rotate-180')"
-      class="w-full flex items-center justify-between px-4 py-3">
-      <span class="text-[10px] text-red-400/60 uppercase tracking-widest font-bold">❌ Ausentes (${ausentesEntries.length})</span>
-      <svg class="chevron w-4 h-4 text-red-400/40 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      class="w-full flex items-center gap-3 px-4 py-3.5">
+      <div class="flex items-center justify-center w-8 h-8 rounded-xl shrink-0" style="background:linear-gradient(135deg,#7f1d1d,#991b1b)">
+        <span class="text-base leading-none">❌</span>
+      </div>
+      <div class="flex-1 text-left">
+        <p class="text-sm font-black text-red-200 leading-tight">Ausentes</p>
+        <p class="text-[10px] text-red-400/50 uppercase tracking-widest">${ausentesEntries.length} fora do jogo</p>
+      </div>
+      ${ausentesEntries.length?`<span class="px-2.5 py-1 rounded-full text-xs font-black text-red-100" style="background:#7f1d1d">${ausentesEntries.length}</span>`:''}
+      <svg class="chevron w-4 h-4 text-red-400/40 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
     </button>
-    <!-- Conteúdo colapsável (oculto por padrão) -->
+    <!-- Conteúdo colapsável -->
     <div class="hidden">
       <!-- Form ausência -->
-      <div class="px-3 pb-3 flex flex-col gap-2 border-t border-red-900/20 pt-3">
+      <div class="px-3 pb-3 pt-1 flex flex-col gap-2 border-t border-red-900/30">
+        <p class="text-[10px] text-red-400/40 uppercase tracking-widest pt-2 pb-0.5">Registrar ausência</p>
         <div class="flex gap-2">
           <input id="ausencia-nome" type="text" placeholder="Seu nome" maxlength="30" autocomplete="name"
-            class="flex-1 px-3 py-2 rounded-xl bg-[#1a0808] border border-red-900/40 text-white placeholder-red-300/20 text-sm focus:border-red-600 focus:outline-none"/>
-          <button onclick="registrarAusencia()" class="px-3 py-2 rounded-xl bg-red-800/80 hover:bg-red-700/80 border border-red-700/40 text-red-200 font-black text-xs transition-colors whitespace-nowrap">
-            Não vou
+            class="flex-1 px-3 py-2.5 rounded-xl text-white placeholder-red-300/20 text-sm focus:outline-none" style="background:#1f0707;border:1px solid rgba(153,27,27,0.35)"/>
+          <button onclick="registrarAusencia()" class="px-4 py-2.5 rounded-xl font-black text-xs text-white whitespace-nowrap transition-opacity active:opacity-70" style="background:linear-gradient(135deg,#b91c1c,#7f1d1d);border:1px solid rgba(220,38,38,0.3)">
+            Não vou ❌
           </button>
         </div>
-        <select id="ausencia-motivo" class="w-full px-3 py-2 rounded-xl bg-[#1a0808] border border-red-900/40 text-red-200/60 text-sm focus:border-red-600 focus:outline-none">
+        <select id="ausencia-motivo" class="w-full px-3 py-2.5 rounded-xl text-red-200/70 text-sm focus:outline-none" style="background:#1f0707;border:1px solid rgba(153,27,27,0.35)">
           <option value="">Motivo (opcional)</option>
           <option value="Viagem">✈️ Viagem</option>
           <option value="Trabalho">💼 Trabalho</option>
@@ -438,17 +446,24 @@ function renderLista() {
         </select>
       </div>
       <!-- Lista ausentes -->
-      <div class="divide-y divide-red-900/15 border-t border-red-900/20">
-        ${ausentesEntries.length?ausentesEntries.map(([pid,e],i)=>`
-          <div class="flex items-center gap-3 px-4 py-2.5">
-            <span class="text-[10px] text-red-400/30 w-4 shrink-0 font-bold">${i+1}</span>
+      <div class="flex flex-col gap-1.5 px-3 pb-3 border-t border-red-900/20 pt-3">
+        ${ausentesEntries.length?ausentesEntries.map(([pid,e],i)=>{
+          const initials=(e.name||"?").split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();
+          const motivoEmoji=e.motivo?e.motivo.split(" ")[0]:"";
+          const motivoLabel=e.motivo?e.motivo.replace(/^[\p{Emoji}\s]+/u,"").trim():"";
+          return `<div class="flex items-center gap-3 px-3 py-2.5 rounded-xl" style="background:rgba(127,29,29,0.18);border:1px solid rgba(153,27,27,0.2)">
+            <div class="flex items-center justify-center w-9 h-9 rounded-full shrink-0 font-black text-sm text-red-100" style="background:linear-gradient(135deg,#7f1d1d,#450a0a)">${initials}</div>
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-semibold text-red-200/80">${e.name}</p>
-              ${e.motivo?`<p class="text-xs text-red-300/50">${e.motivo}</p>`:""}
+              <p class="text-sm font-bold text-red-100 leading-tight truncate">${e.name}</p>
+              ${e.motivo?`<span class="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold text-red-200/70" style="background:rgba(127,29,29,0.5)">${motivoEmoji} ${motivoLabel}</span>`:`<p class="text-[10px] text-red-400/30 mt-0.5">sem motivo</p>`}
             </div>
-            ${S.adminOk?`<button onclick="removeAusencia('${game.id}','${pid}')" class="text-red-500/40 hover:text-red-400 text-sm px-1 shrink-0">✕</button>`:""}
-          </div>`).join("")
-        :`<p class="text-red-400/20 text-xs text-center py-4">Nenhuma ausência registrada</p>`}
+            ${S.adminOk?`<button onclick="removeAusencia('${game.id}','${pid}')" class="w-7 h-7 flex items-center justify-center rounded-full text-red-400/50 hover:text-red-300 hover:bg-red-900/40 transition-all shrink-0 text-sm">✕</button>`:""}
+          </div>`;
+        }).join("")
+        :`<div class="flex flex-col items-center py-5 gap-1">
+          <span class="text-3xl opacity-20">🏃</span>
+          <p class="text-red-400/30 text-xs text-center">Ninguém registrou ausência ainda</p>
+        </div>`}
       </div>
     </div>
   </div>`;
