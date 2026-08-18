@@ -2035,7 +2035,9 @@ function openEditGame(gid){
   editGoleiros=new Set();
   pids.forEach(pid=>{ editTeams[pid]=getPlayerTeam(g,pid); if(g.players[pid]?.goleiro) editGoleiros.add(pid); });
   const presSlots=S.presenca[gid]||{};
-  const presNames=new Set(Object.values(presSlots).map(e=>e.name.toLowerCase()));
+  const maxVg=(S.games[gid]?.maxVagas)||TOTAL_VAGAS;
+  const confirmedPres=Object.entries(presSlots).filter(([k])=>Number(k)<=maxVg).map(([,v])=>v);
+  const presNames=new Set(confirmedPres.map(e=>e.name.toLowerCase()));
   const allActive=activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
   const confirmed=allActive.filter(p=>presNames.has(p.name.toLowerCase()));
   const displayPlayers=confirmed.length>0?confirmed:allActive;
