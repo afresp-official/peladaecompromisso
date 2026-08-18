@@ -393,22 +393,25 @@ function renderLista() {
     ${ausentesEntries.length?`<div class="space-y-1 mb-3">${ausentesEntries.map(([pid,e])=>`<div class="flex items-center gap-2 py-1 text-red-300/50 text-sm">
       <div class="flex-1 min-w-0">
         <span class="font-semibold">${e.name}</span>
-        ${e.motivo?`<span class="text-[10px] text-red-400/40 ml-1">· ${e.motivo}</span>`:""}
+        ${e.motivo?`<span class="text-xs text-red-300/70 ml-1">· ${e.motivo}</span>`:""}
       </div>
       ${S.adminOk?`<button onclick="removeAusencia('${game.id}','${pid}')" class="text-red-500/60 hover:text-red-400 text-xs px-1 shrink-0">✕</button>`:""}
     </div>`).join("")}</div>`:""}
-    <div class="flex gap-1.5 flex-wrap">
+    <div class="space-y-2">
       <input id="ausencia-nome" type="text" placeholder="Seu nome" maxlength="30" autocomplete="name"
-        class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-[#1a0a0a] border border-red-900/40 text-white placeholder-red-300/25 text-sm focus:border-red-600 focus:outline-none"/>
-      <select id="ausencia-motivo" class="px-2 py-2 rounded-xl bg-[#1a0a0a] border border-red-900/40 text-red-300/70 text-xs focus:border-red-600 focus:outline-none">
-        <option value="">Motivo</option>
-        <option value="Viagem">✈️ Viagem</option>
-        <option value="Trabalho">💼 Trabalho</option>
-        <option value="Saúde">🏥 Saúde</option>
-        <option value="Compromisso">📅 Compromisso</option>
-        <option value="Outro">❓ Outro</option>
-      </select>
-      <button onclick="registrarAusencia()" class="px-4 py-2 rounded-xl bg-red-900/60 border border-red-700/40 text-red-300 font-bold text-xs hover:bg-red-800/60">Não vou</button>
+        class="w-full px-3 py-2.5 rounded-xl bg-[#1a0a0a] border border-red-900/40 text-white placeholder-red-300/25 text-sm focus:border-red-600 focus:outline-none"/>
+      <div class="flex gap-2">
+        <select id="ausencia-motivo" class="flex-1 px-3 py-2.5 rounded-xl bg-[#1a0a0a] border border-red-900/40 text-red-200 text-sm focus:border-red-600 focus:outline-none">
+          <option value="">Motivo (opcional)</option>
+          <option value="Viagem">✈️ Viagem</option>
+          <option value="Trabalho">💼 Trabalho</option>
+          <option value="Saúde">🏥 Saúde</option>
+          <option value="Compromisso">📅 Compromisso</option>
+          <option value="Aniversário">🎂 Aniversário</option>
+          <option value="Outro">❓ Outro</option>
+        </select>
+        <button onclick="registrarAusencia()" class="px-4 py-2.5 rounded-xl bg-red-900/60 border border-red-700/40 text-red-300 font-bold text-sm hover:bg-red-800/60 shrink-0">Não vou</button>
+      </div>
     </div>
   </div>`;
   const adminSection = S.adminOk ? `<div class="mt-4 pt-4 border-t border-green-900/30">
