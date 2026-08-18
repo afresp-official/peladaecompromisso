@@ -475,6 +475,11 @@ function renderLista() {
   if(game?.date){const[y,m,d]=game.date.split("-");diaSemana=dias[new Date(+y,+m-1,+d).getDay()];}
 
   el.innerHTML=`
+    <!-- Botão início (visível só no guest mode) -->
+    <div class="flex items-center justify-between mb-3">
+      <button onclick="document.body.classList.remove('guest-mode');goTo('inicio')" class="flex items-center gap-1.5 px-3 h-8 rounded-xl text-xs font-bold text-green-300 transition-colors" style="background:rgba(20,60,30,0.9);border:1px solid rgba(74,222,128,0.25)">🏠 Início</button>
+      <span class="text-[10px] text-white/20 uppercase tracking-widest">Pelada é Compromisso</span>
+    </div>
     <!-- Header -->
     <div class="rounded-2xl bg-gradient-to-br from-[#0d2016] to-[#081510] border border-green-900/40 p-4 mb-3">
       <div class="flex items-start justify-between mb-3">
