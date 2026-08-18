@@ -832,10 +832,11 @@ function renderCampo() {
   }
 
   function posOf(pid) {
-    if (formation[pid]) return formation[pid];
     const team = getPlayerTeam(game, pid);
     const role = game.players?.[pid]?.pos||"";
+    // Posição por função tem prioridade sobre drag salvo
     if(role&&team){const rp=posOfByRole(team,role);if(rp)return rp;}
+    if (formation[pid]) return formation[pid];
     const arr = team==="vermelho" ? vermPids : team==="azul" ? azulPids : semPids;
     const idx = arr.indexOf(pid);
     if (team==="vermelho" || team==="azul") return defaultPos(team, idx);
@@ -2302,7 +2303,11 @@ async function ciclarPosicao(pid,gameId){
   const cur=g.players?.[pid]?.pos||"";
   const idx=POSICOES.indexOf(cur);
   const next=POSICOES[(idx+1)%POSICOES.length];
-  await db.ref("games/"+gameId+"/players/"+pid+"/pos").set(next||null);
+  // Limpa drag salvo para que a posição por função seja usada
+  await db.ref().update({
+    ["games/"+gameId+"/players/"+pid+"/pos"]: next||null,
+    ["formations/"+gameId+"/"+pid]: null
+  });
 }
 async function addRival(){
   const n1=(document.getElementById("rival1")?.value||"").trim();
