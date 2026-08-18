@@ -861,26 +861,28 @@ function renderCampo() {
   const POS_LABELS={"GK":"🥅 Goleiro","ZAG":"🛡 Zagueiro","LAT":"↕ Lateral","VOL":"🔄 Volante","MEI":"🎯 Meia","ATA":"⚡ Atacante","PNT":"🔥 Ponta"};
   function playerCard(pid,team){
     const role=game.players?.[pid]?.pos||"";
-    const posLabel=POS_LABELS[role]||"— posição";
-    const cardBg=team==="vermelho"?"bg-red-900/20 border-red-700/25":"bg-blue-900/20 border-blue-700/25";
-    const posCls=team==="vermelho"?"text-red-300/60 bg-red-900/30 hover:bg-red-800/50":"text-blue-300/60 bg-blue-900/30 hover:bg-blue-800/50";
-    return '<div class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg border '+cardBg+'">'
+    const posLabel=POS_LABELS[role]||"— pos";
+    const isVerm=team==="vermelho";
+    const cardStyle=isVerm?"background:rgba(200,30,30,0.25);border:1px solid rgba(220,80,80,0.35)":"background:rgba(30,60,200,0.25);border:1px solid rgba(80,130,220,0.35)";
+    const posBg=isVerm?"background:rgba(180,20,20,0.6)":"background:rgba(20,40,180,0.6)";
+    const posColor=isVerm?"color:#fca5a5":"color:#93c5fd";
+    return '<div class="flex items-center gap-2 px-2 py-1.5 rounded-lg" style="'+cardStyle+'">'
       +'<div class="flex-1 min-w-0">'
-      +'<p class="text-xs font-bold text-white/90 truncate leading-tight">'+playerName(pid)+'</p>'
-      +'<button onclick="ciclarPosicao(\''+pid+'\',\''+game.id+'\')" class="text-[10px] px-1.5 py-0.5 rounded-full mt-0.5 font-semibold transition-colors '+posCls+'">'+posLabel+'</button>'
+      +'<p class="text-xs font-bold text-white truncate leading-tight">'+playerName(pid)+'</p>'
+      +'<button onclick="ciclarPosicao(\''+pid+'\',\''+game.id+'\')" class="text-[10px] px-1.5 py-0.5 rounded-full mt-0.5 font-bold" style="'+posBg+';'+posColor+'">'+posLabel+'</button>'
       +'</div>'
-      +'<button onclick="ciclarJogador(\''+pid+'\',\''+game.id+'\')" class="shrink-0 text-white/20 hover:text-white/50 text-lg leading-none px-1">⇄</button>'
+      +'<button onclick="ciclarJogador(\''+pid+'\',\''+game.id+'\')" class="shrink-0 text-white/40 hover:text-white text-base leading-none px-0.5" title="Trocar time">⇄</button>'
       +'</div>';
   }
 
   const vermPanel = vermPids.length
     ? vermPids.map(pid=>playerCard(pid,"vermelho")).join("")
-    : '<p class="text-xs text-red-400/20 text-center py-3">vazio</p>';
+    : '<p class="text-xs text-red-300/40 text-center py-3 italic">nenhum jogador</p>';
   const azulPanel = azulPids.length
     ? azulPids.map(pid=>playerCard(pid,"azul")).join("")
-    : '<p class="text-xs text-blue-400/20 text-center py-3">vazio</p>';
+    : '<p class="text-xs text-blue-300/40 text-center py-3 italic">nenhum jogador</p>';
   const semChips = semPidsOrdered.map(pid=>
-    '<button onclick="ciclarJogador(\''+pid+'\',\''+game.id+'\')" class="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white/50 font-semibold active:opacity-70">'+playerName(pid)+'</button>'
+    '<button onclick="ciclarJogador(\''+pid+'\',\''+game.id+'\')" class="px-3 py-1.5 rounded-xl text-xs font-bold text-white active:scale-95 transition-transform" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2)">'+playerName(pid)+'</button>'
   ).join("");
 
   el.innerHTML = `
@@ -898,26 +900,26 @@ function renderCampo() {
 
     <!-- Dois painéis de time -->
     <div class="grid grid-cols-2 gap-2 mb-2">
-      <div class="bg-red-950/20 border border-red-800/30 rounded-xl overflow-hidden">
-        <div class="px-3 py-2 border-b border-red-900/30 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
-          <span class="text-[11px] font-black text-red-400 uppercase tracking-wider flex-1">Vermelho</span>
-          <span class="text-xs font-black text-red-300/50">${verm}</span>
+      <div class="rounded-xl overflow-hidden" style="background:rgba(120,10,10,0.85);border:1.5px solid rgba(220,50,50,0.5)">
+        <div class="px-3 py-2.5 flex items-center gap-2" style="background:rgba(180,20,20,0.7);border-bottom:1px solid rgba(220,50,50,0.3)">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-400 shrink-0 shadow-lg" style="box-shadow:0 0 6px #f87171"></span>
+          <span class="text-xs font-black text-white uppercase tracking-wider flex-1">Vermelho</span>
+          <span class="text-sm font-black text-red-200 bg-red-900/60 px-2 py-0.5 rounded-full">${verm}</span>
         </div>
-        <div class="p-1.5 space-y-1">${vermPanel}</div>
+        <div class="p-2 space-y-1.5">${vermPanel}</div>
       </div>
-      <div class="bg-blue-950/20 border border-blue-800/30 rounded-xl overflow-hidden">
-        <div class="px-3 py-2 border-b border-blue-900/30 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
-          <span class="text-[11px] font-black text-blue-400 uppercase tracking-wider flex-1">Azul</span>
-          <span class="text-xs font-black text-blue-300/50">${azul}</span>
+      <div class="rounded-xl overflow-hidden" style="background:rgba(10,20,120,0.85);border:1.5px solid rgba(50,100,220,0.5)">
+        <div class="px-3 py-2.5 flex items-center gap-2" style="background:rgba(20,40,180,0.7);border-bottom:1px solid rgba(50,100,220,0.3)">
+          <span class="w-2.5 h-2.5 rounded-full bg-blue-400 shrink-0" style="box-shadow:0 0 6px #60a5fa"></span>
+          <span class="text-xs font-black text-white uppercase tracking-wider flex-1">Azul</span>
+          <span class="text-sm font-black text-blue-200 bg-blue-900/60 px-2 py-0.5 rounded-full">${azul}</span>
         </div>
-        <div class="p-1.5 space-y-1">${azulPanel}</div>
+        <div class="p-2 space-y-1.5">${azulPanel}</div>
       </div>
     </div>
     ${semPidsOrdered.length?`
-    <div class="mb-2 px-1">
-      <p class="text-[10px] text-white/25 uppercase tracking-wider font-bold mb-1.5">Sem time — toque para atribuir</p>
+    <div class="mb-2 rounded-xl p-3" style="background:rgba(10,25,15,0.88);border:1px solid rgba(74,222,128,0.2)">
+      <p class="text-[10px] text-green-400/70 uppercase tracking-wider font-black mb-2">⚽ Sem time — toque para atribuir</p>
       <div class="flex flex-wrap gap-1.5">${semChips}</div>
     </div>`:""}
 
