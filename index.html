@@ -929,6 +929,8 @@ function renderCampo() {
 
   const verm = vermPids.length, azul = azulPids.length;
   const semPidsOrdered = pids.filter(p=>!getPlayerTeam(game,p));
+  // Modo leitura: times já definidos e usuário não é admin
+  const readOnly = (verm>0||azul>0) && !S.adminOk;
 
   const POS_LABELS={"GK":"🥅 Goleiro","ZAG":"🛡 Zagueiro","LAT":"↕ Lateral","VOL":"🔄 Volante","MEI":"🎯 Meia","ATA":"⚡ Atacante","PNT":"🔥 Ponta"};
   function playerCard(pid,team){
@@ -941,9 +943,11 @@ function renderCampo() {
     return '<div class="flex items-center gap-2 px-2 py-1.5 rounded-lg" style="'+cardStyle+'">'
       +'<div class="flex-1 min-w-0">'
       +'<p class="text-xs font-bold text-white truncate leading-tight">'+playerName(pid)+'</p>'
-      +'<button onclick="ciclarPosicao(\''+pid+'\',\''+game.id+'\')" class="text-[10px] px-1.5 py-0.5 rounded-full mt-0.5 font-bold" style="'+posBg+';'+posColor+'">'+posLabel+'</button>'
+      +(readOnly
+        ?'<span class="text-[10px] px-1.5 py-0.5 rounded-full mt-0.5 font-bold inline-block" style="'+posBg+';'+posColor+'">'+posLabel+'</span>'
+        :'<button onclick="ciclarPosicao(\''+pid+'\',\''+game.id+'\')" class="text-[10px] px-1.5 py-0.5 rounded-full mt-0.5 font-bold" style="'+posBg+';'+posColor+'">'+posLabel+'</button>')
       +'</div>'
-      +'<button onclick="atribuirTime(\''+pid+'\',\''+game.id+'\','+(isVerm?'\'azul\'':'\'vermelho\'')+') " class="shrink-0 text-white/40 hover:text-white text-base leading-none px-0.5" title="Trocar time">'+(isVerm?'🔵':'🔴')+'</button>'
+      +(readOnly?'':'<button onclick="atribuirTime(\''+pid+'\',\''+game.id+'\','+(isVerm?'\'azul\'':'\'vermelho\'')+') " class="shrink-0 text-white/40 hover:text-white text-base leading-none px-0.5" title="Trocar time">'+(isVerm?'🔵':'🔴')+'</button>')
       +'</div>';
   }
 
@@ -959,8 +963,9 @@ function renderCampo() {
     return '<div class="flex items-center gap-2 px-2.5 py-2 rounded-xl" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12)">'
       +'<div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black text-white/60" style="background:rgba(255,255,255,0.1)">'+ini+'</div>'
       +'<span class="flex-1 text-xs font-semibold text-white/90 truncate leading-tight">'+name+'</span>'
-      +'<button onclick="atribuirTime(\''+pid+'\',\''+game.id+'\',\'vermelho\')" class="w-7 h-7 rounded-full shrink-0 active:scale-90 transition-transform" style="background:rgba(220,38,38,0.85);box-shadow:0 2px 8px rgba(220,38,38,0.4)"></button>'
-      +'<button onclick="atribuirTime(\''+pid+'\',\''+game.id+'\',\'azul\')" class="w-7 h-7 rounded-full shrink-0 active:scale-90 transition-transform" style="background:rgba(37,99,235,0.85);box-shadow:0 2px 8px rgba(37,99,235,0.4)"></button>'
+      +(readOnly?''
+        :'<button onclick="atribuirTime(\''+pid+'\',\''+game.id+'\',\'vermelho\')" class="w-7 h-7 rounded-full shrink-0 active:scale-90 transition-transform" style="background:rgba(220,38,38,0.85);box-shadow:0 2px 8px rgba(220,38,38,0.4)"></button>'
+        +'<button onclick="atribuirTime(\''+pid+'\',\''+game.id+'\',\'azul\')" class="w-7 h-7 rounded-full shrink-0 active:scale-90 transition-transform" style="background:rgba(37,99,235,0.85);box-shadow:0 2px 8px rgba(37,99,235,0.4)"></button>')
       +'</div>';
   }).join("");
 
@@ -973,8 +978,8 @@ function renderCampo() {
       </div>
       <div class="flex gap-1.5">
         ${(verm>0||azul>0)?'<button onclick="compartilharEscalacao(\''+game.id+'\')" class="px-3 h-9 rounded-xl font-black text-xs flex items-center gap-1" style="background:rgba(22,101,52,0.7);border:1px solid rgba(74,222,128,0.35);color:#86efac">📄 PDF</button>':''}
-        <button onclick="sortearTimes('${game.id}')" class="px-3 h-9 rounded-xl bg-purple-900/60 border border-purple-700/50 text-purple-300 font-black text-xs flex items-center gap-1.5">🎲 Sortear</button>
-        <button onclick="limparTimes('${game.id}')" class="px-3 h-9 rounded-xl bg-red-950/50 border border-red-900/40 text-red-400 font-black text-xs">Limpar</button>
+        ${S.adminOk?'<button onclick="sortearTimes(\''+game.id+'\')" class="px-3 h-9 rounded-xl bg-purple-900/60 border border-purple-700/50 text-purple-300 font-black text-xs flex items-center gap-1.5">🎲 Sortear</button>':''}
+        ${S.adminOk?'<button onclick="limparTimes(\''+game.id+'\')" class="px-3 h-9 rounded-xl bg-red-950/50 border border-red-900/40 text-red-400 font-black text-xs">Limpar</button>':''}
       </div>
     </div>
 
@@ -1123,6 +1128,7 @@ function attachDragListeners() {
 }
 
 function startDrag(e, pid) {
+  if(!S.adminOk) return;
   e.preventDefault();
   const pt = e.touches ? e.touches[0] : e;
   const field = document.getElementById("campo-field");
@@ -2517,6 +2523,7 @@ function closeModal(){document.getElementById("modal-overlay").classList.add("hi
 
 // ── Utils ──
 async function atribuirTime(pid,gameId,team){
+  if(!S.adminOk){showToast("Apenas o admin pode alterar os times.");return;}
   const updates={};
   updates["games/"+gameId+"/players/"+pid+"/team"]=team;
   updates["games/"+gameId+"/players/"+pid+"/goleiro"]=null;
@@ -2524,6 +2531,7 @@ async function atribuirTime(pid,gameId,team){
 }
 const POSICOES=["","GK","ZAG","LAT","VOL","MEI","ATA","PNT"];
 async function ciclarPosicao(pid,gameId){
+  if(!S.adminOk){showToast("Apenas o admin pode alterar posições.");return;}
   const g=S.games[gameId]; if(!g) return;
   const cur=g.players?.[pid]?.pos||"";
   const idx=POSICOES.indexOf(cur);
