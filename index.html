@@ -388,68 +388,98 @@ function renderLista() {
 
   const ga=S.ausencia[game.id]||{};
   const ausentesEntries=Object.entries(ga);
-  const ausentesSection=`<div class="mt-3 rounded-2xl overflow-hidden border border-red-900/30 bg-[#110808]">
-    <div class="flex items-center justify-between px-4 py-2.5 border-b border-red-900/20">
+  const ausentesSection=`<div class="rounded-2xl overflow-hidden border border-red-900/30 bg-[#110808] mb-3">
+    <div class="px-4 py-2.5 border-b border-red-900/20">
       <span class="text-[10px] text-red-400/60 uppercase tracking-widest font-bold">❌ Ausentes (${ausentesEntries.length})</span>
     </div>
-    <div class="flex gap-0" style="min-height:${ausentesEntries.length>0?'auto':'120px'}">
-      <div class="flex-1 border-r border-red-900/20 overflow-y-auto p-3" style="max-height:200px">
-        ${ausentesEntries.length?ausentesEntries.map(([pid,e],i)=>`
-          <div class="flex items-center gap-2 py-1.5 border-b border-red-900/10 last:border-0">
-            <span class="text-[10px] text-red-400/30 w-4 shrink-0 font-bold">${i+1}</span>
-            <div class="flex-1 min-w-0 overflow-hidden">
-              <p class="text-sm font-semibold text-red-200/80 truncate">${e.name}</p>
-              ${e.motivo?`<p class="text-[10px] text-red-300/50 truncate">${e.motivo}</p>`:""}
-            </div>
-            ${S.adminOk?`<button onclick="removeAusencia('${game.id}','${pid}')" class="text-red-500/40 hover:text-red-400 text-xs px-1 shrink-0">✕</button>`:'<span class="text-red-500/40 text-xs">✕</span>'}
-          </div>`).join("")
-        :`<p class="text-red-400/20 text-xs text-center pt-4">Nenhuma ausência registrada</p>`}
-      </div>
-      <div class="p-2 flex flex-col gap-1.5 justify-center" style="width:52%">
-        <p class="text-[9px] text-red-400/40 uppercase tracking-wider font-bold text-center">Ausência</p>
+    <!-- Form ausência -->
+    <div class="p-3 border-b border-red-900/20 flex flex-col gap-2">
+      <div class="flex gap-2">
         <input id="ausencia-nome" type="text" placeholder="Seu nome" maxlength="30" autocomplete="name"
-          class="w-full px-2 py-2 rounded-xl bg-[#1a0808] border border-red-900/40 text-white placeholder-red-300/20 text-sm focus:border-red-600 focus:outline-none"/>
-        <select id="ausencia-motivo" class="w-full px-1.5 py-1.5 rounded-lg bg-[#1a0808] border border-red-900/40 text-red-200/60 text-xs focus:border-red-600 focus:outline-none">
-          <option value="">Motivo</option>
-          <option value="Viagem">✈️ Viagem</option>
-          <option value="Trabalho">💼 Trabalho</option>
-          <option value="Saúde">🏥 Saúde</option>
-          <option value="Compromisso">📅 Compromisso</option>
-          <option value="Aniversário-Família">🎂 Aniversário-Família</option>
-          <option value="Minha esposa não deixou">👩 Esposa não deixou</option>
-          <option value="Lavar louças">🍽️ Lavar louças</option>
-          <option value="Psicólogo-Xvideos">🛋️ Psicólogo-Xvideos</option>
-          <option value="Cuidar das crianças">👶 Cuidar das crianças</option>
-          <option value="Outro">❓ Outro</option>
-        </select>
-        <button onclick="registrarAusencia()" class="w-full py-2 rounded-xl bg-red-900/70 hover:bg-red-800/70 border border-red-700/40 text-red-200 font-black text-xs transition-colors">
+          class="flex-1 px-3 py-2 rounded-xl bg-[#1a0808] border border-red-900/40 text-white placeholder-red-300/20 text-sm focus:border-red-600 focus:outline-none"/>
+        <button onclick="registrarAusencia()" class="px-3 py-2 rounded-xl bg-red-800/80 hover:bg-red-700/80 border border-red-700/40 text-red-200 font-black text-xs transition-colors whitespace-nowrap">
           Não vou
         </button>
       </div>
+      <select id="ausencia-motivo" class="w-full px-3 py-2 rounded-xl bg-[#1a0808] border border-red-900/40 text-red-200/60 text-sm focus:border-red-600 focus:outline-none">
+        <option value="">Motivo (opcional)</option>
+        <option value="Viagem">✈️ Viagem</option>
+        <option value="Trabalho">💼 Trabalho</option>
+        <option value="Saúde">🏥 Saúde</option>
+        <option value="Compromisso">📅 Compromisso</option>
+        <option value="Aniversário-Família">🎂 Aniversário-Família</option>
+        <option value="Minha esposa não deixou">👩 Esposa não deixou</option>
+        <option value="Lavar louças">🍽️ Lavar louças</option>
+        <option value="Psicólogo-Xvideos">🛋️ Psicólogo-Xvideos</option>
+        <option value="Cuidar das crianças">👶 Cuidar das crianças</option>
+        <option value="Outro">❓ Outro</option>
+      </select>
+    </div>
+    <!-- Lista ausentes -->
+    <div class="divide-y divide-red-900/15">
+      ${ausentesEntries.length?ausentesEntries.map(([pid,e],i)=>`
+        <div class="flex items-center gap-3 px-4 py-2.5">
+          <span class="text-[10px] text-red-400/30 w-4 shrink-0 font-bold">${i+1}</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-red-200/80">${e.name}</p>
+            ${e.motivo?`<p class="text-xs text-red-300/50">${e.motivo}</p>`:""}
+          </div>
+          ${S.adminOk?`<button onclick="removeAusencia('${game.id}','${pid}')" class="text-red-500/40 hover:text-red-400 text-sm px-1 shrink-0">✕</button>`:""}
+        </div>`).join("")
+      :`<p class="text-red-400/20 text-xs text-center py-4">Nenhuma ausência registrada</p>`}
     </div>
   </div>`;
   const adminSection = S.adminOk ? `<div class="mt-4 pt-4 border-t border-green-900/30">
     <button onclick="resetPresenca('${game.id}')" class="w-full py-2 rounded-xl bg-red-950/50 border border-red-800/40 text-red-400 font-bold text-xs hover:bg-red-900/40 transition-colors">Limpar lista (Admin)</button>
   </div>` : "";
 
+  const dias=["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
+  let diaSemana="";
+  if(game?.date){const[y,m,d]=game.date.split("-");diaSemana=dias[new Date(+y,+m-1,+d).getDay()];}
+
   el.innerHTML=`
-    <div class="mb-3 flex items-center justify-between px-1">
-      <div>
-        <h2 class="font-black text-base leading-none">Pelada é Compromisso</h2>
-        <p class="text-green-300/40 text-[10px] mt-0.5">AFRESP &#x2022; ${fmtDate(game.date)}</p>
+    <!-- Header -->
+    <div class="rounded-2xl bg-gradient-to-br from-[#0d2016] to-[#081510] border border-green-900/40 p-4 mb-3">
+      <div class="flex items-start justify-between mb-3">
+        <div>
+          <h2 class="font-black text-base leading-none text-white">Pelada é Compromisso</h2>
+          <p class="text-green-300/50 text-xs mt-0.5">AFRESP &bull; ${diaSemana}, ${fmtDate(game.date)}</p>
+        </div>
+        <div class="text-right">
+          <div class="font-black text-2xl leading-none ${filled===TOTAL_VAGAS?"text-green-400":"text-amber-400"}">${filled}<span class="text-green-300/25 text-base font-normal">/22</span></div>
+          <p class="text-[9px] text-green-300/30 uppercase tracking-wider">confirmados</p>
+        </div>
       </div>
-      <div class="text-right">
-        <span class="font-black text-xl ${filled===TOTAL_VAGAS?"text-green-400":"text-amber-400"}">${filled}</span><span class="text-green-300/30 text-sm font-normal">/22</span>
-        <p class="text-[9px] text-green-300/30 uppercase tracking-wider">confirmados</p>
+      <!-- Barra de progresso -->
+      <div class="h-2 rounded-full bg-[#0b1a10] overflow-hidden mb-3">
+        <div class="h-full rounded-full transition-all duration-500 ${filled===TOTAL_VAGAS?"bg-green-500":"bg-amber-500"}" style="width:${Math.min(100,filled/22*100)}%"></div>
       </div>
+      ${isFull?`<p class="text-center text-amber-400 font-black text-sm">⚽ Lista completa! 22/22</p>`:`
+      <div class="flex gap-2 mb-2">
+        <input id="presenca-nome" type="text" placeholder="Digite seu nome" maxlength="30" autocomplete="name"
+          class="flex-1 px-3 py-2.5 rounded-xl bg-[#081510] border border-[#2a4a35] text-white placeholder-green-300/25 font-semibold text-sm focus:border-green-500 focus:outline-none"
+          onkeydown="if(event.key==='Enter')confirmarNome()" />
+        <button onclick="confirmarNome()" class="px-4 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-black text-sm transition-colors shadow-lg whitespace-nowrap">
+          Confirmar
+        </button>
+      </div>
+      <button onclick="sharePresenca()" class="w-full py-2 rounded-xl bg-[#081510] border border-green-800/30 text-green-400/60 font-bold text-xs hover:bg-[#0f2016] transition-colors">
+        📤 Compartilhar lista
+      </button>`}
     </div>
-    <div class="flex gap-0 rounded-2xl overflow-hidden border border-green-900/40" style="min-height:340px">
-      <div class="flex-1 bg-[#080f0a] border-r border-green-900/30 overflow-y-auto p-3" style="max-height:420px">
-        <p class="text-[9px] text-green-300/25 uppercase tracking-widest font-bold mb-2">Confirmados (${filled}/22)</p>
+
+    <!-- Lista de confirmados -->
+    <div class="rounded-2xl bg-[#080f0a] border border-green-900/40 overflow-hidden mb-3">
+      <div class="flex items-center justify-between px-4 py-2.5 border-b border-green-900/30">
+        <span class="text-[10px] text-green-300/40 uppercase tracking-widest font-bold">✅ Confirmados (${filled}/22)</span>
+        <span class="text-[10px] text-green-300/25">${22-filled} vaga${22-filled!==1?"s":""} livre${22-filled!==1?"s":""}</span>
+      </div>
+      <div class="divide-y divide-green-900/20">
         ${namesList}
       </div>
-      <div class="bg-[#0b1a10]" style="width:52%">${rightCol}</div>
     </div>
+
+    <!-- Ausentes -->
     ${ausentesSection}
     ${adminSection}
   `;
