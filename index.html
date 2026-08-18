@@ -1523,30 +1523,7 @@ function checkPin(){
   if(pin===S.config.adminPin){S.adminOk=true;closeModal();goTo("admin");}else alert("PIN incorreto!");
 }
 
-let gameTeams={}, selectedGameType="pelada";
-function cyclePlayerTeam(pid){
-  const cur=gameTeams[pid]||null;
-  gameTeams[pid]= cur===null?"azul": cur==="azul"?"vermelho":null;
-  const btn=document.getElementById("pg-"+pid);
-  const lbl=document.getElementById("pgt-"+pid);
-  if(!btn) return;
-  const t=gameTeams[pid];
-  btn.className="pchip "+(t==="azul"?"pchip-azul":t==="vermelho"?"pchip-verm":"pchip-off");
-  if(lbl) lbl.textContent=t==="azul"?"🔵 Azul":t==="vermelho"?"🔴 Verm":"—";
-  updateTeamCounter();
-}
-function updateTeamCounter(){
-  const verm=Object.values(gameTeams).filter(t=>t==="vermelho").length;
-  const azul=Object.values(gameTeams).filter(t=>t==="azul").length;
-  const ev=document.getElementById("tc-verm"), ea=document.getElementById("tc-azul");
-  if(ev) ev.textContent=verm; if(ea) ea.textContent=azul;
-  const bv=document.getElementById("tc-bar-verm"), ba=document.getElementById("tc-bar-azul");
-  if(bv) bv.style.width=Math.min(100,verm/11*100)+"%";
-  if(ba) ba.style.width=Math.min(100,azul/11*100)+"%";
-  const cv=document.getElementById("tc-chip-verm"), ca=document.getElementById("tc-chip-azul");
-  if(cv) cv.className="font-black text-lg "+(verm===11?"text-green-300":verm>11?"text-orange-400":"text-red-400");
-  if(ca) ca.className="font-black text-lg "+(azul===11?"text-green-300":azul>11?"text-orange-400":"text-blue-400");
-}
+let selectedGameType="pelada";
 function setGameType(t){
   selectedGameType=t;
   const p=document.getElementById("gt-pelada"),c=document.getElementById("gt-comp");
