@@ -529,7 +529,7 @@ async function sharePresenca(){
   const ausentes=Object.values(ga);
   let ausentesText="";
   if(ausentes.length){
-    ausentesText="\n\n❌ *Não vão ("+ausentes.length+")*";
+    ausentesText="\n\n❌ *Ausentes ("+ausentes.length+")*";
     ausentes.forEach((e,i)=>{ausentesText+="\n"+(i+1)+". "+e.name+(e.motivo?" — "+e.motivo:"");});
   }
   const url=location.href.split("#")[0]+"#lista";
