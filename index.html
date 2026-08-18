@@ -113,6 +113,7 @@
     body > main {
       flex: 1 1 0%;
       overflow-y: auto;
+      overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
       overscroll-behavior-y: contain;
     }
@@ -684,14 +685,26 @@ async function sharePresenca(){
 }
 
 function renderAll() {
-  renderUserChip();
-  if(S.currentPage==="inicio")    renderInicio();
-  if(S.currentPage==="lista")     renderLista();
-  if(S.currentPage==="campo")     renderCampo();
-  if(S.currentPage==="votar")     renderVotar();
-  if(S.currentPage==="ranking")   renderRanking();
-  if(S.currentPage==="historico") renderHistorico();
-  if(S.currentPage==="admin")     renderAdmin();
+  try { renderUserChip(); } catch(e) { console.error("renderUserChip:",e); }
+  try {
+    if(S.currentPage==="inicio")    renderInicio();
+    else if(S.currentPage==="lista")     renderLista();
+    else if(S.currentPage==="campo")     renderCampo();
+    else if(S.currentPage==="votar")     renderVotar();
+    else if(S.currentPage==="ranking")   renderRanking();
+    else if(S.currentPage==="historico") renderHistorico();
+    else if(S.currentPage==="admin")     renderAdmin();
+  } catch(e) {
+    console.error("renderAll ["+S.currentPage+"]:",e);
+    const cont=document.getElementById(
+      S.currentPage==="inicio"?"game-status-card":
+      S.currentPage==="lista"?"lista-container":
+      S.currentPage==="campo"?"campo-container":
+      S.currentPage==="votar"?"vote-container":
+      S.currentPage==="admin"?"admin-container":"game-status-card"
+    );
+    if(cont) cont.innerHTML='<p class="text-red-400 text-xs p-4">Erro ao carregar. Tente atualizar a página.</p>';
+  }
 }
 
 // ── User chip ──
@@ -1802,16 +1815,16 @@ function renderAdmin(){
           <button onclick="removeRival(${i})" class="text-white/20 hover:text-red-400 font-black text-base leading-none">×</button>
         </span>`).join("")||'<p class="text-green-300/20 text-xs">Nenhum par configurado</p>'}
       </div>
-      <div class="flex gap-2">
-        <select id="rival1" class="flex-1 bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-green-500">
-          <option value="">Jogador 1</option>
+      <div class="flex flex-col gap-2">
+        <select id="rival1" class="w-full bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-green-500">
+          <option value="">Jogador 1...</option>
           ${activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR")).map(p=>`<option value="${p.name}">${p.name}</option>`).join("")}
         </select>
-        <select id="rival2" class="flex-1 bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-green-500">
-          <option value="">Jogador 2</option>
+        <select id="rival2" class="w-full bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-green-500">
+          <option value="">Jogador 2...</option>
           ${activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR")).map(p=>`<option value="${p.name}">${p.name}</option>`).join("")}
         </select>
-        <button onclick="addRival()" class="px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-white text-sm font-bold whitespace-nowrap">+</button>
+        <button onclick="addRival()" class="w-full py-2 rounded-lg bg-green-700 hover:bg-green-600 text-white text-sm font-bold">+ Adicionar par</button>
       </div>
     </div>
     <div class="bg-[#132218] border border-[#2a4a35] rounded-xl p-4">
