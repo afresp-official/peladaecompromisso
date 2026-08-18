@@ -395,8 +395,10 @@ function renderLista() {
       if(e) namesList+=`<div class="flex items-center gap-2 py-1.5 border-b border-amber-900/20 last:border-0 text-amber-200/60 font-medium">
         <span class="text-[10px] text-amber-400/30 w-5 shrink-0 font-bold">${i}</span>
         <span class="text-sm truncate flex-1">${e.name}</span>
-        <span class="text-[10px] text-amber-500/50 shrink-0">espera</span>
-        ${S.adminOk?'<button onclick="removePresenca(\''+game.id+'\','+i+')" class="text-red-500/60 hover:text-red-400 text-xs font-bold px-1">&#x2715;</button>':''}
+        ${S.adminOk
+          ?'<button onclick="promoverEspera(\''+game.id+'\','+i+')" class="text-xs font-black px-2 py-0.5 rounded-lg text-green-300 active:scale-95 transition-transform" style="background:rgba(22,101,52,0.7);border:1px solid rgba(74,222,128,0.3)" title="Mover para o jogo">✓ Jogo</button>'
+           +'<button onclick="removePresenca(\''+game.id+'\','+i+')" class="text-red-500/60 hover:text-red-400 text-xs font-bold px-1">&#x2715;</button>'
+          :'<span class="text-[10px] text-amber-500/50 shrink-0">espera</span>'}
       </div>`;
     });
   }
@@ -567,6 +569,22 @@ async function removePresenca(gameId,slot){
   await db.ref().update(updates);
 }
 
+async function promoverEspera(gameId,slot){
+  if(!S.adminOk)return;
+  const gp=S.presenca[gameId]||{};
+  const entry=gp[slot];
+  if(!entry)return;
+  let freeSlot=null;
+  for(let i=1;i<=TOTAL_VAGAS;i++){if(!gp[i]){freeSlot=i;break;}}
+  if(!freeSlot){showToast("Não há vagas livres no momento");return;}
+  const updates={};
+  updates["presenca/"+gameId+"/"+freeSlot]=entry;
+  updates["presenca/"+gameId+"/"+slot]=null;
+  const pid=Object.entries(S.players).find(([,p])=>p.name&&p.name.toLowerCase()===entry.name.toLowerCase())?.[0];
+  if(pid){const g=S.games[gameId];if(g&&!g.players?.[pid])updates["games/"+gameId+"/players/"+pid]={name:entry.name};}
+  await db.ref().update(updates);
+  showToast(entry.name+" movido para vaga "+freeSlot+" ✅");
+}
 async function resetPresenca(gameId){
   if(!S.adminOk)return;
   if(!confirm("Limpar toda a lista de presença deste jogo?"))return;
