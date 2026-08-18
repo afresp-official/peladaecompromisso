@@ -1698,7 +1698,9 @@ function sortearTimes(gameId){
   const allPids=getGamePlayerIds(g);
   const presSlots=S.presenca[gameId]||{};
   const presNames=new Set(Object.values(presSlots).map(e=>e.name.toLowerCase()));
-  _sorteioPids=presNames.size>0?allPids.filter(pid=>presNames.has((S.players[pid]?.name||"").toLowerCase())):allPids;
+  const presencePids=Object.entries(S.players).filter(([,p])=>presNames.has((p.name||"").toLowerCase())).map(([pid])=>pid);
+  const pidsSet=new Set([...allPids.filter(pid=>!presNames.size||presNames.has((S.players[pid]?.name||"").toLowerCase())),...presencePids]);
+  _sorteioPids=[...pidsSet];
   _sorteioGameId=gameId;
   if(_sorteioPids.length<2){showToast("Poucos jogadores para sortear.");return;}
   mostrarSorteio();
