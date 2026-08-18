@@ -603,7 +603,8 @@ async function sharePresenca(){
   const game=nextGame();
   const gp=game?(S.presenca[game.id]||{}):{};
   const ga=game?(S.ausencia[game.id]||{}):{};
-  const filled=Object.keys(gp).length;
+  const allSlots=Object.keys(gp).map(Number);
+  const filled=allSlots.filter(n=>n<=TOTAL_VAGAS).length;
   const vagas=22-filled;
   const dias=["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
   let diaSemana="";
@@ -611,6 +612,12 @@ async function sharePresenca(){
   const sep="━━━━━━━━━━━━━━━━━━━";
   let nomes="";
   for(let i=1;i<=TOTAL_VAGAS;i++){if(gp[i])nomes+="\n"+i+". "+gp[i].name;}
+  const extraSlots=Object.keys(gp).map(Number).filter(n=>n>TOTAL_VAGAS).sort((a,b)=>a-b);
+  let esperaText="";
+  if(extraSlots.length){
+    esperaText="\n"+sep+"\n⏳ *FILA DE ESPERA ("+extraSlots.length+")*\n";
+    extraSlots.forEach((s,i)=>{esperaText+="\n"+(i+1)+". "+gp[s].name;});
+  }
   const ausentes=Object.values(ga);
   let ausentesText="";
   if(ausentes.length){
@@ -625,6 +632,7 @@ async function sharePresenca(){
     +"\n\n✅ *CONFIRMADOS ("+filled+"/22)*"
     +(vagas>0?" — "+vagas+" vaga"+(vagas>1?"s":"")+" livre"+(vagas>1?"s":""):"")
     +(nomes?"\n"+nomes:"")
+    +esperaText
     +ausentesText
     +"\n"+sep
     +"\n🔗 Confirme no link:\n"+url;
