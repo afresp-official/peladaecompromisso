@@ -427,7 +427,8 @@ function renderLista() {
         <p class="text-[10px] text-white/20 uppercase tracking-widest pt-2 pb-0.5">Registrar ausência</p>
         <div class="flex gap-2">
           <input id="ausencia-nome" type="text" placeholder="Seu nome" maxlength="30" autocomplete="name"
-            class="flex-1 px-3 py-2.5 rounded-xl text-white placeholder-white/20 text-sm focus:outline-none bg-white/5 border border-white/8"/>
+            style="font-size:16px"
+            class="flex-1 px-3 py-2.5 rounded-xl text-white placeholder-white/20 focus:outline-none bg-white/5 border border-white/8"/>
           <button onclick="registrarAusencia()" class="px-4 py-2.5 rounded-xl font-black text-xs text-red-200 whitespace-nowrap transition-opacity active:opacity-70 bg-red-900/50 border border-red-700/30">
             Não vou
           </button>
@@ -499,7 +500,8 @@ function renderLista() {
       ${isFull?`<p class="text-center text-green-400/70 text-xs mb-2 font-semibold">⚽ 22 vagas preenchidas — novos entram na fila de espera</p>`:""}
       <div class="flex gap-2 mb-2">
         <input id="presenca-nome" type="text" placeholder="Digite seu nome" maxlength="30" autocomplete="name"
-          class="flex-1 px-3 py-2.5 rounded-xl bg-[#081510] border border-[#2a4a35] text-white placeholder-green-300/25 font-semibold text-sm focus:border-green-500 focus:outline-none"
+          style="font-size:16px"
+          class="flex-1 px-3 py-2.5 rounded-xl bg-[#081510] border border-[#2a4a35] text-white placeholder-green-300/25 font-semibold focus:border-green-500 focus:outline-none"
           onkeydown="if(event.key==='Enter')confirmarNome()" />
         <button onclick="confirmarNome()" class="px-4 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-black text-sm transition-colors shadow-lg whitespace-nowrap">
           Confirmar
@@ -1792,7 +1794,7 @@ function renderAdmin(){
           <input id="new-player" type="text" placeholder="Adicionar jogador" class="flex-1 bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-green-500" onkeydown="if(event.key==='Enter')addPlayer()"/>
           <button onclick="addPlayer()" class="px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-sm font-bold">Adicionar</button>
         </div>
-        <input type="text" placeholder="🔍 Buscar jogador..." value="${adminPlayerSearch}" oninput="adminPlayerSearch=this.value;renderAdmin();" class="w-full bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-green-500"/>
+        <input type="text" placeholder="🔍 Buscar jogador..." value="${adminPlayerSearch}" oninput="adminPlayerSearch=this.value;renderAdmin();" style="font-size:16px" class="w-full bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-green-500"/>
         <div class="space-y-1.5 max-h-60 overflow-y-auto pr-1">
           ${players.filter(p=>p.name.toLowerCase().includes(adminPlayerSearch.toLowerCase())).map(p=>`<div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0b1a10] border border-[#2a4a35]">
             <span class="flex-1 text-sm font-semibold truncate">${p.name}</span>
