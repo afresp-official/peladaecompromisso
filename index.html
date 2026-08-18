@@ -878,7 +878,8 @@ async function ciclarJogador(pid,gameId){
   } else if(team==="azul"&&!gol){
     updates["games/"+gameId+"/players/"+pid+"/goleiro"]=true;
   } else {
-    updates["games/"+gameId+"/players/"+pid+"/team"]=null;
+    // goleiro → volta para vermelho (não apaga o jogador)
+    updates["games/"+gameId+"/players/"+pid+"/team"]="vermelho";
     updates["games/"+gameId+"/players/"+pid+"/goleiro"]=null;
   }
   await db.ref().update(updates);
@@ -886,7 +887,10 @@ async function ciclarJogador(pid,gameId){
 async function limparTimes(gameId){
   const g=S.games[gameId]; if(!g||!g.players) return;
   const updates={};
-  Object.keys(g.players).forEach(pid=>{updates["games/"+gameId+"/players/"+pid+"/team"]=null;});
+  Object.keys(g.players).forEach(pid=>{
+    updates["games/"+gameId+"/players/"+pid+"/team"]="";
+    updates["games/"+gameId+"/players/"+pid+"/goleiro"]=null;
+  });
   await db.ref().update(updates);
   showToast("Times limpos.");
 }
