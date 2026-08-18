@@ -524,20 +524,34 @@ async function sharePresenca(){
   const gp=game?(S.presenca[game.id]||{}):{};
   const ga=game?(S.ausencia[game.id]||{}):{};
   const filled=Object.keys(gp).length;
+  const vagas=22-filled;
+  const dias=["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
+  let diaSemana="";
+  if(game?.date){const[y,m,d]=game.date.split("-");diaSemana=dias[new Date(+y,+m-1,+d).getDay()];}
+  const sep="━━━━━━━━━━━━━━━━━━━";
   let nomes="";
   for(let i=1;i<=TOTAL_VAGAS;i++){if(gp[i])nomes+="\n"+i+". "+gp[i].name;}
   const ausentes=Object.values(ga);
   let ausentesText="";
   if(ausentes.length){
-    ausentesText="\n\n❌ *Ausentes ("+ausentes.length+")*";
-    ausentes.forEach((e,i)=>{ausentesText+="\n"+(i+1)+". "+e.name+(e.motivo?" — "+e.motivo:"");});
+    ausentesText="\n"+sep+"\n❌ *AUSENTES ("+ausentes.length+")*\n";
+    ausentes.forEach((e,i)=>{ausentesText+="\n"+(i+1)+". "+e.name+(e.motivo?" _("+e.motivo+")_":"");});
   }
   const url=location.href.split("#")[0]+"#lista";
-  const text="⚽ *Pelada AFRESP — Lista de Presença*"+(game?"\n📅 "+fmtDate(game.date):"")+"\n✅ "+filled+"/22 confirmados"+(nomes?"\n"+nomes:"")+ausentesText+"\n\nConfirme no link:";
+  const text=
+    "🏆 *PELADA É COMPROMISSO*\n"
+    +"⚽ _AFRESP — Lista de Presença_\n"
+    +(game?"📅 *"+diaSemana+", "+fmtDate(game.date)+"*\n":"")+sep
+    +"\n\n✅ *CONFIRMADOS ("+filled+"/22)*"
+    +(vagas>0?" — "+vagas+" vaga"+(vagas>1?"s":"")+" livre"+(vagas>1?"s":""):"")
+    +(nomes?"\n"+nomes:"")
+    +ausentesText
+    +"\n"+sep
+    +"\n🔗 Confirme no link:\n"+url;
   if(navigator.share){
-    try{await navigator.share({title:"Presença Pelada AFRESP",text,url});}catch(e){}
+    try{await navigator.share({title:"Pelada é Compromisso",text});}catch(e){}
   }else{
-    try{await navigator.clipboard.writeText(text+"\n"+url);showToast("Lista copiada!");}catch(e){}
+    try{await navigator.clipboard.writeText(text);showToast("Lista copiada!");}catch(e){}
   }
 }
 
