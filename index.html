@@ -213,7 +213,7 @@ const db = firebase.database();
 
 // ── State ──
 const S = {
-  players:{}, games:{}, ratings:{}, formations:{}, presenca:{},
+  players:{}, games:{}, ratings:{}, formations:{}, presenca:{}, ausencia:{},
   config:{adminPin:"1234"},
   uid: localStorage.getItem("afresp_uid")||null,
   adminOk:false, rankFilter:"all", currentPage:"inicio", selectedGameId:null, selectedVoteGameId:null,
@@ -295,6 +295,7 @@ function initListeners() {
   db.ref("ratings").on("value",   s=>{ S.ratings=s.val()||{};    renderAll(); });
   db.ref("formations").on("value",s=>{ S.formations=s.val()||{}; renderAll(); });
   db.ref("presenca").on("value",  s=>{ S.presenca=s.val()||{};   renderAll(); });
+  db.ref("ausencia").on("value",  s=>{ S.ausencia=s.val()||{};   renderAll(); });
   db.ref("config").on("value",    s=>{ if(s.val()) S.config=s.val(); });
 }
 async function seedPlayersIfEmpty() {
@@ -381,6 +382,21 @@ function renderLista() {
         </button>
       </div>`;
 
+  const ga=S.ausencia[game.id]||{};
+  const ausentesEntries=Object.entries(ga);
+  const ausentesSection=`<div class="mt-4 pt-4 border-t border-red-900/20">
+    <p class="text-[10px] text-red-400/50 uppercase tracking-wider font-bold mb-2">❌ Não vão (${ausentesEntries.length})</p>
+    ${ausentesEntries.length?`<div class="space-y-1 mb-3">${ausentesEntries.map(([pid,e])=>`<div class="flex items-center gap-2 py-1 text-red-300/50 text-sm">
+      <span class="flex-1 truncate">${e.name}</span>
+      ${S.adminOk?`<button onclick="removeAusencia('${game.id}','${pid}')" class="text-red-500/60 hover:text-red-400 text-xs px-1">✕</button>`:""}
+    </div>`).join("")}</div>`:""}
+    <div class="flex gap-2">
+      <input id="ausencia-nome" type="text" placeholder="Seu nome" maxlength="30" autocomplete="name"
+        class="flex-1 px-3 py-2 rounded-xl bg-[#1a0a0a] border border-red-900/40 text-white placeholder-red-300/25 text-sm focus:border-red-600 focus:outline-none"
+        onkeydown="if(event.key==='Enter')registrarAusencia()"/>
+      <button onclick="registrarAusencia()" class="px-4 py-2 rounded-xl bg-red-900/60 border border-red-700/40 text-red-300 font-bold text-xs hover:bg-red-800/60">Não vou</button>
+    </div>
+  </div>`;
   const adminSection = S.adminOk ? `<div class="mt-4 pt-4 border-t border-green-900/30">
     <button onclick="resetPresenca('${game.id}')" class="w-full py-2 rounded-xl bg-red-950/50 border border-red-800/40 text-red-400 font-bold text-xs hover:bg-red-900/40 transition-colors">Limpar lista (Admin)</button>
   </div>` : "";
@@ -403,6 +419,7 @@ function renderLista() {
       </div>
       <div class="bg-[#0b1a10]" style="width:52%">${rightCol}</div>
     </div>
+    ${ausentesSection}
     ${adminSection}
   `;
 
@@ -445,6 +462,27 @@ async function resetPresenca(gameId){
   if(!S.adminOk)return;
   if(!confirm("Limpar toda a lista de presença deste jogo?"))return;
   await db.ref("presenca/"+gameId).remove();
+}
+async function registrarAusencia(){
+  const input=document.getElementById("ausencia-nome");
+  const nome=(input&&input.value||"").trim();
+  if(!nome){showToast("Digite o nome.");return;}
+  const game=nextGame();
+  if(!game){showToast("Nenhum jogo disponível.");return;}
+  const ga=S.ausencia[game.id]||{};
+  const dup=Object.values(ga).find(e=>e.name.toLowerCase()===nome.toLowerCase());
+  if(dup){showToast(nome+" já está na lista de ausências!");return;}
+  const presSlots=S.presenca[game.id]||{};
+  const naLista=Object.values(presSlots).find(e=>e.name.toLowerCase()===nome.toLowerCase());
+  if(naLista){showToast(nome+" já confirmou presença!");return;}
+  const pid=db.ref("ausencia/"+game.id).push().key;
+  await db.ref("ausencia/"+game.id+"/"+pid).set({name:nome});
+  showToast("❌ "+nome+" registrado como ausente.");
+  if(input) input.value="";
+}
+async function removeAusencia(gameId,pid){
+  if(!S.adminOk)return;
+  await db.ref("ausencia/"+gameId+"/"+pid).remove();
 }
 
 async function sharePresenca(){
@@ -1236,8 +1274,11 @@ function gamesInPeriod(period,filter){
 function safeAvg(arr){const v=arr.filter(x=>x>0);return v.length?v.reduce((s,x)=>s+x,0)/v.length:0;}
 function calcPlayerScore(pid,games,expectedTotal){
   if(!games||!games.length) return null;
-  const total=games.length; let played=0; const pg=[];
-  games.forEach(game=>{
+  const pname=(S.players[pid]?.name||"").toLowerCase();
+  const ausentes=games.filter(game=>{const ga=S.ausencia[game.id]||{};return Object.values(ga).some(e=>e.name.toLowerCase()===pname);});
+  const effectiveGames=games.filter(g=>!ausentes.includes(g));
+  const total=effectiveGames.length; let played=0; const pg=[];
+  effectiveGames.forEach(game=>{
     if(!getGamePlayerIds(game).includes(pid)) return;
     played++;
     const gr=S.ratings[game.id]||{};
