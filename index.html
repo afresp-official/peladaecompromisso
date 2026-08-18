@@ -397,9 +397,9 @@ function renderLista() {
         ${ausentesEntries.length?ausentesEntries.map(([pid,e],i)=>`
           <div class="flex items-center gap-2 py-1.5 border-b border-red-900/10 last:border-0">
             <span class="text-[10px] text-red-400/30 w-4 shrink-0 font-bold">${i+1}</span>
-            <div class="flex-1 min-w-0">
-              <span class="text-sm font-semibold text-red-200/80">${e.name}</span>
-              ${e.motivo?`<span class="text-xs text-red-300/60 ml-1.5">· ${e.motivo}</span>`:""}
+            <div class="flex-1 min-w-0 overflow-hidden">
+              <p class="text-sm font-semibold text-red-200/80 truncate">${e.name}</p>
+              ${e.motivo?`<p class="text-[10px] text-red-300/50 truncate">${e.motivo}</p>`:""}
             </div>
             ${S.adminOk?`<button onclick="removeAusencia('${game.id}','${pid}')" class="text-red-500/40 hover:text-red-400 text-xs px-1 shrink-0">✕</button>`:'<span class="text-red-500/40 text-xs">✕</span>'}
           </div>`).join("")
