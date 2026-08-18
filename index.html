@@ -871,7 +871,7 @@ function renderCampo() {
       +'<p class="text-xs font-bold text-white truncate leading-tight">'+playerName(pid)+'</p>'
       +'<button onclick="ciclarPosicao(\''+pid+'\',\''+game.id+'\')" class="text-[10px] px-1.5 py-0.5 rounded-full mt-0.5 font-bold" style="'+posBg+';'+posColor+'">'+posLabel+'</button>'
       +'</div>'
-      +'<button onclick="ciclarJogador(\''+pid+'\',\''+game.id+'\')" class="shrink-0 text-white/40 hover:text-white text-base leading-none px-0.5" title="Trocar time">⇄</button>'
+      +'<button onclick="atribuirTime(\''+pid+'\',\''+game.id+'\','+(isVerm?'\'azul\'':'\'vermelho\'')+') " class="shrink-0 text-white/40 hover:text-white text-base leading-none px-0.5" title="Trocar time">'+(isVerm?'🔵':'🔴')+'</button>'
       +'</div>';
   }
 
@@ -882,7 +882,11 @@ function renderCampo() {
     ? azulPids.map(pid=>playerCard(pid,"azul")).join("")
     : '<p class="text-xs text-blue-300/40 text-center py-3 italic">nenhum jogador</p>';
   const semChips = semPidsOrdered.map(pid=>
-    '<button onclick="ciclarJogador(\''+pid+'\',\''+game.id+'\')" class="px-3 py-1.5 rounded-xl text-xs font-bold text-white active:scale-95 transition-transform" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2)">'+playerName(pid)+'</button>'
+    '<div class="flex items-center rounded-xl overflow-hidden" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18)">'
+    +'<span class="px-2.5 py-1.5 text-xs font-bold text-white flex-1 leading-tight">'+playerName(pid)+'</span>'
+    +'<button onclick="atribuirTime(\''+pid+'\',\''+game.id+'\',\'vermelho\')" class="px-2.5 py-1.5 text-base font-black border-l border-white/10 hover:bg-red-900/60 active:bg-red-800 transition-colors" title="Vermelho">🔴</button>'
+    +'<button onclick="atribuirTime(\''+pid+'\',\''+game.id+'\',\'azul\')" class="px-2.5 py-1.5 text-base font-black border-l border-white/10 hover:bg-blue-900/60 active:bg-blue-800 transition-colors" title="Azul">🔵</button>'
+    +'</div>'
   ).join("");
 
   el.innerHTML = `
@@ -2299,6 +2303,12 @@ function openModal(h){document.getElementById("modal-content").innerHTML=h;docum
 function closeModal(){document.getElementById("modal-overlay").classList.add("hidden");document.getElementById("modal-overlay").classList.remove("flex");}
 
 // ── Utils ──
+async function atribuirTime(pid,gameId,team){
+  const updates={};
+  updates["games/"+gameId+"/players/"+pid+"/team"]=team;
+  updates["games/"+gameId+"/players/"+pid+"/goleiro"]=null;
+  await db.ref().update(updates);
+}
 const POSICOES=["","GK","ZAG","LAT","VOL","MEI","ATA","PNT"];
 async function ciclarPosicao(pid,gameId){
   const g=S.games[gameId]; if(!g) return;
