@@ -371,21 +371,23 @@ function renderLista() {
     return;
   }
   const gp = S.presenca[game.id]||{};
-  const filled = Object.keys(gp).length;
+  const maxV = game.maxVagas || TOTAL_VAGAS;
+  const filled = Object.keys(gp).map(Number).filter(n=>n<=maxV).length;
 
   let namesList = "";
-  for(let i=1;i<=TOTAL_VAGAS;i++){
+  for(let i=1;i<=maxV;i++){
     const e=gp[i];
     if(e){
       namesList+=`<div class="flex items-center gap-2 py-1.5 border-b border-green-900/30 last:border-0 text-green-200/80 font-medium">
         <span class="text-[10px] text-green-300/30 w-5 shrink-0 font-bold">${i}</span>
         <span class="text-sm truncate flex-1">${e.name}</span>
+        ${i>TOTAL_VAGAS?'<span class="text-[9px] font-black text-amber-400/70 shrink-0">+1</span>':''}
         ${S.adminOk?'<button onclick="removePresenca(\''+game.id+'\','+i+')" class="text-red-500/60 hover:text-red-400 text-xs font-bold px-1" title="Remover">&#x2715;</button>':'<span class="text-green-500 text-xs">&#x2713;</span>'}
       </div>`;
     }
   }
-  // Extras além do slot 22
-  const extraSlots=Object.keys(gp).map(Number).filter(n=>n>TOTAL_VAGAS).sort((a,b)=>a-b);
+  // Extras além do maxV
+  const extraSlots=Object.keys(gp).map(Number).filter(n=>n>maxV).sort((a,b)=>a-b);
   if(extraSlots.length){
     namesList+=`<div class="flex items-center gap-2 px-0 py-1.5 border-t border-amber-900/40">
       <span class="text-[9px] text-amber-400/70 uppercase tracking-wider font-black flex-1">⏳ Fila de espera (${extraSlots.length})</span>
@@ -404,7 +406,7 @@ function renderLista() {
   }
   if(!namesList) namesList='<p class="text-green-300/25 text-xs text-center pt-6">Nenhum confirmado ainda</p>';
 
-  const isFull = filled >= TOTAL_VAGAS;
+  const isFull = filled >= maxV;
 
   const ga=S.ausencia[game.id]||{};
   const ausentesEntries=Object.entries(ga);
@@ -491,15 +493,15 @@ function renderLista() {
           <p class="text-green-300/50 text-xs mt-0.5">AFRESP &bull; ${diaSemana}, ${fmtDate(game.date)}</p>
         </div>
         <div class="text-right">
-          <div class="font-black text-2xl leading-none ${filled>=TOTAL_VAGAS?"text-green-400":"text-amber-400"}">${filled}<span class="text-green-300/25 text-base font-normal">/22</span></div>
-          <p class="text-[9px] text-green-300/30 uppercase tracking-wider">${filled>TOTAL_VAGAS?`+${filled-TOTAL_VAGAS} na fila`:"confirmados"}</p>
+          <div class="font-black text-2xl leading-none ${filled>=maxV?"text-green-400":"text-amber-400"}">${filled}<span class="text-green-300/25 text-base font-normal">/${maxV}</span></div>
+          <p class="text-[9px] text-green-300/30 uppercase tracking-wider">${extraSlots.length>0?`+${extraSlots.length} na fila`:"confirmados"}${maxV>TOTAL_VAGAS?` • ${maxV-TOTAL_VAGAS>1?maxV-TOTAL_VAGAS+"x":""}12x11":""}</p>
         </div>
       </div>
       <!-- Barra de progresso -->
       <div class="h-2 rounded-full bg-[#0b1a10] overflow-hidden mb-3">
-        <div class="h-full rounded-full transition-all duration-500 ${filled>=TOTAL_VAGAS?"bg-green-500":"bg-amber-500"}" style="width:${Math.min(100,filled/22*100)}%"></div>
+        <div class="h-full rounded-full transition-all duration-500 ${filled>=maxV?"bg-green-500":"bg-amber-500"}" style="width:${Math.min(100,filled/maxV*100)}%"></div>
       </div>
-      ${isFull?`<p class="text-center text-green-400/70 text-xs mb-2 font-semibold">⚽ 22 vagas preenchidas — novos entram na fila de espera</p>`:""}
+      ${isFull?`<p class="text-center text-green-400/70 text-xs mb-2 font-semibold">⚽ ${maxV} vagas preenchidas — novos entram na fila de espera</p>`:""}
       <div class="flex gap-2 mb-2">
         <input id="presenca-nome" type="text" placeholder="Digite seu nome" maxlength="30" autocomplete="name"
           style="font-size:16px"
@@ -542,12 +544,13 @@ async function confirmarNome(){
   const gp=S.presenca[game.id]||{};
   const dup=Object.values(gp).find(function(e){return e.name.toLowerCase()===nome.toLowerCase();});
   if(dup){showToast(nome+" já está na lista!");return;}
+  const maxVg=game.maxVagas||TOTAL_VAGAS;
   let slot=null;
-  for(let i=1;i<=TOTAL_VAGAS;i++){if(!gp[i]){slot=i;break;}}
+  for(let i=1;i<=maxVg;i++){if(!gp[i]){slot=i;break;}}
   if(!slot){
     // Vagas normais cheias — entra na fila de espera
-    const extras=Object.keys(gp).map(Number).filter(n=>n>TOTAL_VAGAS);
-    slot=extras.length?Math.max(...extras)+1:TOTAL_VAGAS+1;
+    const extras=Object.keys(gp).map(Number).filter(n=>n>maxVg);
+    slot=extras.length?Math.max(...extras)+1:maxVg+1;
   }
   let pid=Object.entries(S.players).find(([,p])=>p.name&&p.name.toLowerCase()===nome.toLowerCase())?.[0];
   if(!pid){pid=db.ref("players").push().key;await db.ref("players/"+pid).set({name:nome,active:true});}
@@ -574,10 +577,24 @@ async function promoverEspera(gameId,slot){
   const gp=S.presenca[gameId]||{};
   const entry=gp[slot];
   if(!entry)return;
+  const maxV=(S.games[gameId]?.maxVagas)||TOTAL_VAGAS;
   let freeSlot=null;
-  for(let i=1;i<=TOTAL_VAGAS;i++){if(!gp[i]){freeSlot=i;break;}}
-  if(!freeSlot){showToast("Não há vagas livres no momento");return;}
+  for(let i=1;i<=maxV;i++){if(!gp[i]){freeSlot=i;break;}}
   const updates={};
+  if(!freeSlot){
+    // Todos os slots preenchidos — perguntar se é 12x11
+    if(!confirm("Todos os "+maxV+" confirmados.\nAdicionar como "+(maxV+1)+"º jogador (jogo 12 x 11)?"))return;
+    const newMax=maxV+1;
+    updates["games/"+gameId+"/maxVagas"]=newMax;
+    if(slot!==newMax){
+      if(gp[newMax]){showToast("Erro: reorganize a fila manualmente.");return;}
+      updates["presenca/"+gameId+"/"+newMax]=entry;
+      updates["presenca/"+gameId+"/"+slot]=null;
+    }
+    await db.ref().update(updates);
+    showToast(entry.name+" confirmado como "+(newMax)+"º jogador ✅");
+    return;
+  }
   updates["presenca/"+gameId+"/"+freeSlot]=entry;
   updates["presenca/"+gameId+"/"+slot]=null;
   const pid=Object.entries(S.players).find(([,p])=>p.name&&p.name.toLowerCase()===entry.name.toLowerCase())?.[0];
@@ -621,16 +638,17 @@ async function sharePresenca(){
   const game=nextGame();
   const gp=game?(S.presenca[game.id]||{}):{};
   const ga=game?(S.ausencia[game.id]||{}):{};
+  const maxVs=game?.maxVagas||TOTAL_VAGAS;
   const allSlots=Object.keys(gp).map(Number);
-  const filled=allSlots.filter(n=>n<=TOTAL_VAGAS).length;
-  const vagas=22-filled;
+  const filled=allSlots.filter(n=>n<=maxVs).length;
+  const vagas=maxVs-filled;
   const dias=["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
   let diaSemana="";
   if(game?.date){const[y,m,d]=game.date.split("-");diaSemana=dias[new Date(+y,+m-1,+d).getDay()];}
   const sep="━━━━━━━━━━━━━━━━━━━";
   let nomes="";
-  for(let i=1;i<=TOTAL_VAGAS;i++){if(gp[i])nomes+="\n"+i+". "+gp[i].name;}
-  const extraSlots=Object.keys(gp).map(Number).filter(n=>n>TOTAL_VAGAS).sort((a,b)=>a-b);
+  for(let i=1;i<=maxVs;i++){if(gp[i])nomes+="\n"+i+". "+gp[i].name+(i>TOTAL_VAGAS?" _(+1 — 12x11)_":"");}
+  const extraSlots=Object.keys(gp).map(Number).filter(n=>n>maxVs).sort((a,b)=>a-b);
   let esperaText="";
   if(extraSlots.length){
     esperaText="\n"+sep+"\n⏳ *FILA DE ESPERA ("+extraSlots.length+")*\n";
@@ -647,7 +665,7 @@ async function sharePresenca(){
     "🏆 *PELADA É COMPROMISSO*\n"
     +"⚽ _AFRESP — Lista de Presença_\n"
     +(game?"📅 *"+diaSemana+", "+fmtDate(game.date)+"*\n":"")+sep
-    +"\n\n✅ *CONFIRMADOS ("+filled+"/22)*"
+    +"\n\n✅ *CONFIRMADOS ("+filled+"/"+maxVs+")*"+(maxVs>TOTAL_VAGAS?" _(12 x 11)_":"")
     +(vagas>0?" — "+vagas+" vaga"+(vagas>1?"s":"")+" livre"+(vagas>1?"s":""):"")
     +(nomes?"\n"+nomes:"")
     +esperaText
