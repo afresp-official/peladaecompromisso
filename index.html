@@ -1619,7 +1619,7 @@ function renderAdmin(){
   </div>`;
 }
 
-let _sorteioGameId=null, _sorteioPids=[];
+let _sorteioGameId=null, _sorteioPids=[], _sorteioVerm=[], _sorteioAzul=[];
 function sortearTimes(gameId){
   const g=S.games[gameId]; if(!g) return;
   const allPids=getGamePlayerIds(g);
@@ -1634,36 +1634,36 @@ function mostrarSorteio(){
   const arr=[..._sorteioPids];
   for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
   const mid=Math.ceil(arr.length/2);
-  const verm=arr.slice(0,mid);
-  const azul=arr.slice(mid);
+  _sorteioVerm=arr.slice(0,mid);
+  _sorteioAzul=arr.slice(mid);
   openModal(`
     <h3 class="font-black text-base mb-4">🎲 Sorteio de Times</h3>
     <div class="grid grid-cols-2 gap-3 mb-4">
       <div class="bg-red-950/40 border border-red-800/40 rounded-xl p-3">
         <div class="flex items-center gap-1.5 mb-2">
           <span class="w-2 h-2 rounded-full bg-red-500"></span>
-          <span class="text-red-400 font-black text-xs uppercase">Vermelho (${verm.length})</span>
+          <span class="text-red-400 font-black text-xs uppercase">Vermelho (${_sorteioVerm.length})</span>
         </div>
-        <div class="space-y-1">${verm.map(pid=>`<p class="text-sm text-red-200/80 font-semibold truncate">${playerName(pid)}</p>`).join("")}</div>
+        <div class="space-y-1">${_sorteioVerm.map(pid=>`<p class="text-sm text-red-200/80 font-semibold truncate">${playerName(pid)}</p>`).join("")}</div>
       </div>
       <div class="bg-blue-950/40 border border-blue-800/40 rounded-xl p-3">
         <div class="flex items-center gap-1.5 mb-2">
           <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-          <span class="text-blue-400 font-black text-xs uppercase">Azul (${azul.length})</span>
+          <span class="text-blue-400 font-black text-xs uppercase">Azul (${_sorteioAzul.length})</span>
         </div>
-        <div class="space-y-1">${azul.map(pid=>`<p class="text-sm text-blue-200/80 font-semibold truncate">${playerName(pid)}</p>`).join("")}</div>
+        <div class="space-y-1">${_sorteioAzul.map(pid=>`<p class="text-sm text-blue-200/80 font-semibold truncate">${playerName(pid)}</p>`).join("")}</div>
       </div>
     </div>
     <div class="flex gap-2">
       <button onclick="mostrarSorteio()" class="flex-1 py-2.5 rounded-xl bg-purple-900/60 border border-purple-700/50 text-purple-300 font-bold text-sm hover:bg-purple-800/60">🔀 Ressortear</button>
-      <button onclick="confirmarSorteio(${JSON.stringify(verm)},${JSON.stringify(azul)})" class="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 font-black text-sm">✅ Confirmar</button>
+      <button onclick="confirmarSorteio()" class="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 font-black text-sm">✅ Confirmar</button>
     </div>
   `);
 }
-async function confirmarSorteio(verm,azul){
+async function confirmarSorteio(){
   const updates={};
-  verm.forEach(pid=>{ updates["games/"+_sorteioGameId+"/players/"+pid+"/team"]="vermelho"; });
-  azul.forEach(pid=>{ updates["games/"+_sorteioGameId+"/players/"+pid+"/team"]="azul"; });
+  _sorteioVerm.forEach(pid=>{ updates["games/"+_sorteioGameId+"/players/"+pid+"/team"]="vermelho"; });
+  _sorteioAzul.forEach(pid=>{ updates["games/"+_sorteioGameId+"/players/"+pid+"/team"]="azul"; });
   await db.ref().update(updates);
   closeModal();
   showToast("Times sorteados! Ajuste se necessário.");
