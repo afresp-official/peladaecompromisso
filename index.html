@@ -869,8 +869,11 @@ function renderCampo() {
 
   const allPids = getGamePlayerIds(game);
   const presSlots = S.presenca[game.id]||{};
-  const presNames = new Set(Object.values(presSlots).map(e=>e.name.toLowerCase()));
-  // Inclui todos da presença mesmo que não estejam em game.players
+  const maxV = game.maxVagas || TOTAL_VAGAS;
+  // Apenas slots confirmados (1 a maxV) — fila de espera fica de fora
+  const confirmedSlots = Object.entries(presSlots).filter(([k])=>Number(k)<=maxV).map(([,v])=>v);
+  const presNames = new Set(confirmedSlots.map(e=>e.name.toLowerCase()));
+  // Inclui todos da presença confirmada mesmo que não estejam em game.players
   const presencePids = Object.entries(S.players).filter(([,p])=>presNames.has((p.name||"").toLowerCase())).map(([pid])=>pid);
   const pidsSet = new Set([...allPids.filter(pid=>presNames.size===0||presNames.has((S.players[pid]?.name||"").toLowerCase())),...presencePids]);
   const pids = [...pidsSet];
@@ -1899,7 +1902,9 @@ function sortearTimes(gameId){
   const g=S.games[gameId]; if(!g) return;
   const allPids=getGamePlayerIds(g);
   const presSlots=S.presenca[gameId]||{};
-  const presNames=new Set(Object.values(presSlots).map(e=>e.name.toLowerCase()));
+  const maxVs=g.maxVagas||TOTAL_VAGAS;
+  const confirmedNames=Object.entries(presSlots).filter(([k])=>Number(k)<=maxVs).map(([,v])=>v);
+  const presNames=new Set(confirmedNames.map(e=>e.name.toLowerCase()));
   const presencePids=Object.entries(S.players).filter(([,p])=>presNames.has((p.name||"").toLowerCase())).map(([pid])=>pid);
   const pidsSet=new Set([...allPids.filter(pid=>!presNames.size||presNames.has((S.players[pid]?.name||"").toLowerCase())),...presencePids]);
   _sorteioPids=[...pidsSet];
@@ -2287,7 +2292,9 @@ async function compartilharEscalacao(gameId){
   const game=S.games[gameId]; if(!game) return;
   const gObj={id:gameId,...game};
   const presSlots=S.presenca[gameId]||{};
-  const presNames=new Set(Object.values(presSlots).map(e=>e.name.toLowerCase()));
+  const maxVc=game.maxVagas||TOTAL_VAGAS;
+  const confirmedC=Object.entries(presSlots).filter(([k])=>Number(k)<=maxVc).map(([,v])=>v);
+  const presNames=new Set(confirmedC.map(e=>e.name.toLowerCase()));
   const presencePids=Object.entries(S.players).filter(([,p])=>presNames.has((p.name||"").toLowerCase())).map(([pid])=>pid);
   const pidsSet=new Set([...getGamePlayerIds(gObj).filter(pid=>!presNames.size||presNames.has((S.players[pid]?.name||"").toLowerCase())),...presencePids]);
   const allPids=[...pidsSet];
