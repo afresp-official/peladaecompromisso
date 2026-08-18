@@ -745,17 +745,25 @@ function renderCampo() {
 
   const verm = vermPids.length, azul = azulPids.length;
 
-  const playerTeamRows = pids.map(pid=>{
-    const t=getPlayerTeam(game,pid);
+  const semPidsOrdered=pids.filter(p=>!getPlayerTeam(game,p));
+  const pidsOrdered=[...vermPids,...azulPids,...semPidsOrdered];
+  let lastGroup='';
+  const playerTeamRows = pidsOrdered.map(pid=>{
+    const t=getPlayerTeam(game,pid)||'sem';
     const isVerm=t==="vermelho",isAzul=t==="azul";
     const gk=game.players?.[pid]?.goleiro;
     const rowCls=isVerm?'bg-red-900/60 border-red-700/60':isAzul?'bg-blue-900/60 border-blue-700/60':'bg-[#0d1f14] border-[#1e3325]';
     const nameCls=gk?'text-yellow-300':isVerm?'text-red-200':isAzul?'text-blue-200':'text-white/60';
     const tag=isVerm?'🔴':isAzul?'🔵':'⚪';
-    return '<button onclick="handleCampoClick(\''+pid+'\',\''+game.id+'\')" class="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg border '+rowCls+' transition-all mb-0.5">'
+    let header='';
+    if(t!==lastGroup){
+      lastGroup=t;
+      const lbl=isVerm?'🔴 Vermelho ('+vermPids.length+')':isAzul?'🔵 Azul ('+azulPids.length+')':'Sem time ('+semPidsOrdered.length+')';
+      header='<div class="text-[10px] font-black uppercase tracking-wider mt-2 mb-1 px-1 '+(isVerm?'text-red-400':isAzul?'text-blue-400':'text-white/30')+'">'+lbl+'</div>';
+    }
+    return header+'<button onclick="handleCampoClick(\''+pid+'\',\''+game.id+'\')" class="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg border '+rowCls+' transition-all mb-0.5">'
       +'<span class="text-xs">'+tag+'</span>'
       +'<span class="flex-1 text-sm font-semibold text-left '+nameCls+'">'+(gk?'🥅 ':'')+playerName(pid)+'</span>'
-      +'<span class="text-[10px] text-white/20">'+(isVerm?'Verm':isAzul?'Azul':'—')+'</span>'
       +'</button>';
   }).join('');
 
