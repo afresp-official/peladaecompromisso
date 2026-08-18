@@ -399,7 +399,7 @@ function renderLista() {
             <span class="text-[10px] text-red-400/30 w-4 shrink-0 font-bold">${i+1}</span>
             <div class="flex-1 min-w-0">
               <span class="text-sm font-semibold text-red-200/80">${e.name}</span>
-              ${e.motivo?`<span class="text-[10px] text-red-400/50 ml-1.5 font-medium">${e.motivo}</span>`:""}
+              ${e.motivo?`<span class="text-xs text-red-300/60 ml-1.5">· ${e.motivo}</span>`:""}
             </div>
             ${S.adminOk?`<button onclick="removeAusencia('${game.id}','${pid}')" class="text-red-500/40 hover:text-red-400 text-xs px-1 shrink-0">✕</button>`:'<span class="text-red-500/40 text-xs">✕</span>'}
           </div>`).join("")
@@ -409,7 +409,7 @@ function renderLista() {
         <p class="text-[9px] text-red-400/40 uppercase tracking-widest font-bold text-center mb-1">Registrar ausência</p>
         <input id="ausencia-nome" type="text" placeholder="Seu nome" maxlength="30" autocomplete="name"
           class="w-full px-3 py-2 rounded-xl bg-[#1a0808] border border-red-900/40 text-white placeholder-red-300/20 text-sm focus:border-red-600 focus:outline-none"/>
-        <select id="ausencia-motivo" class="w-full px-3 py-2 rounded-xl bg-[#1a0808] border border-red-900/40 text-red-200/70 text-sm focus:border-red-600 focus:outline-none">
+        <select id="ausencia-motivo" class="w-full px-2 py-1.5 rounded-lg bg-[#1a0808] border border-red-900/40 text-red-200/60 text-xs focus:border-red-600 focus:outline-none">
           <option value="">Motivo (opcional)</option>
           <option value="Viagem">✈️ Viagem</option>
           <option value="Trabalho">💼 Trabalho</option>
