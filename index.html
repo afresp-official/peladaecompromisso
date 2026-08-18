@@ -408,16 +408,16 @@ function renderLista() {
   const ausentesSection=`<div class="rounded-2xl overflow-hidden border border-white/5 mb-3" style="background:#111a14">
     <!-- Header colapsável -->
     <button onclick="this.nextElementSibling.classList.toggle('hidden');this.querySelector('.chevron').classList.toggle('rotate-180')"
-      class="w-full flex items-center gap-3 px-4 py-3.5">
-      <div class="flex items-center justify-center w-8 h-8 rounded-xl shrink-0 bg-white/5">
-        <span class="text-base leading-none">🚫</span>
+      class="w-full flex items-center gap-3 px-4 py-4">
+      <div class="flex items-center justify-center w-10 h-10 rounded-xl shrink-0" style="background:rgba(185,28,28,0.25);border:1px solid rgba(220,38,38,0.2)">
+        <span class="text-xl leading-none">🚫</span>
       </div>
       <div class="flex-1 text-left">
-        <p class="text-sm font-bold text-white/80 leading-tight">Ausentes</p>
-        <p class="text-[10px] text-white/25 uppercase tracking-widest">${ausentesEntries.length ? ausentesEntries.length+" fora do jogo" : "nenhum ausente"}</p>
+        <p class="text-base font-black text-white leading-tight tracking-wide">AUSENTES</p>
+        <p class="text-[11px] text-white/35 uppercase tracking-widest mt-0.5">${ausentesEntries.length ? ausentesEntries.length+" fora do jogo" : "nenhum ausente"}</p>
       </div>
-      ${ausentesEntries.length?`<span class="px-2.5 py-1 rounded-full text-xs font-black text-red-300 bg-red-900/40">${ausentesEntries.length}</span>`:''}
-      <svg class="chevron w-4 h-4 text-white/20 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      ${ausentesEntries.length?`<span class="flex items-center justify-center w-9 h-9 rounded-full text-lg font-black text-red-200" style="background:rgba(185,28,28,0.5);border:1px solid rgba(220,38,38,0.35)">${ausentesEntries.length}</span>`:''}
+      <svg class="chevron w-5 h-5 text-white/30 transition-transform shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
     </button>
     <!-- Conteúdo colapsável -->
     <div class="hidden">
