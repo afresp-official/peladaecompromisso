@@ -1654,22 +1654,22 @@ function renderAdmin(){
   const games=Object.entries(S.games).map(([id,g])=>({id,...g})).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   el.innerHTML=`<div class="space-y-5">
     <button onclick="goTo('inicio')" class="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors shadow-lg">← Voltar</button>
-    <!-- Regras de Sorteio -->
+    <!-- Balanceamento de Times -->
     <div class="bg-[#132218] border border-[#2a4a35] rounded-xl p-4">
-      <div class="font-bold text-sm mb-1">⭐ Craques — Regras do Sorteio</div>
-      <p class="text-[10px] text-green-300/30 mb-3">Esses jogadores sempre são divididos alternadamente entre os times no sorteio.</p>
-      <div class="flex flex-wrap gap-2 mb-3" id="craques-list">
-        ${(S.config.craques||[]).map(n=>`<span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-900/40 border border-amber-700/40 text-amber-200 text-xs font-bold">
-          ⭐ ${n}
-          <button onclick="removeCraque('${n}')" class="text-amber-400/50 hover:text-red-400 font-black ml-0.5">×</button>
-        </span>`).join("")||'<p class="text-green-300/20 text-xs">Nenhum craque definido</p>'}
+      <div class="font-bold text-sm mb-1">⚖️ Balanceamento de Times</div>
+      <p class="text-[10px] text-green-300/30 mb-3">Jogadores desta lista são sempre distribuídos um em cada time no sorteio, garantindo equilíbrio.</p>
+      <div class="flex flex-wrap gap-2 mb-3">
+        ${(S.config.craques||[]).map(n=>`<span class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-900/40 border border-green-700/40 text-green-200 text-xs font-semibold">
+          ${n}
+          <button onclick="removeCraque('${n}')" class="text-green-400/40 hover:text-red-400 font-black ml-0.5">×</button>
+        </span>`).join("")||'<p class="text-green-300/20 text-xs">Nenhum jogador configurado</p>'}
       </div>
       <div class="flex gap-2">
-        <select id="craque-select" class="flex-1 bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+        <select id="craque-select" class="flex-1 bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-green-500">
           <option value="">Escolher jogador...</option>
           ${activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR")).map(p=>`<option value="${p.name}">${p.name}</option>`).join("")}
         </select>
-        <button onclick="addCraque()" class="px-4 py-2 rounded-lg bg-amber-700/60 hover:bg-amber-600/60 border border-amber-600/40 text-amber-200 text-sm font-bold whitespace-nowrap">+ Adicionar</button>
+        <button onclick="addCraque()" class="px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-white text-sm font-bold whitespace-nowrap">+ Adicionar</button>
       </div>
     </div>
     <div class="bg-[#132218] border border-[#2a4a35] rounded-xl p-4">
@@ -1773,26 +1773,22 @@ function mostrarSorteio(){
 
   _sorteioVerm=verm; _sorteioAzul=azul;
 
-  const craquesPresentes=craquePids.length;
-  const aviso=craquesPresentes?`<p class="text-[10px] text-amber-400/70 text-center mb-3">⭐ ${craquesPresentes} craque${craquesPresentes>1?"s":""} distribuído${craquesPresentes>1?"s":""} alternadamente</p>`:"";
-
   openModal(`
-    <h3 class="font-black text-base mb-1">🎲 Sorteio de Times</h3>
-    ${aviso}
+    <h3 class="font-black text-base mb-4">🎲 Sorteio de Times</h3>
     <div class="grid grid-cols-2 gap-3 mb-4">
       <div class="bg-red-950/40 border border-red-800/40 rounded-xl p-3">
         <div class="flex items-center gap-1.5 mb-2">
           <span class="w-2 h-2 rounded-full bg-red-500"></span>
           <span class="text-red-400 font-black text-xs uppercase">Vermelho (${_sorteioVerm.length})</span>
         </div>
-        <div class="space-y-1">${_sorteioVerm.map(pid=>{const isCraque=craqueNames.has((S.players[pid]?.name||"").toLowerCase());return'<p class="text-sm text-red-200/80 font-semibold truncate">'+(isCraque?'⭐ ':'')+playerName(pid)+'</p>';}).join("")}</div>
+        <div class="space-y-1">${_sorteioVerm.map(pid=>'<p class="text-sm text-red-200/80 font-semibold truncate">'+playerName(pid)+'</p>').join("")}</div>
       </div>
       <div class="bg-blue-950/40 border border-blue-800/40 rounded-xl p-3">
         <div class="flex items-center gap-1.5 mb-2">
           <span class="w-2 h-2 rounded-full bg-blue-500"></span>
           <span class="text-blue-400 font-black text-xs uppercase">Azul (${_sorteioAzul.length})</span>
         </div>
-        <div class="space-y-1">${_sorteioAzul.map(pid=>{const isCraque=craqueNames.has((S.players[pid]?.name||"").toLowerCase());return'<p class="text-sm text-blue-200/80 font-semibold truncate">'+(isCraque?'⭐ ':'')+playerName(pid)+'</p>';}).join("")}</div>
+        <div class="space-y-1">${_sorteioAzul.map(pid=>'<p class="text-sm text-blue-200/80 font-semibold truncate">'+playerName(pid)+'</p>').join("")}</div>
       </div>
     </div>
     <div class="flex gap-2">
