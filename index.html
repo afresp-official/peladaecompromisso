@@ -676,7 +676,8 @@ function renderPlayerSelect(){
       }).join("")}
     </div>`);
 }
-function selectPlayer(id){S.uid=id;localStorage.setItem("afresp_uid",id);renderAll();}
+function selectPlayer(id){S.uid=id;localStorage.setItem("afresp_uid",id);renderAll();const vc=document.getElementById("vote-container");if(vc)vc.scrollIntoView({behavior:"smooth",block:"start"});}
+function filterVotarNames(q){const g=document.getElementById("votar-name-grid");if(!g)return;const lq=q.toLowerCase();g.querySelectorAll("button[data-name]").forEach(b=>{b.style.display=b.dataset.name.toLowerCase().includes(lq)?'':'none';});}
 function medianGoals(arr){
   if(!arr.length) return 0;
   const s=[...arr].sort((a,b)=>a-b);
@@ -1153,9 +1154,12 @@ function renderVotar() {
     const latest=latestGame();
     el.innerHTML=backBtn+`<div class="bg-[#132218] border border-[#2a4a35] rounded-xl p-4">
       <p class="font-black text-base mb-1">Quem é você? 👋</p>
-      <p class="text-[10px] text-green-300/30 mb-3">✅ = já votou no último jogo</p>
-      <div class="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
-        ${opts.map(p=>{const voted=latest&&hasVoted(latest.id,p.id);return`<button onclick="selectPlayer('${p.id}')" class="text-left px-3 py-2 rounded-lg border text-sm font-semibold transition-all flex items-center justify-between gap-1 ${voted?'bg-green-950/30 border-green-800/40 text-green-300/50':'bg-[#0f2016] border-[#2a4a35] text-green-200 hover:border-green-500'}"><span class="truncate">${p.name}</span>${voted?'<span class="text-green-500 text-xs shrink-0">✅</span>':''}</button>`;}).join("")}
+      <input id="votar-busca-nome" type="text" placeholder="Digite seu nome..." oninput="filterVotarNames(this.value)"
+        onfocus="setTimeout(()=>this.scrollIntoView({behavior:'smooth',block:'nearest'}),350)"
+        class="w-full mb-3 px-3 py-2.5 rounded-xl bg-[#0a1a10] border border-[#2a4a35] text-green-100 placeholder-green-400/30 outline-none focus:border-green-500 transition-colors"
+        style="font-size:16px;caret-color:#4ade80" autocomplete="off" autocorrect="off" spellcheck="false">
+      <div id="votar-name-grid" class="grid grid-cols-2 gap-2">
+        ${opts.map(p=>{const voted=latest&&hasVoted(latest.id,p.id);return`<button data-name="${p.name}" onclick="selectPlayer('${p.id}')" class="text-left px-3 py-2 rounded-lg border text-sm font-semibold transition-all flex items-center justify-between gap-1 ${voted?'bg-green-950/30 border-green-800/40 text-green-300/50':'bg-[#0f2016] border-[#2a4a35] text-green-200 hover:border-green-500'}"><span class="truncate">${p.name}</span>${voted?'<span class="text-green-500 text-xs shrink-0">✅</span>':''}</button>`;}).join("")}
       </div>
     </div>`;
     return;
