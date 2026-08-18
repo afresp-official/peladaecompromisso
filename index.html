@@ -247,12 +247,15 @@ const INITIAL_PLAYERS = [
   "Claudecir","Cícero","Kross de terno","Léo","Anderson"
 ];
 
-// ── Default 4-3-3 positions (landscape, 0-1 range, red attacks right) ──
+// ── Default positions (landscape, 0-1 range, red attacks right) — supports up to 18 ──
 const DEF_POS = [
-  {x:.05,y:.50},                                                      // GK
-  {x:.18,y:.12},{x:.18,y:.37},{x:.18,y:.63},{x:.18,y:.88},           // DEF 4
-  {x:.33,y:.22},{x:.33,y:.50},{x:.33,y:.78},                         // MID 3
-  {x:.43,y:.15},{x:.43,y:.50},{x:.43,y:.85},                         // FWD 3
+  {x:.05,y:.50},                                                            // GK
+  {x:.18,y:.12},{x:.18,y:.37},{x:.18,y:.63},{x:.18,y:.88},                // DEF 4
+  {x:.30,y:.22},{x:.30,y:.50},{x:.30,y:.78},                              // MID 3
+  {x:.40,y:.15},{x:.40,y:.42},{x:.40,y:.65},{x:.40,y:.88},               // FWD 4
+  {x:.24,y:.35},{x:.24,y:.65},                                             // extra MID
+  {x:.35,y:.30},{x:.35,y:.70},                                             // extra FWD
+  {x:.13,y:.30},{x:.13,y:.70},                                             // extra DEF
 ];
 function defaultPos(team, idx) {
   const base = DEF_POS[Math.min(idx, DEF_POS.length-1)];
@@ -832,23 +835,16 @@ function renderCampo() {
 
   const semPidsOrdered=pids.filter(p=>!getPlayerTeam(game,p));
   const pidsOrdered=[...vermPids,...azulPids,...semPidsOrdered];
-  let prevGroup='';
   const playerTeamRows = pidsOrdered.map(pid=>{
     const t=getPlayerTeam(game,pid)||'';
     const gk=game.players?.[pid]?.goleiro===true;
     const isVerm=t==="vermelho",isAzul=t==="azul";
-    const btnCls=gk?'bg-yellow-500 border-yellow-400 text-black':isVerm?'bg-red-600 border-red-500 text-white':isAzul?'bg-blue-600 border-blue-500 text-white':'bg-[#1a2e1f] border-[#2a4a35] text-white/30';
-    const btnLbl=gk?'🥅 Gol':isVerm?'🔴 Verm':isAzul?'🔵 Azul':'—';
-    let sep='';
-    if(t!==prevGroup){
-      prevGroup=t;
-      if(isVerm) sep='<div class="text-[10px] font-black uppercase tracking-wider text-red-400 pt-2 pb-1 px-1">🔴 Vermelho ('+vermPids.length+')</div>';
-      else if(isAzul) sep='<div class="text-[10px] font-black uppercase tracking-wider text-blue-400 pt-2 pb-1 px-1">🔵 Azul ('+azulPids.length+')</div>';
-      else if(semPidsOrdered.length) sep='<div class="text-[10px] font-black uppercase tracking-wider text-white/30 pt-2 pb-1 px-1">Sem time ('+semPidsOrdered.length+')</div>';
-    }
-    return sep+'<div class="flex items-center gap-2 px-1 py-1">'
-      +'<span class="flex-1 text-sm font-semibold text-white truncate">'+playerName(pid)+'</span>'
-      +'<button onclick="ciclarJogador(\''+pid+'\',\''+game.id+'\')" class="min-w-[80px] text-center px-3 py-1.5 rounded-xl border font-bold text-xs transition-all '+btnCls+'">'+btnLbl+'</button>'
+    const cardBg=gk?'bg-yellow-900/30 border-yellow-700/40':isVerm?'bg-red-900/25 border-red-700/30':isAzul?'bg-blue-900/25 border-blue-700/30':'bg-[#0f1e14] border-[#1a3020]';
+    const btnCls=gk?'bg-yellow-500 text-black':isVerm?'bg-red-600 text-white':isAzul?'bg-blue-600 text-white':'bg-[#1a2e1f] text-white/30';
+    const btnLbl=gk?'🥅':isVerm?'🔴':isAzul?'🔵':'—';
+    return '<div class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg border '+cardBg+'">'
+      +'<span class="flex-1 text-xs font-semibold text-white/90 truncate leading-tight">'+playerName(pid)+'</span>'
+      +'<button onclick="ciclarJogador(\''+pid+'\',\''+game.id+'\')" class="shrink-0 w-8 h-7 flex items-center justify-center rounded-lg font-black text-sm transition-all '+btnCls+'">'+btnLbl+'</button>'
       +'</div>';
   }).join('');
 
@@ -859,19 +855,21 @@ function renderCampo() {
         <button onclick="goTo('inicio')" class="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors shadow-lg" title="Voltar">← Voltar</button>
         <div class="font-black text-base leading-tight">Escalação</div>
       </div>
-      <div class="flex items-center gap-2"></div>
+      <div class="flex gap-2">
+        <button onclick="sortearTimes('${game.id}')" class="px-3 h-9 rounded-xl bg-purple-900/60 border border-purple-700/50 text-purple-300 font-black text-xs flex items-center gap-1.5">🎲 Sortear</button>
+        <button onclick="limparTimes('${game.id}')" class="px-3 h-9 rounded-xl bg-red-950/50 border border-red-900/40 text-red-400 font-black text-xs">Limpar</button>
+      </div>
     </div>
 
-    <!-- Sortear -->
-    <button onclick="sortearTimes('${game.id}')" class="w-full mb-3 py-2.5 rounded-xl bg-purple-900/60 border border-purple-700/50 hover:bg-purple-800/60 text-purple-300 font-black text-sm transition-colors flex items-center justify-center gap-2">🎲 Sortear Times Aleatoriamente</button>
-
-    <!-- Times -->
-    <div class="bg-[#0b1a10] border border-[#2a4a35] rounded-xl p-3 mb-3">
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-[10px] text-green-300/50 uppercase tracking-wider font-bold">🔴 ${verm} Verm &nbsp;·&nbsp; 🔵 ${azul} Azul</span>
-        <button onclick="limparTimes('${game.id}')" class="text-[10px] text-red-400/60 hover:text-red-400 font-bold px-2 py-0.5 rounded-lg hover:bg-red-950/30 border border-red-900/30">Limpar</button>
+    <!-- Times: grid 2 colunas compacto -->
+    <div class="bg-[#0b1a10] border border-[#2a4a35] rounded-xl p-2 mb-3">
+      <div class="flex items-center gap-3 px-1 mb-2">
+        <span class="text-[10px] text-red-400 font-black uppercase tracking-wider">🔴 ${verm} Verm</span>
+        <span class="text-white/20 text-[10px]">·</span>
+        <span class="text-[10px] text-blue-400 font-black uppercase tracking-wider">🔵 ${azul} Azul</span>
+        ${semPidsOrdered.length?`<span class="text-white/20 text-[10px]">·</span><span class="text-[10px] text-white/30 font-bold uppercase tracking-wider">${semPidsOrdered.length} sem time</span>`:''}
       </div>
-      <div class="space-y-0.5">${playerTeamRows}</div>
+      <div class="grid grid-cols-2 gap-1">${playerTeamRows}</div>
     </div>
 
     <!-- Campo landscape: vermelho esquerda, azul direita -->
