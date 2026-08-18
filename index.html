@@ -2017,14 +2017,59 @@ async function savePin(){const p=document.getElementById("new-pin")?.value?.trim
 // ── Edição de Votos (Admin) ──
 let editVoteState={gid:null,vid:null,ratings:{}};
 
+async function shareGameResult(gid){
+  const g=S.games[gid]; if(!g) return;
+  const gr=S.ratings[gid]||{};
+  const dias=["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
+  let diaSemana="";
+  if(g.date){const[y,m,d]=g.date.split("-");diaSemana=dias[new Date(+y,+m-1,+d).getDay()];}
+
+  // Calcular médias por jogador
+  const scores={};
+  Object.values(gr).forEach(voterRatings=>{
+    Object.entries(voterRatings).forEach(([pid,v])=>{
+      if(!scores[pid]) scores[pid]={sum:0,count:0};
+      if(v.note>0){scores[pid].sum+=v.note;scores[pid].count++;}
+    });
+  });
+  const ranked=Object.entries(scores)
+    .filter(([,s])=>s.count>0)
+    .map(([pid,s])=>({pid,avg:s.sum/s.count}))
+    .sort((a,b)=>b.avg-a.avg);
+
+  const sep="━━━━━━━━━━━━━━━━━━━";
+  const medal=(i)=>i===0?"🥇":i===1?"🥈":i===2?"🥉":"  "+(i+1)+".";
+  let tabela=ranked.slice(0,10).map((r,i)=>"\n"+medal(i)+" "+playerName(r.pid)+" — "+r.avg.toFixed(1)).join("");
+  if(!tabela) tabela="\nNenhuma avaliação ainda";
+
+  const text="🏆 *PELADA É COMPROMISSO*\n"
+    +"⚽ _AFRESP — Resultado do Jogo_\n"
+    +"📅 *"+diaSemana+", "+fmtDate(g.date)+"*\n"
+    +sep
+    +"\n\n🗳️ *MELHORES DO JOGO*"
+    +tabela
+    +"\n\n"+sep
+    +"\n"+Object.keys(gr).length+" jogadores avaliaram";
+
+  if(navigator.share){
+    try{await navigator.share({title:"Resultado — Pelada é Compromisso",text});}catch(e){}
+  } else {
+    try{await navigator.clipboard.writeText(text);showToast("Resultado copiado!");}catch(e){}
+  }
+}
 function openGameVotes(gid){
   const g=S.games[gid]; if(!g) return;
   const gr=S.ratings[gid]||{};
   const voters=Object.keys(gr);
   openModal(`
-    <div class="flex items-center gap-2 mb-4">
-      <span class="text-base font-black">🗳️ Votos</span>
-      <span class="text-green-300/40 text-xs">— ${fmtDate(g.date)}</span>
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <span class="text-base font-black">🗳️ Votos</span>
+        <span class="text-green-300/40 text-xs">— ${fmtDate(g.date)}</span>
+      </div>
+      <button onclick="shareGameResult('${gid}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1a2e1f] border border-green-700/40 text-green-400 font-bold text-xs hover:bg-green-900/30">
+        📤 Compartilhar
+      </button>
     </div>
     ${!voters.length
       ? `<p class="text-center text-green-300/30 text-sm py-8">Nenhum voto enviado ainda.</p>`
