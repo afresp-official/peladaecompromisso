@@ -714,7 +714,10 @@ function renderCampo() {
   const allPids = getGamePlayerIds(game);
   const presSlots = S.presenca[game.id]||{};
   const presNames = new Set(Object.values(presSlots).map(e=>e.name.toLowerCase()));
-  const pids = presNames.size>0 ? allPids.filter(pid=>presNames.has((S.players[pid]?.name||"").toLowerCase())) : allPids;
+  // Inclui todos da presença mesmo que não estejam em game.players
+  const presencePids = Object.entries(S.players).filter(([,p])=>presNames.has((p.name||"").toLowerCase())).map(([pid])=>pid);
+  const pidsSet = new Set([...allPids.filter(pid=>presNames.size===0||presNames.has((S.players[pid]?.name||"").toLowerCase())),...presencePids]);
+  const pids = [...pidsSet];
   const formation = S.formations[game.id] || {};
 
   // Calcular posições: usa formação salva ou padrão por time/índice
