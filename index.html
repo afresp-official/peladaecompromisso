@@ -747,13 +747,21 @@ function renderCampo() {
 
   const semPidsOrdered=pids.filter(p=>!getPlayerTeam(game,p));
   const pidsOrdered=[...vermPids,...azulPids,...semPidsOrdered];
+  let prevGroup='';
   const playerTeamRows = pidsOrdered.map(pid=>{
-    const t=getPlayerTeam(game,pid);
+    const t=getPlayerTeam(game,pid)||'';
     const gk=game.players?.[pid]?.goleiro===true;
     const isVerm=t==="vermelho",isAzul=t==="azul";
     const btnCls=gk?'bg-yellow-500 border-yellow-400 text-black':isVerm?'bg-red-600 border-red-500 text-white':isAzul?'bg-blue-600 border-blue-500 text-white':'bg-[#1a2e1f] border-[#2a4a35] text-white/30';
     const btnLbl=gk?'🥅 Gol':isVerm?'🔴 Verm':isAzul?'🔵 Azul':'—';
-    return '<div class="flex items-center gap-2 px-1 py-1">'
+    let sep='';
+    if(t!==prevGroup){
+      prevGroup=t;
+      if(isVerm) sep='<div class="text-[10px] font-black uppercase tracking-wider text-red-400 pt-2 pb-1 px-1">🔴 Vermelho ('+vermPids.length+')</div>';
+      else if(isAzul) sep='<div class="text-[10px] font-black uppercase tracking-wider text-blue-400 pt-2 pb-1 px-1">🔵 Azul ('+azulPids.length+')</div>';
+      else if(semPidsOrdered.length) sep='<div class="text-[10px] font-black uppercase tracking-wider text-white/30 pt-2 pb-1 px-1">Sem time ('+semPidsOrdered.length+')</div>';
+    }
+    return sep+'<div class="flex items-center gap-2 px-1 py-1">'
       +'<span class="flex-1 text-sm font-semibold text-white truncate">'+playerName(pid)+'</span>'
       +'<button onclick="ciclarJogador(\''+pid+'\',\''+game.id+'\')" class="min-w-[80px] text-center px-3 py-1.5 rounded-xl border font-bold text-xs transition-all '+btnCls+'">'+btnLbl+'</button>'
       +'</div>';
