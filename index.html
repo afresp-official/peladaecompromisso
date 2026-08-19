@@ -241,6 +241,39 @@ const S = {
   adminOk:false, rankFilter:"all", currentPage:"inicio", selectedGameId:null, selectedVoteGameId:null,
 };
 
+// ── Site Auth ──
+let siteAuth = localStorage.getItem("afresp_access")==="ok";
+const FREE_PAGES = new Set(["lista","votar","ranking"]);
+let _pendingSitePage = "inicio";
+
+function showSiteLogin(targetPage){
+  _pendingSitePage = targetPage||"inicio";
+  const el=document.getElementById("site-login-overlay");
+  el.style.display="flex";
+  setTimeout(()=>{const i=document.getElementById("site-pass-input");if(i)i.focus();},120);
+}
+function hideSiteLogin(){
+  document.getElementById("site-login-overlay").style.display="none";
+  const err=document.getElementById("site-pass-error");if(err)err.style.display="none";
+  const inp=document.getElementById("site-pass-input");if(inp)inp.value="";
+}
+function checkSitePass(){
+  const val=(document.getElementById("site-pass-input")?.value||"").trim();
+  if(val.toLowerCase()==="afresp"){
+    siteAuth=true;
+    localStorage.setItem("afresp_access","ok");
+    hideSiteLogin();
+    goTo(_pendingSitePage||"inicio");
+  }else{
+    const err=document.getElementById("site-pass-error");if(err)err.style.display="block";
+    const inp=document.getElementById("site-pass-input");if(inp)inp.select();
+  }
+}
+function goFreeAccess(){
+  hideSiteLogin();
+  goTo("lista");
+}
+
 const INITIAL_PLAYERS = [
   "Lê Love","Leandro Vaz","Dimi","JC7","Ivan","Stenio",
   "Lacoste 🥶","João Alves","Chico Alves","🌶️","Giba SP",
@@ -335,6 +368,7 @@ async function seedPlayersIfEmpty() {
 // ── Router ──
 function goTo(page) {
   if(page==="admin"&&!S.adminOk){showAdminPin();return;}
+  if(!siteAuth&&!FREE_PAGES.has(page)){showSiteLogin(page);return;}
   history.replaceState(null,"","#"+page);
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.getElementById("page-"+page).classList.add("active");
@@ -2646,8 +2680,48 @@ async function removeCraque(nome){
 function nextTuesday(){const d=new Date();const diff=(2-d.getDay()+7)%7||7;d.setDate(d.getDate()+diff);return d.toISOString().split("T")[0];}
 
 // ── Init ──
-(async()=>{await seedPlayersIfEmpty();initListeners();const _h=location.hash.slice(1);if(_h==="lista")document.body.classList.add("guest-mode");goTo(["inicio","lista","campo","votar","ranking","historico"].includes(_h)?_h:"inicio");})();
+(async()=>{
+  await seedPlayersIfEmpty();
+  initListeners();
+  const _h=location.hash.slice(1);
+  const startPage=["inicio","lista","campo","votar","ranking","historico"].includes(_h)?_h:"inicio";
+  if(_h==="lista")document.body.classList.add("guest-mode");
+  if(!siteAuth&&!FREE_PAGES.has(startPage)){
+    // Render the page structure but show login overlay on top
+    goTo(startPage);
+    showSiteLogin(startPage);
+  }else{
+    goTo(startPage);
+  }
+})();
 </script>
+
+<!-- Site Login Overlay -->
+<div id="site-login-overlay" style="display:none;position:fixed;inset:0;z-index:9998;background:#081510;flex-direction:column;align-items:center;justify-content:center;padding:24px">
+  <div style="width:100%;max-width:340px">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-size:44px;margin-bottom:10px">⚽</div>
+      <div style="font-weight:900;font-size:20px;letter-spacing:1.5px;color:#fff">PELADA É COMPROMISSO</div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.25);margin-top:5px;letter-spacing:3px;text-transform:uppercase">AFRESP</div>
+    </div>
+    <div style="background:#0d2016;border:1px solid rgba(74,222,128,0.15);border-radius:20px;padding:24px 20px">
+      <div style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:14px;text-align:center;letter-spacing:0.5px">🔐 Digite a senha para acessar</div>
+      <input id="site-pass-input" type="password" placeholder="••••••" autocomplete="off"
+        style="width:100%;background:#081510;border:1.5px solid #2a4a35;border-radius:12px;padding:14px 16px;color:#fff;font-size:22px;font-weight:700;text-align:center;outline:none;margin-bottom:12px;letter-spacing:6px;transition:border-color 0.2s"
+        onfocus="this.style.borderColor='#16a34a'" onblur="this.style.borderColor='#2a4a35'"
+        onkeydown="if(event.key==='Enter')checkSitePass()">
+      <button onclick="checkSitePass()"
+        style="width:100%;padding:14px;background:linear-gradient(135deg,#16a34a,#15803d);border:none;border-radius:12px;color:#fff;font-weight:900;font-size:15px;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 16px rgba(22,163,74,0.3)">
+        Entrar
+      </button>
+      <div id="site-pass-error" style="color:#f87171;font-size:11px;text-align:center;margin-top:10px;display:none;font-weight:600">Senha incorreta. Tente novamente.</div>
+    </div>
+    <div style="text-align:center;margin-top:18px;font-size:11px;color:rgba(255,255,255,0.2)">
+      Presença, Votação e Ranking são livres •
+      <span style="cursor:pointer;color:rgba(74,222,128,0.45);text-decoration:underline" onclick="goFreeAccess()">acessar sem senha</span>
+    </div>
+  </div>
+</div>
 
 <!-- Toast -->
 <div id="toast" style="position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(12px);background:#15803d;color:#fff;padding:10px 20px;border-radius:999px;font-weight:700;font-size:13px;opacity:0;transition:all .3s;z-index:200;white-space:nowrap;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,.4)"></div>
