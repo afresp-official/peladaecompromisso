@@ -2697,29 +2697,73 @@ function nextTuesday(){const d=new Date();const diff=(2-d.getDay()+7)%7||7;d.set
 </script>
 
 <!-- Site Login Overlay -->
-<div id="site-login-overlay" style="display:none;position:fixed;inset:0;z-index:9998;background:#081510;flex-direction:column;align-items:center;justify-content:center;padding:24px">
-  <div style="width:100%;max-width:340px">
-    <div style="text-align:center;margin-bottom:32px">
-      <div style="font-size:44px;margin-bottom:10px">⚽</div>
-      <div style="font-weight:900;font-size:20px;letter-spacing:1.5px;color:#fff">PELADA É COMPROMISSO</div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.25);margin-top:5px;letter-spacing:3px;text-transform:uppercase">AFRESP</div>
+<div id="site-login-overlay" style="display:none;position:fixed;inset:0;z-index:9998;background:#081510;flex-direction:column;align-items:center;justify-content:center;padding:20px;overflow-y:auto">
+  <div style="width:100%;max-width:360px">
+
+    <!-- Logo -->
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-size:52px;margin-bottom:10px;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.5))">⚽</div>
+      <div style="font-weight:900;font-size:22px;letter-spacing:1.5px;color:#fff;line-height:1.1">PELADA É COMPROMISSO</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:6px;letter-spacing:4px;text-transform:uppercase">AFRESP</div>
     </div>
-    <div style="background:#0d2016;border:1px solid rgba(74,222,128,0.15);border-radius:20px;padding:24px 20px">
-      <div style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:14px;text-align:center;letter-spacing:0.5px">🔐 Digite a senha para acessar</div>
-      <input id="site-pass-input" type="password" placeholder="••••••" autocomplete="off"
-        style="width:100%;background:#081510;border:1.5px solid #2a4a35;border-radius:12px;padding:14px 16px;color:#fff;font-size:22px;font-weight:700;text-align:center;outline:none;margin-bottom:12px;letter-spacing:6px;transition:border-color 0.2s"
+
+    <!-- OPÇÃO 1: Acesso com senha -->
+    <div style="background:#0d2016;border:1.5px solid rgba(74,222,128,0.2);border-radius:20px;padding:22px 20px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:20px">🔐</span>
+        <div>
+          <div style="font-weight:900;font-size:15px;color:#fff">Acesso completo</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:1px">Membros AFRESP — todas as telas</div>
+        </div>
+      </div>
+      <div style="height:1px;background:rgba(255,255,255,0.06);margin:14px 0"></div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:8px;font-weight:600">Digite a senha:</div>
+      <input id="site-pass-input" type="password" placeholder="Senha" autocomplete="off"
+        style="width:100%;background:#081510;border:1.5px solid #2a4a35;border-radius:12px;padding:13px 16px;color:#fff;font-size:18px;font-weight:700;text-align:center;outline:none;margin-bottom:10px;letter-spacing:5px;transition:border-color 0.2s;box-sizing:border-box"
         onfocus="this.style.borderColor='#16a34a'" onblur="this.style.borderColor='#2a4a35'"
         onkeydown="if(event.key==='Enter')checkSitePass()">
       <button onclick="checkSitePass()"
-        style="width:100%;padding:14px;background:linear-gradient(135deg,#16a34a,#15803d);border:none;border-radius:12px;color:#fff;font-weight:900;font-size:15px;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 16px rgba(22,163,74,0.3)">
-        Entrar
+        style="width:100%;padding:13px;background:linear-gradient(135deg,#16a34a,#15803d);border:none;border-radius:12px;color:#fff;font-weight:900;font-size:15px;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 16px rgba(22,163,74,0.3)">
+        ✅ Entrar
       </button>
-      <div id="site-pass-error" style="color:#f87171;font-size:11px;text-align:center;margin-top:10px;display:none;font-weight:600">Senha incorreta. Tente novamente.</div>
+      <div id="site-pass-error" style="color:#f87171;font-size:12px;text-align:center;margin-top:10px;display:none;font-weight:700">❌ Senha incorreta. Tente novamente.</div>
     </div>
-    <div style="text-align:center;margin-top:18px;font-size:11px;color:rgba(255,255,255,0.2)">
-      Presença, Votação e Ranking são livres •
-      <span style="cursor:pointer;color:rgba(74,222,128,0.45);text-decoration:underline" onclick="goFreeAccess()">acessar sem senha</span>
+
+    <!-- DIVISOR -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.08)"></div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.2);font-weight:600;letter-spacing:1px">OU</div>
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.08)"></div>
     </div>
+
+    <!-- OPÇÃO 2: Acesso livre -->
+    <div style="background:#0a1a10;border:1.5px solid rgba(74,222,128,0.1);border-radius:20px;padding:22px 20px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:20px">🔓</span>
+        <div>
+          <div style="font-weight:900;font-size:15px;color:#4ade80">Acesso livre</div>
+          <div style="font-size:11px;color:rgba(74,222,128,0.5);margin-top:1px">Sem senha necessária</div>
+        </div>
+      </div>
+      <div style="height:1px;background:rgba(255,255,255,0.06);margin:14px 0"></div>
+      <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,0.5)">
+          <span style="font-size:15px">✅</span> <span>Lista de Presença</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,0.5)">
+          <span style="font-size:15px">🗳️</span> <span>Votação de Jogadores</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,0.5)">
+          <span style="font-size:15px">🏆</span> <span>Ranking</span>
+        </div>
+      </div>
+      <button onclick="goFreeAccess()"
+        style="width:100%;padding:13px;background:rgba(74,222,128,0.1);border:1.5px solid rgba(74,222,128,0.3);border-radius:12px;color:#4ade80;font-weight:900;font-size:15px;cursor:pointer;letter-spacing:0.5px;transition:all 0.2s"
+        onmouseover="this.style.background='rgba(74,222,128,0.18)'" onmouseout="this.style.background='rgba(74,222,128,0.1)'">
+        Entrar sem senha →
+      </button>
+    </div>
+
   </div>
 </div>
 
