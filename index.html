@@ -1175,7 +1175,7 @@ async function onDragEnd(e) {
 
 // ── VOTAR ──
 let voteState = {gameId:null, ratings:{}};
-function emptyRating(){return{note:0,goals:0,assists:0,obs:"",garra:0,comportamento:0,passes:0,faltas:0,gravidade:0,amarelos:0,vermelhos:0};}
+function emptyRating(){return{note:0,goals:0,assists:0,chutes:0,desarmes:0,obs:"",garra:0,comportamento:0,faltas:0,gravidade:0,amarelos:0,vermelhos:0};}
 function ensureRating(pid){if(!voteState.ratings[pid])voteState.ratings[pid]=emptyRating();}
 function setRating5(pid,field,val){
   ensureRating(pid);
@@ -1330,16 +1330,17 @@ function renderVoteCard(pid,game){
     // Atitude & Habilidade
     +sec('Atitude &amp; Habilidade')
     +'<div class="mt-1">'
-    +r5row('⚡','Garra','garra',v.garra)
+    +r5row('💪','Garra','garra',v.garra)
     +r5row('🤝','Comportamento','comportamento',v.comportamento)
-    +r5row('❌','Passes errados','passes',v.passes)
     +'</div>'
 
     // Estatísticas
     +sec('Estatísticas')
     +'<div class="mt-1">'
     +ctrRow('⚽','Gols','text-yellow-300','g-'+pid,'g-min-'+pid,"addGoal('"+pid+"',-1)","addGoal('"+pid+"',1)",v.goals)
-    +ctrRow('🅰','Assistências','text-blue-300','a-'+pid,'a-min-'+pid,"addAssist('"+pid+"',-1)","addAssist('"+pid+"',1)",v.assists)
+    +ctrRow('🎯','Assistências','text-blue-300','a-'+pid,'a-min-'+pid,"addAssist('"+pid+"',-1)","addAssist('"+pid+"',1)",v.assists)
+    +ctrRow('🔫','Chutes a gol','text-green-300','ch-'+pid,'ch-min-'+pid,"addChutes('"+pid+"',-1)","addChutes('"+pid+"',1)",v.chutes)
+    +ctrRow('⚔️','Desarmes/Duelos','text-cyan-300','ds-'+pid,'ds-min-'+pid,"addDesarmes('"+pid+"',-1)","addDesarmes('"+pid+"',1)",v.desarmes)
     +'</div>'
 
     // Disciplina
@@ -1381,6 +1382,18 @@ function addAssist(pid,d){
   const e=document.getElementById("a-"+pid); if(e) e.textContent=voteState.ratings[pid].assists;
   const b=document.getElementById("a-min-"+pid); if(b) b.disabled=voteState.ratings[pid].assists<=0;
 }
+function addChutes(pid,d){
+  ensureRating(pid);
+  voteState.ratings[pid].chutes=Math.max(0,(voteState.ratings[pid].chutes||0)+d);
+  const e=document.getElementById("ch-"+pid); if(e) e.textContent=voteState.ratings[pid].chutes;
+  const b=document.getElementById("ch-min-"+pid); if(b) b.disabled=voteState.ratings[pid].chutes<=0;
+}
+function addDesarmes(pid,d){
+  ensureRating(pid);
+  voteState.ratings[pid].desarmes=Math.max(0,(voteState.ratings[pid].desarmes||0)+d);
+  const e=document.getElementById("ds-"+pid); if(e) e.textContent=voteState.ratings[pid].desarmes;
+  const b=document.getElementById("ds-min-"+pid); if(b) b.disabled=voteState.ratings[pid].desarmes<=0;
+}
 function setObs(pid,val){ensureRating(pid);voteState.ratings[pid].obs=val;}
 async function submitVotes(){
   const gameId=voteState.gameId; if(!gameId||!S.uid) return;
@@ -1393,8 +1406,8 @@ async function submitVotes(){
     const updates={};
     Object.entries(voteState.ratings).forEach(([pid,v])=>{
       updates[`/ratings/${gameId}/${S.uid}/${pid}`]={
-        note:v.note,goals:v.goals,assists:v.assists,obs:(v.obs||"").trim(),
-        garra:v.garra||0,comportamento:v.comportamento||0,passes:v.passes||0,
+        note:v.note,goals:v.goals,assists:v.assists,chutes:v.chutes||0,desarmes:v.desarmes||0,
+        obs:(v.obs||"").trim(),garra:v.garra||0,comportamento:v.comportamento||0,
         faltas:v.faltas||0,gravidade:v.gravidade||0,amarelos:v.amarelos||0,vermelhos:v.vermelhos||0,
         ts:Date.now()
       };
@@ -1603,7 +1616,8 @@ function calcPlayerScore(pid,games,expectedTotal,period){
       note:safeAvg(pv.map(v=>v.note||0))*_winBonus,
       garra:safeAvg(pv.map(v=>v.garra||0)),
       comport:safeAvg(pv.map(v=>v.comportamento||0)),
-      passes:safeAvg(pv.map(v=>v.passes||0)),
+      chutes:safeAvg(pv.map(v=>v.chutes||0)),
+      desarmes:safeAvg(pv.map(v=>v.desarmes||0)),
       gols:safeAvg(pv.map(v=>v.goals||0)),
       assists:safeAvg(pv.map(v=>v.assists||0)),
       amarelo:safeAvg(pv.map(v=>v.amarelos||0)),
@@ -1616,14 +1630,22 @@ function calcPlayerScore(pid,games,expectedTotal,period){
   const freqDisplay=played/total;
   const freqScore=played/Math.max(total,expectedTotal||total);
   const a=k=>pg.reduce((s,g)=>s+(g[k]||0),0)/pg.length;
-  const note=a("note"),garra=a("garra"),comport=a("comport"),passes=a("passes");
+  const note=a("note"),garra=a("garra"),comport=a("comport"),chutes=a("chutes"),desarmes=a("desarmes");
   const gols=a("gols"),assists=a("assists"),amarelo=a("amarelo"),verm=a("verm"),faltas=a("faltas"),grav=a("grav");
   const gravMult=grav<=0?0.1:grav<=1?0.3:grav<=2?0.6:1;
   const cardY=period==="ano"?20/12:20;
   const cardR=period==="ano"?35/12:35;
-  const quality=(garra>0?(garra/5)*35:0)+(comport>0?(comport/5)*25:0)+(note>0?(note/10)*30:0)-passes*0.5+Math.min(gols*2,8)+Math.min(assists,5)-amarelo*cardY-verm*cardR-faltas*gravMult;
+  const notePts=note>0?note*3:0;
+  const golsPts=Math.min(gols,3)*8;
+  const assistsPts=Math.min(assists,3)*5;
+  const chutesPts=Math.min(chutes,4)*2;
+  const garraPts=garra>0?garra*3:0;
+  const comportPts=comport>0?comport*2:0;
+  const desarmesPts=Math.min(desarmes,3)*1;
+  const positive=Math.min(100,notePts+golsPts+assistsPts+chutesPts+garraPts+comportPts+desarmesPts);
+  const quality=positive-amarelo*cardY-verm*cardR-faltas*gravMult;
   const score=freqScore*Math.max(0,quality);
-  return{score:Math.max(0,score),freq:freqDisplay,note,garra,comport,passes,gols,assists,amarelo,verm,faltas,grav,played,total};
+  return{score:Math.max(0,score),freq:freqDisplay,note,garra,comport,chutes,desarmes,gols,assists,amarelo,verm,faltas,grav,played,total};
 }
 function getPlayerStats(pid,filter){
   const notes=[],ga=[],aa=[]; let games=0;
@@ -2422,8 +2444,8 @@ async function openEditVoter(gid,vid){
   pids.forEach(pid=>{
     const v=existing[pid]||{};
     editVoteState.ratings[pid]={
-      note:v.note??0, goals:v.goals??0, assists:v.assists??0, obs:v.obs??"",
-      garra:v.garra??0, comportamento:v.comportamento??0, passes:v.passes??0,
+      note:v.note??0, goals:v.goals??0, assists:v.assists??0, chutes:v.chutes??0, desarmes:v.desarmes??0,
+      obs:v.obs??"", garra:v.garra??0, comportamento:v.comportamento??0,
       faltas:v.faltas??0, gravidade:v.gravidade??0, amarelos:v.amarelos??0, vermelhos:v.vermelhos??0
     };
   });
@@ -2461,20 +2483,27 @@ function renderEditVoteCard(pid,game){
   return `<div class="bg-[#0b1a10] border ${bc} rounded-xl p-3 space-y-2" id="evc-${pid}">
     <div class="flex items-center gap-2">${teamBadge(team)}<span class="font-bold text-sm">${playerName(pid)}</span></div>
     <div><div class="text-[10px] text-green-300/40 mb-1">⭐ Nota Geral</div><div class="flex flex-wrap gap-1.5">${notes}</div></div>
-    <div class="grid grid-cols-3 gap-x-2 gap-y-1.5">
-      <div><div class="text-[10px] text-green-300/40 mb-1">⚡ Garra</div><div class="flex gap-1 flex-wrap">${er5("garra",v.garra)}</div></div>
+    <div class="grid grid-cols-2 gap-x-2 gap-y-1.5">
+      <div><div class="text-[10px] text-green-300/40 mb-1">💪 Garra</div><div class="flex gap-1 flex-wrap">${er5("garra",v.garra)}</div></div>
       <div><div class="text-[10px] text-green-300/40 mb-1">🤝 Comport.</div><div class="flex gap-1 flex-wrap">${er5("comportamento",v.comportamento)}</div></div>
-      <div><div class="text-[10px] text-orange-300/40 mb-1">❌ P.errados</div><div class="flex gap-1 flex-wrap">${er5("passes",v.passes)}</div></div>
     </div>
     <div class="flex gap-3 flex-wrap text-xs">
       <div class="flex items-center gap-1.5"><span class="text-yellow-300/50">⚽</span>
         <button class="counter-btn" id="evg-min-${pid}" onclick="adjEditGoal('${pid}',-1)" ${(v.goals||0)<=0?"disabled":""}>−</button>
         <span id="evg-${pid}" class="font-black text-yellow-300 w-4 text-center">${v.goals||0}</span>
         <button class="counter-btn" onclick="adjEditGoal('${pid}',1)">+</button></div>
-      <div class="flex items-center gap-1.5"><span class="text-blue-300/50">🅰</span>
+      <div class="flex items-center gap-1.5"><span class="text-blue-300/50">🎯</span>
         <button class="counter-btn" id="eva-min-${pid}" onclick="adjEditAssist('${pid}',-1)" ${(v.assists||0)<=0?"disabled":""}>−</button>
         <span id="eva-${pid}" class="font-black text-blue-300 w-4 text-center">${v.assists||0}</span>
         <button class="counter-btn" onclick="adjEditAssist('${pid}',1)">+</button></div>
+      <div class="flex items-center gap-1.5"><span class="text-green-300/50">🔫</span>
+        <button class="counter-btn" id="ech-min-${pid}" onclick="adjEditChutes('${pid}',-1)" ${(v.chutes||0)<=0?"disabled":""}>−</button>
+        <span id="ech-${pid}" class="font-black text-green-300 w-4 text-center">${v.chutes||0}</span>
+        <button class="counter-btn" onclick="adjEditChutes('${pid}',1)">+</button></div>
+      <div class="flex items-center gap-1.5"><span class="text-cyan-300/50">⚔️</span>
+        <button class="counter-btn" id="eds-min-${pid}" onclick="adjEditDesarmes('${pid}',-1)" ${(v.desarmes||0)<=0?"disabled":""}>−</button>
+        <span id="eds-${pid}" class="font-black text-cyan-300 w-4 text-center">${v.desarmes||0}</span>
+        <button class="counter-btn" onclick="adjEditDesarmes('${pid}',1)">+</button></div>
       <div class="flex items-center gap-1.5"><span class="text-amber-400/50">🟡</span>
         <button class="counter-btn" id="eam-min-${pid}" onclick="adjEditAmarelo('${pid}',-1)" ${(v.amarelos||0)<=0?"disabled":""}>−</button>
         <span id="eam-${pid}" class="font-black text-amber-300 w-4 text-center">${v.amarelos||0}</span>
@@ -2514,6 +2543,16 @@ function adjEditAssist(pid,d){
   const e=document.getElementById("eva-"+pid); if(e) e.textContent=editVoteState.ratings[pid].assists;
   const b=document.getElementById("eva-min-"+pid); if(b) b.disabled=editVoteState.ratings[pid].assists<=0;
 }
+function adjEditChutes(pid,d){
+  editVoteState.ratings[pid].chutes=Math.max(0,(editVoteState.ratings[pid].chutes||0)+d);
+  const e=document.getElementById("ech-"+pid); if(e) e.textContent=editVoteState.ratings[pid].chutes;
+  const b=document.getElementById("ech-min-"+pid); if(b) b.disabled=editVoteState.ratings[pid].chutes<=0;
+}
+function adjEditDesarmes(pid,d){
+  editVoteState.ratings[pid].desarmes=Math.max(0,(editVoteState.ratings[pid].desarmes||0)+d);
+  const e=document.getElementById("eds-"+pid); if(e) e.textContent=editVoteState.ratings[pid].desarmes;
+  const b=document.getElementById("eds-min-"+pid); if(b) b.disabled=editVoteState.ratings[pid].desarmes<=0;
+}
 function adjEditAmarelo(pid,d){
   editVoteState.ratings[pid].amarelos=Math.max(0,Math.min(3,(editVoteState.ratings[pid].amarelos||0)+d));
   const e=document.getElementById("eam-"+pid); if(e) e.textContent=editVoteState.ratings[pid].amarelos;
@@ -2536,8 +2575,8 @@ async function saveEditVoter(){
   const updates={};
   Object.entries(ratings).forEach(([pid,v])=>{
     updates[`/ratings/${gid}/${vid}/${pid}`]={
-      note:v.note,goals:v.goals,assists:v.assists,obs:(v.obs||"").trim(),
-      garra:v.garra||0,comportamento:v.comportamento||0,passes:v.passes||0,
+      note:v.note,goals:v.goals,assists:v.assists,chutes:v.chutes||0,desarmes:v.desarmes||0,
+      obs:(v.obs||"").trim(),garra:v.garra||0,comportamento:v.comportamento||0,
       faltas:v.faltas||0,gravidade:v.gravidade||0,amarelos:v.amarelos||0,vermelhos:v.vermelhos||0,
       ts:Date.now()
     };
