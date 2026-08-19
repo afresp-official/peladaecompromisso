@@ -1836,7 +1836,7 @@ function toggleGame(id){if(expandedGames.has(id))expandedGames.delete(id);else e
 // ── ADMIN ──
 function showAdminPin(){
   openModal(`<h3 class="font-black text-lg mb-4">🔐 Acesso Admin</h3>
-    <input id="pin-input" type="password" inputmode="numeric" maxlength="6" placeholder="Digite o PIN"
+    <input id="pin-input" type="password" inputmode="text" maxlength="20" placeholder="Digite a senha"
       class="w-full bg-[#0b1a10] border border-[#2a4a35] rounded-xl px-4 py-3 text-white text-lg text-center font-bold focus:outline-none focus:border-green-500 mb-4"
       onkeydown="if(event.key==='Enter')checkPin()" />
     <button onclick="checkPin()" class="w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 font-bold transition-colors">Entrar</button>`);
