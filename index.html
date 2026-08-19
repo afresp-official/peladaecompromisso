@@ -751,7 +751,7 @@ function bestPlayerOfGame(game){
   const pids=getGamePlayerIds(game);
   let best=null, bestScore=-1;
   pids.forEach(pid=>{
-    const r=calcPlayerScore(pid,[game]);
+    const r=calcPlayerScore(pid,[game],1,"partida");
     if(!r) return;
     if(r.score>bestScore){bestScore=r.score;best={name:playerName(pid),score:r.score.toFixed(0),note:r.note>0?r.note.toFixed(1):null,team:getPlayerTeam(game,pid)};}
   });
@@ -1420,7 +1420,7 @@ function buildShareText(){
   const labels={partida:"última partida",mes:"este mês",semestre:"este semestre",ano:"este ano"};
   const periodLabel=labels[rankPeriod]||rankPeriod;
   const expectedGames={partida:1,mes:4,semestre:26,ano:52}[rankPeriod]||games.length;
-  const scores=activePlayers().map(function(p){const r=calcPlayerScore(p.id,games,expectedGames);return r?Object.assign({},p,r):null;}).filter(Boolean).sort(function(a,b){return b.score-a.score;});
+  const scores=activePlayers().map(function(p){const r=calcPlayerScore(p.id,games,expectedGames,rankPeriod);return r?Object.assign({},p,r):null;}).filter(Boolean).sort(function(a,b){return b.score-a.score;});
   if(!scores.length)return"Nenhuma avaliação registrada ainda.";
   const medals=["🥇","🥈","🥉"];
   const g0=games[0];
@@ -1481,7 +1481,7 @@ function buildGameShareText(gameId){
 
   // top 5
   const scores=pids.map(function(pid){
-    const r=calcPlayerScore(pid,[Object.assign({id:gameId},game)]);
+    const r=calcPlayerScore(pid,[Object.assign({id:gameId},game)],1,"partida");
     return r?Object.assign({name:playerName(pid)},r):null;
   }).filter(Boolean).sort(function(a,b){return b.score-a.score;});
 
@@ -1584,7 +1584,7 @@ function gamesInPeriod(period,filter){
   }).map(id=>({id,...S.games[id]}));
 }
 function safeAvg(arr){const v=arr.filter(x=>x>0);return v.length?v.reduce((s,x)=>s+x,0)/v.length:0;}
-function calcPlayerScore(pid,games,expectedTotal){
+function calcPlayerScore(pid,games,expectedTotal,period){
   if(!games||!games.length) return null;
   const pname=(S.players[pid]?.name||"").toLowerCase();
   const ausentes=games.filter(game=>{const ga=S.ausencia[game.id]||{};return Object.values(ga).some(e=>e.name.toLowerCase()===pname);});
@@ -1619,7 +1619,9 @@ function calcPlayerScore(pid,games,expectedTotal){
   const note=a("note"),garra=a("garra"),comport=a("comport"),passes=a("passes");
   const gols=a("gols"),assists=a("assists"),amarelo=a("amarelo"),verm=a("verm"),faltas=a("faltas"),grav=a("grav");
   const gravMult=grav<=0?0.1:grav<=1?0.3:grav<=2?0.6:1;
-  const quality=(garra>0?(garra/5)*35:0)+(comport>0?(comport/5)*25:0)+(note>0?(note/10)*30:0)-passes*0.5+Math.min(gols*2,8)+Math.min(assists,5)-amarelo*2-verm*5-faltas*gravMult;
+  const cardY=period==="ano"?20/12:20;
+  const cardR=period==="ano"?35/12:35;
+  const quality=(garra>0?(garra/5)*35:0)+(comport>0?(comport/5)*25:0)+(note>0?(note/10)*30:0)-passes*0.5+Math.min(gols*2,8)+Math.min(assists,5)-amarelo*cardY-verm*cardR-faltas*gravMult;
   const score=freqScore*Math.max(0,quality);
   return{score:Math.max(0,score),freq:freqDisplay,note,garra,comport,passes,gols,assists,amarelo,verm,faltas,grav,played,total};
 }
@@ -1714,7 +1716,7 @@ function renderRanking(){
   }
   // Ranking view
   const expectedGames={partida:1,mes:4,semestre:26,ano:52}[rankPeriod]||games.length;
-  const scores=activePlayers().map(p=>{const r=calcPlayerScore(p.id,games,expectedGames);return r?Object.assign({},p,r):null;}).filter(Boolean).sort((a,b)=>b.score-a.score);
+  const scores=activePlayers().map(p=>{const r=calcPlayerScore(p.id,games,expectedGames,rankPeriod);return r?Object.assign({},p,r):null;}).filter(Boolean).sort((a,b)=>b.score-a.score);
   if(!scores.length){el.innerHTML=header+'<div class="text-center py-12 text-green-300/40 text-sm">Nenhuma partida avaliada '+periodLabel+'.</div>';return;}
   el.innerHTML=header+'<div class="space-y-2">'+scores.map((p,i)=>rankPlayerCard(p,i)).join("")+"</div>";
 }
