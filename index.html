@@ -236,7 +236,7 @@ const db = firebase.database();
 // ── State ──
 const S = {
   players:{}, games:{}, ratings:{}, formations:{}, presenca:{}, ausencia:{},
-  config:{adminPin:"1234"},
+  config:{adminPin:"afresp"},
   uid: localStorage.getItem("afresp_uid")||null,
   adminOk:false, rankFilter:"all", currentPage:"inicio", selectedGameId:null, selectedVoteGameId:null,
 };
@@ -362,7 +362,7 @@ async function seedPlayersIfEmpty() {
   const batch={};
   INITIAL_PLAYERS.forEach(name=>{ const id=db.ref("players").push().key; batch[id]={name,active:true}; });
   await db.ref("players").update(batch);
-  await db.ref("config/adminPin").set("1234");
+  await db.ref("config/adminPin").set("afresp");
 }
 
 // ── Router ──
@@ -385,7 +385,7 @@ function goToCampo(gid) {
 function openEscalacao(gid){
   const senha=prompt("Senha para acessar a escalação:");
   if(senha===null)return;
-  if(senha!=="1234"){showToast("Senha incorreta.");return;}
+  if(senha!=="afresp"){showToast("Senha incorreta.");return;}
   S.adminOk=true;
   goToCampo(gid);
 }
