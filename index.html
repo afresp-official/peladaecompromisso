@@ -1596,8 +1596,11 @@ function calcPlayerScore(pid,games,expectedTotal){
     const gr=S.ratings[game.id]||{};
     const pv=Object.values(gr).map(v=>v[pid]).filter(Boolean);
     if(!pv.length) return;
+    const _res=calcGameResult(game);
+    const _myTeam=getPlayerTeam(game,pid);
+    const _winBonus=_res&&((_myTeam==="vermelho"&&_res.vermScore>_res.azulScore)||(_myTeam==="azul"&&_res.azulScore>_res.vermScore))?1.03:1;
     pg.push({
-      note:safeAvg(pv.map(v=>v.note||0)),
+      note:safeAvg(pv.map(v=>v.note||0))*_winBonus,
       garra:safeAvg(pv.map(v=>v.garra||0)),
       comport:safeAvg(pv.map(v=>v.comportamento||0)),
       passes:safeAvg(pv.map(v=>v.passes||0)),
