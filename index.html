@@ -486,9 +486,13 @@ function renderLista() {
 
   const _today = new Date().toISOString().split('T')[0];
   const listaClosed = game.date < _today;
+  const hasUpcoming = Object.keys(S.games).some(id => S.games[id].date >= _today);
   const _fullMsg = isFull ? '<p class="text-center text-green-400/70 text-xs mb-2 font-semibold">⚽ '+maxV+' vagas preenchidas — novos entram na fila de espera</p>' : "";
+  const _closedMsg = hasUpcoming
+    ? '<div class="flex items-center gap-3 mb-3 px-4 py-3 rounded-xl" style="background:rgba(120,50,50,0.18);border:1px solid rgba(220,38,38,0.2)"><span class="text-2xl">🔒</span><div><div class="font-black text-sm text-red-300">Lista encerrada</div><div class="text-[10px] text-red-300/50 mt-0.5">Este jogo já aconteceu.</div></div></div>'
+    : '<div class="flex items-center gap-3 mb-3 px-4 py-3 rounded-xl" style="background:rgba(20,60,40,0.25);border:1px solid rgba(74,222,128,0.15)"><span class="text-2xl">⏳</span><div><div class="font-black text-sm text-green-300">Aguardando próximo jogo</div><div class="text-[10px] text-green-300/40 mt-0.5">O admin irá abrir a lista assim que o próximo jogo for agendado.</div></div></div>';
   const _inputSection = listaClosed
-    ? '<div class="flex items-center gap-3 mb-3 px-4 py-3 rounded-xl" style="background:rgba(120,50,50,0.18);border:1px solid rgba(220,38,38,0.2)"><span class="text-2xl">🔒</span><div><div class="font-black text-sm text-red-300">Lista encerrada</div><div class="text-[10px] text-red-300/50 mt-0.5">Este jogo já aconteceu. O admin abrirá uma nova lista na próxima semana.</div></div></div>'
+    ? _closedMsg
     : _fullMsg + '<div class="flex gap-2 mb-2"><input id="presenca-nome" type="text" placeholder="Digite seu nome" maxlength="30" autocomplete="name" style="font-size:16px" class="flex-1 px-3 py-2.5 rounded-xl bg-[#081510] border border-[#2a4a35] text-white placeholder-green-300/25 font-semibold focus:border-green-500 focus:outline-none" onkeydown="if(event.key===\'Enter\')confirmarNome()" /><button onclick="confirmarNome()" class="px-4 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 active:bg-green-700 text-white font-black text-sm transition-colors shadow-lg whitespace-nowrap">Confirmar</button></div>';
 
   el.innerHTML=`
