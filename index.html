@@ -243,7 +243,7 @@ const S = {
 
 // ── Site Auth ──
 let siteAuth = localStorage.getItem("afresp_access")==="ok";
-const FREE_PAGES = new Set(["lista","votar","ranking"]);
+const FREE_PAGES = new Set(["lista","votar","ranking","campo"]);
 let _pendingSitePage = "inicio";
 
 function showSiteLogin(targetPage){
@@ -2752,6 +2752,9 @@ function nextTuesday(){const d=new Date();const diff=(2-d.getDay()+7)%7||7;d.set
         </div>
         <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,0.5)">
           <span style="font-size:15px">🗳️</span> <span>Votação de Jogadores</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,0.5)">
+          <span style="font-size:15px">🟩</span> <span>Campo / Escalação</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,0.5)">
           <span style="font-size:15px">🏆</span> <span>Ranking</span>
