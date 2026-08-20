@@ -2315,8 +2315,8 @@ function openGameVotes(gid){
         <span class="text-base font-black">🗳️ Votos</span>
         <span class="text-green-300/40 text-xs">— ${fmtDate(g.date)}</span>
       </div>
-      <button onclick="shareGameResult('${gid}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1a2e1f] border border-green-700/40 text-green-400 font-bold text-xs hover:bg-green-900/30">
-        📤 Compartilhar
+      <button onclick="shareResultadoPDF('${gid}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1a2e1f] border border-green-700/40 text-green-400 font-bold text-xs hover:bg-green-900/30">
+        📄 Compartilhar PDF
       </button>
     </div>
     ${!voters.length
