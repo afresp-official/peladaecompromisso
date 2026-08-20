@@ -1288,8 +1288,10 @@ function renderVotar() {
   const presSlots=S.presenca[game.id]||{};
   const presNames=new Set(Object.values(presSlots).map(e=>e.name.toLowerCase()));
   const rawPids=getGamePlayerIds(game);
+  const presencePids=Object.entries(S.players).filter(([,p])=>presNames.has((p.name||"").toLowerCase())).map(([pid])=>pid);
   const filteredPids=presNames.size>0?rawPids.filter(pid=>presNames.has((S.players[pid]?.name||"").toLowerCase())):rawPids;
-  const allPids=filteredPids, others=allPids;
+  const allPids=[...new Set([...filteredPids,...presencePids])];
+  const others=allPids;
   if(voteState.gameId!==game.id){
     voteState={gameId:game.id,ratings:{}};
     others.forEach(pid=>{voteState.ratings[pid]=emptyRating();});
