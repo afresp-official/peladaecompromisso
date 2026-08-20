@@ -1758,16 +1758,15 @@ function renderRanking(){
     const rows=activePlayers().map(p=>{
       const pname=p.name.toLowerCase();
       const absentGames=allGames.filter(g=>{const ga=S.ausencia[g.id]||{};return Object.values(ga).some(e=>e.name.toLowerCase()===pname);});
-      const playedGames=allGames.filter(g=>{
-        if(absentGames.some(a=>a.id===g.id)) return false;
+      const effective=allGames.filter(g=>!absentGames.some(a=>a.id===g.id));
+      const played=effective.filter(g=>{
         if(getGamePlayerIds(g).includes(p.id)) return true;
         const ratedInGame=new Set(Object.values(S.ratings[g.id]||{}).flatMap(r=>Object.keys(r)));
         if(ratedInGame.has(p.id)) return true;
         const presNames=new Set(Object.values(S.presenca[g.id]||{}).map(e=>(e.name||"").toLowerCase()));
         return presNames.has(pname);
-      });
-      const played=playedGames.length;
-      const total=played+absentGames.length;
+      }).length;
+      const total=effective.length;
       const pct=total>0?Math.round(played/total*100):0;
       return{...p,played,total,ausentes:absentGames.length,pct};
     }).filter(r=>r.total>0).sort((a,b)=>b.pct-a.pct||b.played-a.played);
