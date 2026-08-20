@@ -856,10 +856,10 @@ function renderGameStatus(){
           <div class="text-[10px] text-green-300/30 uppercase tracking-wider mb-1.5">⚽ Artilheiros</div>
           <div class="flex gap-2">
             <div class="flex-1 flex flex-col gap-1">
-              ${result.scorers.filter(s=>s.team==="vermelho").map(s=>`<span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-red-950/70 text-red-300 border border-red-800/40 text-center">${s.name}${s.goals>1?` (${s.goals})`:""}</span>`).join("")}
+              ${result.scorers.filter(s=>s.team==="vermelho").map(s=>`<span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-red-950/70 text-red-300 border border-red-800/40 text-center">${s.name} ${"⚽".repeat(Math.min(s.goals,8))}</span>`).join("")}
             </div>
             <div class="flex-1 flex flex-col gap-1">
-              ${result.scorers.filter(s=>s.team==="azul").map(s=>`<span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-950/70 text-blue-300 border border-blue-800/40 text-center">${s.name}${s.goals>1?` (${s.goals})`:""}</span>`).join("")}
+              ${result.scorers.filter(s=>s.team==="azul").map(s=>`<span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-950/70 text-blue-300 border border-blue-800/40 text-center">${s.name} ${"⚽".repeat(Math.min(s.goals,8))}</span>`).join("")}
             </div>
           </div>
         </div>`:""}
@@ -1529,8 +1529,8 @@ function buildGameShareText(gameId){
       const vScorers=result.scorers.filter(function(s){return s.team==="vermelho";});
       const aScorers=result.scorers.filter(function(s){return s.team==="azul";});
       txt+="\n⚽ *Artilheiros:*\n";
-      if(vScorers.length) txt+="🔴 "+vScorers.map(function(s){return s.name+(s.goals>1?" ("+s.goals+")":"");}).join(", ")+"\n";
-      if(aScorers.length) txt+="🔵 "+aScorers.map(function(s){return s.name+(s.goals>1?" ("+s.goals+")":"");}).join(", ")+"\n";
+      if(vScorers.length) txt+="🔴 "+vScorers.map(function(s){return s.name+" "+"⚽".repeat(Math.min(s.goals,8));}).join(", ")+"\n";
+      if(aScorers.length) txt+="🔵 "+aScorers.map(function(s){return s.name+" "+"⚽".repeat(Math.min(s.goals,8));}).join(", ")+"\n";
     }
   }
 
@@ -2184,10 +2184,10 @@ async function shareResultadoPDF(gid){
       <div style="font-size:9px;color:#4ade80;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;font-weight:700;">⚽ Artilheiros</div>
       <div style="display:flex;gap:8px;">
         <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
-          ${result.scorers.filter(s=>s.team==="vermelho").map(s=>`<span style="font-size:11px;padding:3px 8px;border-radius:20px;font-weight:700;background:rgba(127,29,29,0.5);color:#fca5a5;border:1px solid rgba(185,28,28,0.4);text-align:center;">${s.name}${s.goals>1?` (${s.goals})`:""}</span>`).join("")}
+          ${result.scorers.filter(s=>s.team==="vermelho").map(s=>`<span style="font-size:11px;padding:3px 8px;border-radius:20px;font-weight:700;background:rgba(127,29,29,0.5);color:#fca5a5;border:1px solid rgba(185,28,28,0.4);text-align:center;">${s.name} ${"⚽".repeat(Math.min(s.goals,8))}</span>`).join("")}
         </div>
         <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
-          ${result.scorers.filter(s=>s.team==="azul").map(s=>`<span style="font-size:11px;padding:3px 8px;border-radius:20px;font-weight:700;background:rgba(23,37,84,0.5);color:#93c5fd;border:1px solid rgba(29,78,216,0.4);text-align:center;">${s.name}${s.goals>1?` (${s.goals})`:""}</span>`).join("")}
+          ${result.scorers.filter(s=>s.team==="azul").map(s=>`<span style="font-size:11px;padding:3px 8px;border-radius:20px;font-weight:700;background:rgba(23,37,84,0.5);color:#93c5fd;border:1px solid rgba(29,78,216,0.4);text-align:center;">${s.name} ${"⚽".repeat(Math.min(s.goals,8))}</span>`).join("")}
         </div>
       </div>
     </div>`:"";
@@ -2404,10 +2404,10 @@ async function viewVoter(gid,vid){
             <div class="text-[9px] text-green-300/30 uppercase tracking-wider mb-1.5">⚽ Artilheiros</div>
             <div class="flex gap-2">
               <div class="flex-1 flex flex-col gap-1">
-                ${result.scorers.filter(s=>s.team==="vermelho").map(s=>`<div class="text-[10px] px-2 py-1 rounded-lg font-semibold bg-red-950/70 text-red-300 border border-red-800/40 text-center leading-tight">${s.name}${s.goals>1?` (${s.goals})`:""}</div>`).join("")}
+                ${result.scorers.filter(s=>s.team==="vermelho").map(s=>`<div class="text-[10px] px-2 py-1 rounded-lg font-semibold bg-red-950/70 text-red-300 border border-red-800/40 text-center leading-tight">${s.name} ${"⚽".repeat(Math.min(s.goals,8))}</div>`).join("")}
               </div>
               <div class="flex-1 flex flex-col gap-1">
-                ${result.scorers.filter(s=>s.team==="azul").map(s=>`<div class="text-[10px] px-2 py-1 rounded-lg font-semibold bg-blue-950/70 text-blue-300 border border-blue-800/40 text-center leading-tight">${s.name}${s.goals>1?` (${s.goals})`:""}</div>`).join("")}
+                ${result.scorers.filter(s=>s.team==="azul").map(s=>`<div class="text-[10px] px-2 py-1 rounded-lg font-semibold bg-blue-950/70 text-blue-300 border border-blue-800/40 text-center leading-tight">${s.name} ${"⚽".repeat(Math.min(s.goals,8))}</div>`).join("")}
               </div>
             </div>
           </div>`:""}
@@ -2447,7 +2447,7 @@ async function shareVotosPDF(gid){
   const renderCard=([pid,v])=>{
     const team=getPlayerTeam(gameObj,pid);
     const stats=[];
-    const badge=(bg,bor,col,txt)=>`<span style="display:inline-block;vertical-align:top;white-space:nowrap;background:${bg};border:1px solid ${bor};border-radius:6px;padding:1px 10px 12px;color:${col};font-size:10px;line-height:1;">${txt}</span>`;
+    const badge=(bg,bor,col,txt)=>`<span style="display:inline-block;vertical-align:top;white-space:nowrap;background:${bg};border:1px solid ${bor};border-radius:6px;padding:0 10px 20px;color:${col};font-size:10px;line-height:1;">${txt}</span>`;
     if(v.garra) stats.push(badge("rgba(20,83,45,0.6)","rgba(34,197,94,0.2)","#86efac",`⚡ Garra: ${v.garra}/5`));
     if(v.comportamento) stats.push(badge("rgba(20,83,45,0.6)","rgba(34,197,94,0.2)","#86efac",`🤝 Comportamento: ${v.comportamento}/5`));
     if(v.goals) stats.push(badge("rgba(113,63,18,0.5)","rgba(202,138,4,0.3)","#fde68a",`⚽ Gols: ${v.goals}`));
@@ -2469,10 +2469,10 @@ async function shareVotosPDF(gid){
       <div style="font-size:9px;color:#4ade80;text-transform:uppercase;letter-spacing:2px;margin-bottom:7px;font-weight:700;">Artilheiros</div>
       <div style="display:flex;gap:8px;">
         <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
-          ${result.scorers.filter(s=>s.team==="vermelho").map(s=>`<div style="font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;background:rgba(127,29,29,0.5);color:#fca5a5;border:1px solid rgba(185,28,28,0.3);text-align:center;">${s.name}${s.goals>1?` (${s.goals})`:""}</div>`).join("")}
+          ${result.scorers.filter(s=>s.team==="vermelho").map(s=>`<div style="font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;background:rgba(127,29,29,0.5);color:#fca5a5;border:1px solid rgba(185,28,28,0.3);text-align:center;">${s.name} ${"⚽".repeat(Math.min(s.goals,8))}</div>`).join("")}
         </div>
         <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
-          ${result.scorers.filter(s=>s.team==="azul").map(s=>`<div style="font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;background:rgba(23,37,84,0.5);color:#93c5fd;border:1px solid rgba(29,78,216,0.3);text-align:center;">${s.name}${s.goals>1?` (${s.goals})`:""}</div>`).join("")}
+          ${result.scorers.filter(s=>s.team==="azul").map(s=>`<div style="font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;background:rgba(23,37,84,0.5);color:#93c5fd;border:1px solid rgba(29,78,216,0.3);text-align:center;">${s.name} ${"⚽".repeat(Math.min(s.goals,8))}</div>`).join("")}
         </div>
       </div>
     </div>`:"";
