@@ -2447,13 +2447,14 @@ async function shareVotosPDF(gid){
   const renderCard=([pid,v])=>{
     const team=getPlayerTeam(gameObj,pid);
     const stats=[];
-    if(v.garra) stats.push(`<span style="display:inline-flex;align-items:flex-start;gap:4px;background:rgba(20,83,45,0.6);border:1px solid rgba(34,197,94,0.2);border-radius:6px;padding:5px 10px;color:#86efac;"><span style="font-size:12px;line-height:1;">⚡</span><span style="font-size:10px;line-height:1;">Garra: ${v.garra}/5</span></span>`);
-    if(v.comportamento) stats.push(`<span style="display:inline-flex;align-items:flex-start;gap:4px;background:rgba(20,83,45,0.6);border:1px solid rgba(34,197,94,0.2);border-radius:6px;padding:5px 10px;color:#86efac;"><span style="font-size:12px;line-height:1;">🤝</span><span style="font-size:10px;line-height:1;">Comportamento: ${v.comportamento}/5</span></span>`);
-    if(v.goals) stats.push(`<span style="display:inline-flex;align-items:flex-start;gap:4px;background:rgba(113,63,18,0.5);border:1px solid rgba(202,138,4,0.3);border-radius:6px;padding:5px 10px;color:#fde68a;"><span style="font-size:12px;line-height:1;">⚽</span><span style="font-size:10px;line-height:1;">Gols: ${v.goals}</span></span>`);
-    if(v.assists) stats.push(`<span style="display:inline-flex;align-items:flex-start;gap:4px;background:rgba(23,37,84,0.5);border:1px solid rgba(59,130,246,0.3);border-radius:6px;padding:5px 10px;color:#93c5fd;"><span style="font-size:12px;line-height:1;">🅰</span><span style="font-size:10px;line-height:1;">Assist.: ${v.assists}</span></span>`);
-    if(v.amarelos) stats.push(`<span style="display:inline-flex;align-items:flex-start;gap:4px;background:rgba(120,53,15,0.5);border:1px solid rgba(217,119,6,0.3);border-radius:6px;padding:5px 10px;color:#fcd34d;"><span style="font-size:12px;line-height:1;">🟡</span><span style="font-size:10px;line-height:1;">Amarelo x${v.amarelos}</span></span>`);
-    if(v.vermelhos) stats.push(`<span style="display:inline-flex;align-items:flex-start;gap:4px;background:rgba(127,29,29,0.5);border:1px solid rgba(220,38,38,0.3);border-radius:6px;padding:5px 10px;color:#fca5a5;"><span style="font-size:12px;line-height:1;">🔴</span><span style="font-size:10px;line-height:1;">Vermelho x${v.vermelhos}</span></span>`);
-    if(v.faltas) stats.push(`<span style="display:inline-flex;align-items:flex-start;gap:4px;background:rgba(124,45,18,0.5);border:1px solid rgba(234,88,12,0.3);border-radius:6px;padding:5px 10px;color:#fdba74;"><span style="font-size:12px;line-height:1;">⚠</span><span style="font-size:10px;line-height:1;">Faltas: ${v.faltas} (${gravLabel[v.gravidade||0]})</span></span>`);
+    const badge=(bg,bor,col,txt)=>`<span style="display:inline-block;vertical-align:top;white-space:nowrap;background:${bg};border:1px solid ${bor};border-radius:6px;padding:4px 10px;color:${col};font-size:10px;line-height:1.6;">${txt}</span>`;
+    if(v.garra) stats.push(badge("rgba(20,83,45,0.6)","rgba(34,197,94,0.2)","#86efac",`⚡ Garra: ${v.garra}/5`));
+    if(v.comportamento) stats.push(badge("rgba(20,83,45,0.6)","rgba(34,197,94,0.2)","#86efac",`🤝 Comportamento: ${v.comportamento}/5`));
+    if(v.goals) stats.push(badge("rgba(113,63,18,0.5)","rgba(202,138,4,0.3)","#fde68a",`⚽ Gols: ${v.goals}`));
+    if(v.assists) stats.push(badge("rgba(23,37,84,0.5)","rgba(59,130,246,0.3)","#93c5fd",`🅰 Assist.: ${v.assists}`));
+    if(v.amarelos) stats.push(badge("rgba(120,53,15,0.5)","rgba(217,119,6,0.3)","#fcd34d",`🟡 Amarelo x${v.amarelos}`));
+    if(v.vermelhos) stats.push(badge("rgba(127,29,29,0.5)","rgba(220,38,38,0.3)","#fca5a5",`🔴 Vermelho x${v.vermelhos}`));
+    if(v.faltas) stats.push(badge("rgba(124,45,18,0.5)","rgba(234,88,12,0.3)","#fdba74",`⚠ Faltas: ${v.faltas} (${gravLabel[v.gravidade||0]})`));
     return `<div style="background:#0b1a10;border:1px solid #1e3a27;border-radius:12px;padding:10px 12px;margin-bottom:6px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:${stats.length||v.obs?'8px':'0'};">
         <div style="display:flex;align-items:center;gap:7px;">${teamDot(team)}<span style="font-size:13px;font-weight:700;color:${teamColor(team)};">${playerName(pid)}</span></div>
