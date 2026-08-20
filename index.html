@@ -2447,7 +2447,7 @@ async function shareVotosPDF(gid){
   const renderCard=([pid,v])=>{
     const team=getPlayerTeam(gameObj,pid);
     const stats=[];
-    const badge=(bg,bor,col,txt)=>`<span style="display:inline-block;vertical-align:top;white-space:nowrap;background:${bg};border:1px solid ${bor};border-radius:6px;padding:4px 10px;color:${col};font-size:10px;line-height:1.6;">${txt}</span>`;
+    const badge=(bg,bor,col,txt)=>`<span style="display:inline-block;vertical-align:top;white-space:nowrap;background:${bg};border:1px solid ${bor};border-radius:6px;padding:1px 10px 12px;color:${col};font-size:10px;line-height:1;">${txt}</span>`;
     if(v.garra) stats.push(badge("rgba(20,83,45,0.6)","rgba(34,197,94,0.2)","#86efac",`⚡ Garra: ${v.garra}/5`));
     if(v.comportamento) stats.push(badge("rgba(20,83,45,0.6)","rgba(34,197,94,0.2)","#86efac",`🤝 Comportamento: ${v.comportamento}/5`));
     if(v.goals) stats.push(badge("rgba(113,63,18,0.5)","rgba(202,138,4,0.3)","#fde68a",`⚽ Gols: ${v.goals}`));
