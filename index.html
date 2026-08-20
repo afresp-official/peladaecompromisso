@@ -2353,14 +2353,14 @@ async function viewVoter(gid,vid){
         <span class="font-black text-xl text-green-300">${v.note||0}<span class="text-green-300/40 text-sm font-normal">/10</span></span>
       </div>
       <div class="flex gap-1.5 flex-wrap text-xs">
-        ${v.garra?`<span class="inline-flex items-center gap-1 bg-green-950/60 border border-green-800/30 rounded-lg px-2.5 py-1 text-green-300/70">⚡ Garra: ${v.garra}/5</span>`:""}
-        ${v.comportamento?`<span class="inline-flex items-center gap-1 bg-green-950/60 border border-green-800/30 rounded-lg px-2.5 py-1 text-green-300/70">🤝 Comportamento: ${v.comportamento}/5</span>`:""}
-        ${v.passes?`<span class="inline-flex items-center gap-1 bg-orange-950/40 border border-orange-800/30 rounded-lg px-2.5 py-1 text-orange-300/70">❌ Passes errados: ${v.passes}/5</span>`:""}
-        ${v.goals?`<span class="inline-flex items-center gap-1 bg-yellow-950/40 border border-yellow-800/30 rounded-lg px-2.5 py-1 text-yellow-300">⚽ Gols: ${v.goals}</span>`:""}
-        ${v.assists?`<span class="inline-flex items-center gap-1 bg-blue-950/40 border border-blue-800/30 rounded-lg px-2.5 py-1 text-blue-300">🅰 Assist.: ${v.assists}</span>`:""}
-        ${v.amarelos?`<span class="inline-flex items-center gap-1 bg-amber-950/40 border border-amber-800/30 rounded-lg px-2.5 py-1 text-amber-400">🟡 Amarelo ×${v.amarelos}</span>`:""}
-        ${v.vermelhos?`<span class="inline-flex items-center gap-1 bg-red-950/40 border border-red-800/30 rounded-lg px-2.5 py-1 text-red-400">🔴 Vermelho ×${v.vermelhos}</span>`:""}
-        ${v.faltas?`<span class="inline-flex items-center gap-1 bg-orange-950/40 border border-orange-800/30 rounded-lg px-2.5 py-1 text-orange-300">⚠ Faltas: ${v.faltas} (${gravLabel[v.gravidade||0]})</span>`:""}
+        ${v.garra?`<span class="inline-flex items-center gap-1 overflow-hidden bg-green-950/60 border border-green-800/30 rounded-lg px-3 py-1.5 text-green-300/70 leading-none">⚡ Garra: ${v.garra}/5</span>`:""}
+        ${v.comportamento?`<span class="inline-flex items-center gap-1 overflow-hidden bg-green-950/60 border border-green-800/30 rounded-lg px-3 py-1.5 text-green-300/70 leading-none">🤝 Comportamento: ${v.comportamento}/5</span>`:""}
+        ${v.passes?`<span class="inline-flex items-center gap-1 overflow-hidden bg-orange-950/40 border border-orange-800/30 rounded-lg px-3 py-1.5 text-orange-300/70 leading-none">❌ Passes errados: ${v.passes}/5</span>`:""}
+        ${v.goals?`<span class="inline-flex items-center gap-1 overflow-hidden bg-yellow-950/40 border border-yellow-800/30 rounded-lg px-3 py-1.5 text-yellow-300 leading-none">⚽ Gols: ${v.goals}</span>`:""}
+        ${v.assists?`<span class="inline-flex items-center gap-1 overflow-hidden bg-blue-950/40 border border-blue-800/30 rounded-lg px-3 py-1.5 text-blue-300 leading-none">🅰 Assist.: ${v.assists}</span>`:""}
+        ${v.amarelos?`<span class="inline-flex items-center gap-1 overflow-hidden bg-amber-950/40 border border-amber-800/30 rounded-lg px-3 py-1.5 text-amber-400 leading-none">🟡 Amarelo ×${v.amarelos}</span>`:""}
+        ${v.vermelhos?`<span class="inline-flex items-center gap-1 overflow-hidden bg-red-950/40 border border-red-800/30 rounded-lg px-3 py-1.5 text-red-400 leading-none">🔴 Vermelho ×${v.vermelhos}</span>`:""}
+        ${v.faltas?`<span class="inline-flex items-center gap-1 overflow-hidden bg-orange-950/40 border border-orange-800/30 rounded-lg px-3 py-1.5 text-orange-300 leading-none">⚠ Faltas: ${v.faltas} (${gravLabel[v.gravidade||0]})</span>`:""}
       </div>
       ${v.obs?`<p class="text-xs text-green-300/60 italic border-l-2 border-green-700 pl-2">"${v.obs}"</p>`:""}
     </div>`;
