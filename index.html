@@ -1276,11 +1276,6 @@ function renderVotar() {
   const game=gameRaw;
   if(!game){el.innerHTML=backBtn+`<div class="text-center py-16 text-green-300/40 text-sm">Nenhum jogo cadastrado ainda.</div>`;return;}
   if(hasVoted(game.id,S.uid)){renderMyVotes(el,game);return;}
-  const totalVoters=S.ratings[game.id]?Object.keys(S.ratings[game.id]).length:0;
-  if(totalVoters>0){
-    el.innerHTML=backBtn+`<div class="text-center py-20 px-4"><div class="text-5xl mb-4">🔒</div><div class="font-black text-lg text-white mb-2">Votação encerrada</div><p class="text-green-300/40 text-sm">A avaliação deste jogo já foi realizada.</p><button onclick="openGameVotes('${game.id}')" class="mt-6 px-6 py-3 rounded-xl bg-[#0f1a2a] border border-[#1e3a5f] text-blue-400 font-bold text-sm">🗳️ Ver votos</button></div>`;
-    return;
-  }
   if(game.status!=="fechado"){
     el.innerHTML=backBtn+`<div class="text-center py-20 px-4"><div class="text-5xl mb-4">🔒</div><div class="font-black text-lg text-white mb-2">Votação ainda não liberada</div><p class="text-green-300/40 text-sm">O admin libera a votação após o jogo acontecer.</p></div>`;
     return;
@@ -1291,7 +1286,15 @@ function renderVotar() {
   const presencePids=Object.entries(S.players).filter(([,p])=>presNames.has((p.name||"").toLowerCase())).map(([pid])=>pid);
   const filteredPids=presNames.size>0?rawPids.filter(pid=>presNames.has((S.players[pid]?.name||"").toLowerCase())):rawPids;
   const allPids=[...new Set([...filteredPids,...presencePids])];
-  const others=allPids;
+  const existingRatings=S.ratings[game.id]||{};
+  const totalVoters=Object.keys(existingRatings).length;
+  const ratedPids=new Set(Object.values(existingRatings).flatMap(r=>Object.keys(r)));
+  const unratedPids=allPids.filter(p=>!ratedPids.has(p));
+  if(totalVoters>0&&unratedPids.length===0){
+    el.innerHTML=backBtn+`<div class="text-center py-20 px-4"><div class="text-5xl mb-4">🔒</div><div class="font-black text-lg text-white mb-2">Votação encerrada</div><p class="text-green-300/40 text-sm">A avaliação deste jogo já foi realizada.</p><button onclick="openGameVotes('${game.id}')" class="mt-6 px-6 py-3 rounded-xl bg-[#0f1a2a] border border-[#1e3a5f] text-blue-400 font-bold text-sm">🗳️ Ver votos</button></div>`;
+    return;
+  }
+  const others=totalVoters>0?unratedPids:allPids;
   if(voteState.gameId!==game.id){
     voteState={gameId:game.id,ratings:{}};
     others.forEach(pid=>{voteState.ratings[pid]=emptyRating();});
