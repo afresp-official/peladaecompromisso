@@ -2353,14 +2353,14 @@ async function viewVoter(gid,vid){
         <span class="font-black text-xl text-green-300">${v.note||0}<span class="text-green-300/40 text-sm font-normal">/10</span></span>
       </div>
       <div class="flex gap-1.5 flex-wrap text-xs">
-        ${v.garra?`<span class="bg-green-950/60 border border-green-800/30 rounded-full px-2 py-0.5 text-green-300/70">⚡ Garra: ${v.garra}/5</span>`:""}
-        ${v.comportamento?`<span class="bg-green-950/60 border border-green-800/30 rounded-full px-2 py-0.5 text-green-300/70">🤝 Comportamento: ${v.comportamento}/5</span>`:""}
-        ${v.passes?`<span class="bg-orange-950/40 border border-orange-800/30 rounded-full px-2 py-0.5 text-orange-300/70">❌ Passes errados: ${v.passes}/5</span>`:""}
-        ${v.goals?`<span class="bg-yellow-950/40 border border-yellow-800/30 rounded-full px-2 py-0.5 text-yellow-300">⚽ Gols: ${v.goals}</span>`:""}
-        ${v.assists?`<span class="bg-blue-950/40 border border-blue-800/30 rounded-full px-2 py-0.5 text-blue-300">🅰 Assist.: ${v.assists}</span>`:""}
-        ${v.amarelos?`<span class="bg-amber-950/40 border border-amber-800/30 rounded-full px-2 py-0.5 text-amber-400">🟡 Amarelo ×${v.amarelos}</span>`:""}
-        ${v.vermelhos?`<span class="bg-red-950/40 border border-red-800/30 rounded-full px-2 py-0.5 text-red-400">🔴 Vermelho ×${v.vermelhos}</span>`:""}
-        ${v.faltas?`<span class="bg-orange-950/40 border border-orange-800/30 rounded-full px-2 py-0.5 text-orange-300">⚠ Faltas: ${v.faltas} (${gravLabel[v.gravidade||0]})</span>`:""}
+        ${v.garra?`<span class="inline-flex items-center gap-1 bg-green-950/60 border border-green-800/30 rounded-lg px-2.5 py-1 text-green-300/70">⚡ Garra: ${v.garra}/5</span>`:""}
+        ${v.comportamento?`<span class="inline-flex items-center gap-1 bg-green-950/60 border border-green-800/30 rounded-lg px-2.5 py-1 text-green-300/70">🤝 Comportamento: ${v.comportamento}/5</span>`:""}
+        ${v.passes?`<span class="inline-flex items-center gap-1 bg-orange-950/40 border border-orange-800/30 rounded-lg px-2.5 py-1 text-orange-300/70">❌ Passes errados: ${v.passes}/5</span>`:""}
+        ${v.goals?`<span class="inline-flex items-center gap-1 bg-yellow-950/40 border border-yellow-800/30 rounded-lg px-2.5 py-1 text-yellow-300">⚽ Gols: ${v.goals}</span>`:""}
+        ${v.assists?`<span class="inline-flex items-center gap-1 bg-blue-950/40 border border-blue-800/30 rounded-lg px-2.5 py-1 text-blue-300">🅰 Assist.: ${v.assists}</span>`:""}
+        ${v.amarelos?`<span class="inline-flex items-center gap-1 bg-amber-950/40 border border-amber-800/30 rounded-lg px-2.5 py-1 text-amber-400">🟡 Amarelo ×${v.amarelos}</span>`:""}
+        ${v.vermelhos?`<span class="inline-flex items-center gap-1 bg-red-950/40 border border-red-800/30 rounded-lg px-2.5 py-1 text-red-400">🔴 Vermelho ×${v.vermelhos}</span>`:""}
+        ${v.faltas?`<span class="inline-flex items-center gap-1 bg-orange-950/40 border border-orange-800/30 rounded-lg px-2.5 py-1 text-orange-300">⚠ Faltas: ${v.faltas} (${gravLabel[v.gravidade||0]})</span>`:""}
       </div>
       ${v.obs?`<p class="text-xs text-green-300/60 italic border-l-2 border-green-700 pl-2">"${v.obs}"</p>`:""}
     </div>`;
@@ -2404,10 +2404,10 @@ async function viewVoter(gid,vid){
             <div class="text-[9px] text-green-300/30 uppercase tracking-wider mb-1.5">⚽ Artilheiros</div>
             <div class="flex gap-2">
               <div class="flex-1 flex flex-col gap-1">
-                ${result.scorers.filter(s=>s.team==="vermelho").map(s=>`<span class="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-red-950/70 text-red-300 border border-red-800/40 text-center">${s.name}${s.goals>1?` (${s.goals})`:""}</span>`).join("")}
+                ${result.scorers.filter(s=>s.team==="vermelho").map(s=>`<div class="text-[10px] px-2 py-1 rounded-lg font-semibold bg-red-950/70 text-red-300 border border-red-800/40 text-center leading-tight">${s.name}${s.goals>1?` (${s.goals})`:""}</div>`).join("")}
               </div>
               <div class="flex-1 flex flex-col gap-1">
-                ${result.scorers.filter(s=>s.team==="azul").map(s=>`<span class="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-blue-950/70 text-blue-300 border border-blue-800/40 text-center">${s.name}${s.goals>1?` (${s.goals})`:""}</span>`).join("")}
+                ${result.scorers.filter(s=>s.team==="azul").map(s=>`<div class="text-[10px] px-2 py-1 rounded-lg font-semibold bg-blue-950/70 text-blue-300 border border-blue-800/40 text-center leading-tight">${s.name}${s.goals>1?` (${s.goals})`:""}</div>`).join("")}
               </div>
             </div>
           </div>`:""}
