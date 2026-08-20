@@ -1289,7 +1289,7 @@ function renderVotar() {
   const presNames=new Set(Object.values(presSlots).map(e=>e.name.toLowerCase()));
   const rawPids=getGamePlayerIds(game);
   const filteredPids=presNames.size>0?rawPids.filter(pid=>presNames.has((S.players[pid]?.name||"").toLowerCase())):rawPids;
-  const allPids=filteredPids, others=allPids.filter(p=>p!==S.uid);
+  const allPids=filteredPids, others=allPids;
   if(voteState.gameId!==game.id){
     voteState={gameId:game.id,ratings:{}};
     others.forEach(pid=>{voteState.ratings[pid]=emptyRating();});
