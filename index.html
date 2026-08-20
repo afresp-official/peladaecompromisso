@@ -872,7 +872,7 @@ function renderGameStatus(){
         ${voters===0&&game.status==="fechado"?`<button onclick="goToVotar('${game.id}')" class="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-500 font-black text-sm transition-colors">🗳️ Votar</button>`:""}
         ${voters===0&&game.status!=="fechado"?`<span class="flex-1 text-center text-[10px] text-amber-400/60 flex items-center justify-center gap-1">🔒 Votação liberada após o jogo</span>`:""}
       </div>
-      ${voters>0?`<button onclick="shareGameResult('${game.id}')" class="share-game-btn mt-1 w-full py-2.5 rounded-xl bg-green-950/60 border border-green-700/30 hover:bg-green-900/40 text-green-400 font-bold text-sm transition-colors flex items-center justify-center gap-2">
+      ${voters>0?`<button onclick="shareResultadoPDF('${game.id}')" class="share-game-btn mt-1 w-full py-2.5 rounded-xl bg-green-950/60 border border-green-700/30 hover:bg-green-900/40 text-green-400 font-bold text-sm transition-colors flex items-center justify-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         Compartilhar resultado
       </button>`:""}
@@ -2165,6 +2165,102 @@ async function saveEditGame(){
   alert("Jogo atualizado!");
 }
 async function savePin(){const p=document.getElementById("new-pin")?.value?.trim();if(!p||p.length<4){alert("PIN deve ter ao menos 4 dígitos");return;}await db.ref("config/adminPin").set(p);alert("PIN salvo!");}
+
+async function shareResultadoPDF(gid){
+  const g=S.games[gid]; if(!g) return;
+  const dias=["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
+  let diaSemana="";
+  if(g.date){const[y,m,d]=g.date.split("-");diaSemana=dias[new Date(+y,+m-1,+d).getDay()];}
+  const result=calcGameResult({id:gid,...g});
+  const bp=bestPlayerOfGame({id:gid,...g});
+  const pids=getGamePlayerIds({id:gid,...g});
+  const ranked=pids
+    .map(pid=>{const r=calcPlayerScore(pid,[{id:gid,...g}],1,"partida");return r?{pid,name:playerName(pid),team:getPlayerTeam({id:gid,...g},pid),...r}:null;})
+    .filter(Boolean).sort((a,b)=>b.score-a.score);
+  const medal=i=>i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}.`;
+  const teamColor=t=>t==="vermelho"?"#f87171":t==="azul"?"#60a5fa":"#86efac";
+  const artHtml=result&&result.scorers.length?`
+    <div style="border-top:1px solid #1e4a2a;padding-top:10px;margin-top:10px;">
+      <div style="font-size:9px;color:#4ade80;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;font-weight:700;">⚽ Artilheiros</div>
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+          ${result.scorers.filter(s=>s.team==="vermelho").map(s=>`<span style="font-size:11px;padding:3px 8px;border-radius:20px;font-weight:700;background:rgba(127,29,29,0.5);color:#fca5a5;border:1px solid rgba(185,28,28,0.4);text-align:center;">${s.name}${s.goals>1?` (${s.goals})`:""}</span>`).join("")}
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+          ${result.scorers.filter(s=>s.team==="azul").map(s=>`<span style="font-size:11px;padding:3px 8px;border-radius:20px;font-weight:700;background:rgba(23,37,84,0.5);color:#93c5fd;border:1px solid rgba(29,78,216,0.4);text-align:center;">${s.name}${s.goals>1?` (${s.goals})`:""}</span>`).join("")}
+        </div>
+      </div>
+    </div>`:"";
+  const bpHtml=bp?`
+    <div style="border-top:1px solid #1e4a2a;padding-top:10px;margin-top:10px;display:flex;align-items:center;gap:8px;">
+      <span style="font-size:18px;">⭐</span>
+      <div>
+        <div style="font-size:9px;color:#facc15;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Melhor Jogador</div>
+        <div style="font-size:14px;font-weight:900;color:#fde68a;">${bp.name} <span style="color:#ca8a04;font-weight:400;font-size:11px;">${bp.score} pts${bp.note?` · nota ${bp.note}`:""}</span></div>
+      </div>
+    </div>`:"";
+  const rankingRows=ranked.map((p,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;margin-bottom:4px;background:rgba(15,32,22,0.8);border:1px solid #1e3a27;">
+      <span style="font-size:13px;width:22px;text-align:center;">${medal(i)}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:700;color:${teamColor(p.team)};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.name}</div>
+      </div>
+      <div style="display:flex;gap:10px;font-size:10px;color:#86efac;">
+        ${p.note>0?`<span>⭐ ${p.note.toFixed(1)}</span>`:""}
+        ${p.garra>0?`<span>⚡ ${p.garra.toFixed(1)}</span>`:""}
+        ${p.comport>0?`<span>🤝 ${p.comport.toFixed(1)}</span>`:""}
+        ${p.gols>0?`<span>⚽ ${Math.round(p.gols)}</span>`:""}
+      </div>
+      <div style="font-size:11px;font-weight:900;color:#4ade80;min-width:32px;text-align:right;">${Math.round(p.score)}pts</div>
+    </div>`).join("");
+  const html=`<div style="background:#081510;padding:20px 16px;font-family:'Segoe UI',Arial,sans-serif;color:#fff;width:420px;">
+    <div style="text-align:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #1e4a2a;">
+      <div style="font-size:9px;color:#4ade80;text-transform:uppercase;letter-spacing:3px;margin-bottom:4px;">⚽ AFRESP</div>
+      <div style="font-size:18px;font-weight:900;letter-spacing:0.5px;">PELADA É COMPROMISSO</div>
+      <div style="font-size:11px;color:#86efac;margin-top:4px;">${diaSemana}, ${fmtDate(g.date)} · ${(g.type||"pelada").toUpperCase()}</div>
+    </div>
+    ${result?`<div style="background:#0f2016;border:1px solid #1e4a2a;border-radius:12px;padding:14px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:center;align-items:center;gap:28px;padding-bottom:12px;margin-bottom:2px;">
+        <div style="text-align:center;"><div style="font-size:46px;font-weight:900;color:#f87171;line-height:1;">${result.vermScore}</div><div style="font-size:9px;color:#f87171;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">🔴 Vermelho</div></div>
+        <div style="font-size:20px;color:#2a4a35;font-weight:900;">×</div>
+        <div style="text-align:center;"><div style="font-size:46px;font-weight:900;color:#60a5fa;line-height:1;">${result.azulScore}</div><div style="font-size:9px;color:#60a5fa;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">🔵 Azul</div></div>
+      </div>
+      ${artHtml}${bpHtml}
+    </div>`:""}
+    <div style="background:#0f2016;border:1px solid #1e4a2a;border-radius:12px;padding:12px;">
+      <div style="font-size:9px;color:#4ade80;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;font-weight:700;">🏆 Avaliação dos Jogadores</div>
+      ${rankingRows||'<div style="text-align:center;color:#2a4a35;font-size:12px;padding:12px;">Nenhuma avaliação</div>'}
+    </div>
+    <div style="text-align:center;margin-top:10px;font-size:9px;color:#2a4a35;">Pelada é Compromisso · AFRESP</div>
+  </div>`;
+  showToast("Gerando PDF...",5000);
+  const wrap=document.createElement("div");
+  wrap.style.cssText="position:fixed;left:-9999px;top:0;z-index:-999;";
+  wrap.innerHTML=html;
+  document.body.appendChild(wrap);
+  try{
+    const canvas=await html2canvas(wrap.firstElementChild,{backgroundColor:"#081510",scale:2,logging:false,useCORS:true,allowTaint:true});
+    document.body.removeChild(wrap);
+    const imgData=canvas.toDataURL("image/png");
+    const{jsPDF}=window.jspdf;
+    const pdfW=595,pdfH=Math.round((canvas.height/canvas.width)*pdfW);
+    const doc=new jsPDF({unit:"pt",format:[pdfW,pdfH],orientation:"portrait"});
+    doc.addImage(imgData,"PNG",0,0,pdfW,pdfH);
+    const blob=doc.output("blob");
+    const fname="resultado-pelada.pdf";
+    const file=new File([blob],fname,{type:"application/pdf"});
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      try{await navigator.share({title:"Resultado — Pelada é Compromisso",files:[file]});}catch(e){}
+    }else{
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");a.href=url;a.download=fname;a.click();
+      URL.revokeObjectURL(url);showToast("PDF salvo!");
+    }
+  }catch(e){
+    if(document.body.contains(wrap))document.body.removeChild(wrap);
+    showToast("Erro ao gerar PDF");
+  }
+}
 
 // ── Edição de Votos (Admin) ──
 let editVoteState={gid:null,vid:null,ratings:{}};
