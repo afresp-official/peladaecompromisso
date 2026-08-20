@@ -2315,7 +2315,7 @@ function openGameVotes(gid){
         <span class="text-base font-black">🗳️ Votos</span>
         <span class="text-green-300/40 text-xs">— ${fmtDate(g.date)}</span>
       </div>
-      <button onclick="shareResultadoPDF('${gid}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1a2e1f] border border-green-700/40 text-green-400 font-bold text-xs hover:bg-green-900/30">
+      <button onclick="shareVotosPDF('${gid}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1a2e1f] border border-green-700/40 text-green-400 font-bold text-xs hover:bg-green-900/30">
         📄 Compartilhar PDF
       </button>
     </div>
@@ -2417,6 +2417,15 @@ async function viewVoter(gid,vid){
       ${renderSection(azul,"Time Azul","text-blue-400","bg-blue-500")}
     </div>
   `);
+}
+async function shareVotosPDF(gid){
+  const gr=S.ratings[gid]||{};
+  const voters=Object.keys(gr);
+  if(!voters.length){showToast("Nenhum voto registrado.");return;}
+  const vid=voters[0];
+  await viewVoter(gid,vid);
+  await new Promise(r=>setTimeout(r,250));
+  await shareVoterScreen(gid,vid);
 }
 async function shareVoterScreen(gid,vid){
   const content=document.getElementById("votes-content");
