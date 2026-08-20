@@ -1762,7 +1762,9 @@ function renderRanking(){
       const played=effective.filter(g=>{
         if(getGamePlayerIds(g).includes(p.id)) return true;
         const ratedInGame=new Set(Object.values(S.ratings[g.id]||{}).flatMap(r=>Object.keys(r)));
-        return ratedInGame.has(p.id);
+        if(ratedInGame.has(p.id)) return true;
+        const presNames=new Set(Object.values(S.presenca[g.id]||{}).map(e=>(e.name||"").toLowerCase()));
+        return presNames.has(pname);
       }).length;
       const total=effective.length;
       const pct=total>0?Math.round(played/total*100):0;
