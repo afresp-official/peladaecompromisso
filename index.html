@@ -2426,13 +2426,102 @@ async function viewVoter(gid,vid){
   `);
 }
 async function shareVotosPDF(gid){
+  const g=S.games[gid]; if(!g) return;
   const gr=S.ratings[gid]||{};
   const voters=Object.keys(gr);
   if(!voters.length){showToast("Nenhum voto registrado.");return;}
+  const dias=["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
+  let diaSemana="";
+  if(g.date){const[y,m,d]=g.date.split("-");diaSemana=dias[new Date(+y,+m-1,+d).getDay()];}
+  const gameObj={id:gid,...g};
+  const result=calcGameResult(gameObj);
+  const bp=bestPlayerOfGame(gameObj);
+  const gravLabel=["Nenhuma","Leve","Média","Grave"];
   const vid=voters[0];
-  await viewVoter(gid,vid);
-  await new Promise(r=>setTimeout(r,250));
-  await shareVoterScreen(gid,vid);
+  const snap=await db.ref(`ratings/${gid}/${vid}`).once("value");
+  const votes=snap.val()||{};
+  const teamColor=t=>t==="vermelho"?"#f87171":t==="azul"?"#60a5fa":"#86efac";
+  const teamDot=t=>t==="vermelho"?`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#ef4444;flex-shrink:0;margin-top:2px;"></span>`:t==="azul"?`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#3b82f6;flex-shrink:0;margin-top:2px;"></span>`:`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#22c55e;flex-shrink:0;margin-top:2px;"></span>`;
+  const sortedVerm=Object.entries(votes).filter(([pid])=>getPlayerTeam(gameObj,pid)==="vermelho").sort((a,b)=>(b[1].note||0)-(a[1].note||0));
+  const sortedAzul=Object.entries(votes).filter(([pid])=>getPlayerTeam(gameObj,pid)==="azul").sort((a,b)=>(b[1].note||0)-(a[1].note||0));
+  const renderCard=([pid,v])=>{
+    const team=getPlayerTeam(gameObj,pid);
+    const stats=[];
+    if(v.garra) stats.push(`<span style="background:rgba(20,83,45,0.6);border:1px solid rgba(34,197,94,0.2);border-radius:6px;padding:3px 8px;color:#86efac;">Garra: ${v.garra}/5</span>`);
+    if(v.comportamento) stats.push(`<span style="background:rgba(20,83,45,0.6);border:1px solid rgba(34,197,94,0.2);border-radius:6px;padding:3px 8px;color:#86efac;">Comportamento: ${v.comportamento}/5</span>`);
+    if(v.goals) stats.push(`<span style="background:rgba(113,63,18,0.5);border:1px solid rgba(202,138,4,0.3);border-radius:6px;padding:3px 8px;color:#fde68a;">Gols: ${v.goals}</span>`);
+    if(v.assists) stats.push(`<span style="background:rgba(23,37,84,0.5);border:1px solid rgba(59,130,246,0.3);border-radius:6px;padding:3px 8px;color:#93c5fd;">Assist.: ${v.assists}</span>`);
+    if(v.amarelos) stats.push(`<span style="background:rgba(120,53,15,0.5);border:1px solid rgba(217,119,6,0.3);border-radius:6px;padding:3px 8px;color:#fcd34d;">Amarelo x${v.amarelos}</span>`);
+    if(v.vermelhos) stats.push(`<span style="background:rgba(127,29,29,0.5);border:1px solid rgba(220,38,38,0.3);border-radius:6px;padding:3px 8px;color:#fca5a5;">Vermelho x${v.vermelhos}</span>`);
+    if(v.faltas) stats.push(`<span style="background:rgba(124,45,18,0.5);border:1px solid rgba(234,88,12,0.3);border-radius:6px;padding:3px 8px;color:#fdba74;">Faltas: ${v.faltas} (${gravLabel[v.gravidade||0]})</span>`);
+    return `<div style="background:#0b1a10;border:1px solid #1e3a27;border-radius:12px;padding:10px 12px;margin-bottom:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:${stats.length||v.obs?'8px':'0'};">
+        <div style="display:flex;align-items:center;gap:7px;">${teamDot(team)}<span style="font-size:13px;font-weight:700;color:${teamColor(team)};">${playerName(pid)}</span></div>
+        <span style="font-size:20px;font-weight:900;color:#4ade80;line-height:1;">${v.note||0}<span style="font-size:11px;color:#4ade80;opacity:0.4;">/10</span></span>
+      </div>
+      ${stats.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;font-size:10px;margin-bottom:${v.obs?'7px':'0'};">${stats.join("")}</div>`:""}
+      ${v.obs?`<div style="font-size:10px;font-style:italic;color:#86efac;opacity:0.6;border-left:2px solid #16a34a;padding-left:8px;line-height:1.4;">"${v.obs}"</div>`:""}
+    </div>`;
+  };
+  const artHtml=result&&result.scorers.length?`
+    <div style="border-top:1px solid #1e4a2a;padding-top:8px;margin-top:8px;">
+      <div style="font-size:9px;color:#4ade80;text-transform:uppercase;letter-spacing:2px;margin-bottom:7px;font-weight:700;">Artilheiros</div>
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+          ${result.scorers.filter(s=>s.team==="vermelho").map(s=>`<div style="font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;background:rgba(127,29,29,0.5);color:#fca5a5;border:1px solid rgba(185,28,28,0.3);text-align:center;">${s.name}${s.goals>1?` (${s.goals})`:""}</div>`).join("")}
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+          ${result.scorers.filter(s=>s.team==="azul").map(s=>`<div style="font-size:11px;font-weight:600;padding:4px 8px;border-radius:6px;background:rgba(23,37,84,0.5);color:#93c5fd;border:1px solid rgba(29,78,216,0.3);text-align:center;">${s.name}${s.goals>1?` (${s.goals})`:""}</div>`).join("")}
+        </div>
+      </div>
+    </div>`:"";
+  const bpHtml=bp?`<div style="border-top:1px solid #1e4a2a;padding-top:8px;margin-top:8px;display:flex;align-items:center;gap:8px;"><span style="font-size:16px;">&#11088;</span><div><div style="font-size:8px;color:#ca8a04;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Melhor Jogador</div><div style="font-size:13px;font-weight:900;color:#fde68a;">${bp.name} <span style="color:#a16207;font-weight:400;font-size:10px;">${bp.score} pts</span></div></div></div>`:"";
+  const sectionTitle=(label,color)=>`<div style="display:flex;align-items:center;gap:7px;margin:12px 0 8px;"><span style="width:9px;height:9px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span><span style="font-size:10px;font-weight:900;color:${color};text-transform:uppercase;letter-spacing:1.5px;">${label}</span></div>`;
+  const html=`<div style="background:#081510;padding:20px 16px;font-family:'Segoe UI',Arial,sans-serif;color:#fff;width:420px;">
+    <div style="text-align:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #1e4a2a;">
+      <div style="font-size:9px;color:#4ade80;text-transform:uppercase;letter-spacing:3px;margin-bottom:4px;">AFRESP</div>
+      <div style="font-size:18px;font-weight:900;letter-spacing:0.5px;">PELADA E COMPROMISSO</div>
+      <div style="font-size:11px;color:#86efac;margin-top:4px;">Votos de ${playerName(vid)} &middot; ${diaSemana}, ${fmtDate(g.date)}</div>
+    </div>
+    ${result?`<div style="background:#0f2016;border:1px solid #1e4a2a;border-radius:12px;padding:12px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:center;align-items:center;gap:28px;padding-bottom:10px;margin-bottom:2px;">
+        <div style="text-align:center;"><div style="font-size:40px;font-weight:900;color:#f87171;line-height:1;">${result.vermScore}</div><div style="font-size:9px;color:#f87171;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Vermelho</div></div>
+        <div style="font-size:18px;color:#2a4a35;font-weight:900;">x</div>
+        <div style="text-align:center;"><div style="font-size:40px;font-weight:900;color:#60a5fa;line-height:1;">${result.azulScore}</div><div style="font-size:9px;color:#60a5fa;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Azul</div></div>
+      </div>
+      ${artHtml}${bpHtml}
+    </div>`:""}
+    ${sortedVerm.length?sectionTitle("Time Vermelho","#ef4444")+""+sortedVerm.map(renderCard).join(""):""}
+    ${sortedAzul.length?sectionTitle("Time Azul","#3b82f6")+""+sortedAzul.map(renderCard).join(""):""}
+    <div style="text-align:center;margin-top:12px;font-size:9px;color:#2a4a35;">Pelada e Compromisso · AFRESP</div>
+  </div>`;
+  showToast("Gerando PDF...",5000);
+  const wrap=document.createElement("div");
+  wrap.style.cssText="position:fixed;left:-9999px;top:0;z-index:-999;";
+  wrap.innerHTML=html;
+  document.body.appendChild(wrap);
+  try{
+    const canvas=await html2canvas(wrap.firstElementChild,{backgroundColor:"#081510",scale:2,logging:false,useCORS:true,allowTaint:true});
+    document.body.removeChild(wrap);
+    const imgData=canvas.toDataURL("image/png");
+    const{jsPDF}=window.jspdf;
+    const pdfW=595,pdfH=Math.round((canvas.height/canvas.width)*pdfW);
+    const doc=new jsPDF({unit:"pt",format:[pdfW,pdfH],orientation:"portrait"});
+    doc.addImage(imgData,"PNG",0,0,pdfW,pdfH);
+    const blob=doc.output("blob");
+    const fname="votos-pelada.pdf";
+    const file=new File([blob],fname,{type:"application/pdf"});
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      try{await navigator.share({title:"Votos — Pelada e Compromisso",files:[file]});}catch(e){}
+    }else{
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");a.href=url;a.download=fname;a.click();
+      URL.revokeObjectURL(url);showToast("PDF salvo!");
+    }
+  }catch(e){
+    if(document.body.contains(wrap))document.body.removeChild(wrap);
+    showToast("Erro ao gerar PDF");
+  }
 }
 async function shareVoterScreen(gid,vid){
   const content=document.getElementById("votes-content");
