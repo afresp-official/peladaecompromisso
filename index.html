@@ -1762,9 +1762,19 @@ function renderRanking(){
       const absentGames=allGames.filter(g=>{const ga=S.ausencia[g.id]||{};return Object.values(ga).some(e=>e.name.toLowerCase()===pname);});
       const effective=allGames.filter(g=>!absentGames.some(a=>a.id===g.id));
       const played=effective.filter(g=>{
-        if(getGamePlayerIds(g).includes(p.id)) return true;
+        const gamePids=getGamePlayerIds(g);
+        // por ID na escalação
+        if(gamePids.includes(p.id)) return true;
+        // por NOME na escalação (cobre duplicatas de ID)
+        const gamePlayerNames=new Set(gamePids.map(pid=>(S.players[pid]?.name||"").toLowerCase()).filter(Boolean));
+        if(gamePlayerNames.has(pname)) return true;
+        // por ID nos votos
         const ratedInGame=new Set(Object.values(S.ratings[g.id]||{}).flatMap(r=>Object.keys(r)));
         if(ratedInGame.has(p.id)) return true;
+        // por NOME nos votos (cobre duplicatas de ID)
+        const ratedNames=new Set([...ratedInGame].map(pid=>(S.players[pid]?.name||"").toLowerCase()).filter(Boolean));
+        if(ratedNames.has(pname)) return true;
+        // por NOME na lista de presença
         const presNames=new Set(Object.values(S.presenca[g.id]||{}).map(e=>(e.name||"").toLowerCase()));
         return presNames.has(pname);
       }).length;
