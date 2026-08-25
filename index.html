@@ -913,7 +913,7 @@ function renderCampo() {
   // Inclui todos da presença confirmada mesmo que não estejam em game.players
   const presencePids = Object.entries(S.players).filter(([,p])=>presNames.has((p.name||"").toLowerCase())).map(([pid])=>pid);
   const pidsSet = new Set([...allPids.filter(pid=>presNames.size===0||presNames.has((S.players[pid]?.name||"").toLowerCase())),...presencePids]);
-  const pids = [...pidsSet];
+  const _cSeenNames=new Set();const pids=[...pidsSet].filter(pid=>{const n=(S.players[pid]?.name||"").toLowerCase();if(_cSeenNames.has(n))return false;_cSeenNames.add(n);return true;});
   const formation = S.formations[game.id] || {};
 
   // Calcular posições: usa formação salva ou padrão por time/índice
@@ -1284,7 +1284,7 @@ function renderVotar() {
   const rawPids=getGamePlayerIds(game);
   const presencePids=Object.entries(S.players).filter(([,p])=>presNames.has((p.name||"").toLowerCase())).map(([pid])=>pid);
   const filteredPids=presNames.size>0?rawPids.filter(pid=>presNames.has((S.players[pid]?.name||"").toLowerCase())):rawPids;
-  const allPids=[...new Set([...filteredPids,...presencePids])];
+  const _vSeenNames=new Set();const allPids=[...new Set([...filteredPids,...presencePids])].filter(pid=>{const n=(S.players[pid]?.name||"").toLowerCase();if(_vSeenNames.has(n))return false;_vSeenNames.add(n);return true;});
   const existingRatings=S.ratings[game.id]||{};
   const totalVoters=Object.keys(existingRatings).length;
   const ratedPids=new Set(Object.values(existingRatings).flatMap(r=>Object.keys(r)));
@@ -2009,7 +2009,7 @@ function sortearTimes(gameId){
   const presNames=new Set(confirmedNames.map(e=>e.name.toLowerCase()));
   const presencePids=Object.entries(S.players).filter(([,p])=>presNames.has((p.name||"").toLowerCase())).map(([pid])=>pid);
   const pidsSet=new Set([...allPids.filter(pid=>!presNames.size||presNames.has((S.players[pid]?.name||"").toLowerCase())),...presencePids]);
-  _sorteioPids=[...pidsSet];
+  const _sSeenNames=new Set();_sorteioPids=[...pidsSet].filter(pid=>{const n=(S.players[pid]?.name||"").toLowerCase();if(_sSeenNames.has(n))return false;_sSeenNames.add(n);return true;});
   _sorteioGameId=gameId;
   if(_sorteioPids.length<2){showToast("Poucos jogadores para sortear.");return;}
   mostrarSorteio();
@@ -2603,7 +2603,7 @@ async function compartilharEscalacao(gameId){
   const presNames=new Set(confirmedC.map(e=>e.name.toLowerCase()));
   const presencePids=Object.entries(S.players).filter(([,p])=>presNames.has((p.name||"").toLowerCase())).map(([pid])=>pid);
   const pidsSet=new Set([...getGamePlayerIds(gObj).filter(pid=>!presNames.size||presNames.has((S.players[pid]?.name||"").toLowerCase())),...presencePids]);
-  const allPids=[...pidsSet];
+  const _pSeenNames=new Set();const allPids=[...pidsSet].filter(pid=>{const n=(S.players[pid]?.name||"").toLowerCase();if(_pSeenNames.has(n))return false;_pSeenNames.add(n);return true;});
   const vermPids=allPids.filter(p=>getPlayerTeam(gObj,p)==="vermelho");
   const azulPids=allPids.filter(p=>getPlayerTeam(gObj,p)==="azul");
   if(!vermPids.length&&!azulPids.length){showToast("Defina os times antes de compartilhar.");return;}
@@ -2921,7 +2921,6 @@ function nextTuesday(){const d=new Date();const diff=(2-d.getDay()+7)%7||7;d.set
   const startPage=["inicio","lista","campo","votar","ranking","historico"].includes(_h)?_h:"inicio";
   if(_h==="lista")document.body.classList.add("guest-mode");
   if(!siteAuth&&!FREE_PAGES.has(startPage)){
-    // Render the page structure but show login overlay on top
     goTo(startPage);
     showSiteLogin(startPage);
   }else{
