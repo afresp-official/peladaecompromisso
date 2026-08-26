@@ -1212,7 +1212,7 @@ async function onDragEnd(e) {
 
 // ── VOTAR ──
 let voteState = {gameId:null, ratings:{}};
-function emptyRating(){return{note:0,goals:0,assists:0,chutes:0,desarmes:0,obs:"",garra:0,comportamento:0,faltas:0,gravidade:0,amarelos:0,vermelhos:0};}
+function emptyRating(){return{note:0,goals:0,assists:0,chutes:0,desarmes:0,obs:"",garra:0,comportamento:0,faltas:0,gravidade:0,amarelos:0,vermelhos:0,azuis:0};}
 function ensureRating(pid){if(!voteState.ratings[pid])voteState.ratings[pid]=emptyRating();}
 function setRating5(pid,field,val){
   ensureRating(pid);
@@ -1246,6 +1246,12 @@ function addVermelho(pid,d){
   voteState.ratings[pid].vermelhos=Math.max(0,Math.min(2,(voteState.ratings[pid].vermelhos||0)+d));
   const e=document.getElementById("vm-"+pid); if(e) e.textContent=voteState.ratings[pid].vermelhos;
   const b=document.getElementById("vm-min-"+pid); if(b) b.disabled=voteState.ratings[pid].vermelhos<=0;
+}
+function addAzul(pid,d){
+  ensureRating(pid);
+  voteState.ratings[pid].azuis=Math.max(0,Math.min(3,(voteState.ratings[pid].azuis||0)+d));
+  const e=document.getElementById("az-"+pid); if(e) e.textContent=voteState.ratings[pid].azuis;
+  const b=document.getElementById("az-min-"+pid); if(b) b.disabled=voteState.ratings[pid].azuis<=0;
 }
 function addFalta(pid,d){
   ensureRating(pid);
@@ -1394,6 +1400,7 @@ function renderVoteCard(pid,game){
     +'<div class="mt-1">'
     +ctrRow('🟡','Cartão Amarelo','text-amber-300','am-'+pid,'am-min-'+pid,"addAmarelo('"+pid+"',-1)","addAmarelo('"+pid+"',1)",v.amarelos)
     +ctrRow('🔴','Cartão Vermelho','text-red-300','vm-'+pid,'vm-min-'+pid,"addVermelho('"+pid+"',-1)","addVermelho('"+pid+"',1)",v.vermelhos)
+    +ctrRow('🔵','Cartão Azul','text-blue-300','az-'+pid,'az-min-'+pid,"addAzul('"+pid+"',-1)","addAzul('"+pid+"',1)",v.azuis)
     +ctrRow('⚠','Faltas cometidas','text-orange-300','ft-'+pid,'ft-min-'+pid,"addFalta('"+pid+"',-1)","addFalta('"+pid+"',1)",v.faltas)
     +'</div>'
     +'<div id="grav-'+pid+'"></div>'
@@ -1454,7 +1461,7 @@ async function submitVotes(){
       updates[`/ratings/${gameId}/${S.uid}/${pid}`]={
         note:v.note,goals:v.goals,assists:v.assists,chutes:v.chutes||0,desarmes:v.desarmes||0,
         obs:(v.obs||"").trim(),garra:v.garra||0,comportamento:v.comportamento||0,
-        faltas:v.faltas||0,gravidade:v.gravidade||0,amarelos:v.amarelos||0,vermelhos:v.vermelhos||0,
+        faltas:v.faltas||0,gravidade:v.gravidade||0,amarelos:v.amarelos||0,vermelhos:v.vermelhos||0,azuis:v.azuis||0,
         ts:Date.now()
       };
     });
@@ -1593,6 +1600,7 @@ function renderMyVotes(el,game){
         ${v.assists?`<span class="text-blue-300 bg-blue-950/40 border border-blue-800/30 rounded-full px-2 py-0.5">🅰 ${v.assists}</span>`:""}
         ${v.amarelos?`<span class="text-amber-400 bg-amber-950/40 border border-amber-800/30 rounded-full px-2 py-0.5">🟡 ×${v.amarelos}</span>`:""}
         ${v.vermelhos?`<span class="text-red-400 bg-red-950/40 border border-red-800/30 rounded-full px-2 py-0.5">🔴 ×${v.vermelhos}</span>`:""}
+        ${v.azuis?`<span class="text-blue-400 bg-blue-950/40 border border-blue-800/30 rounded-full px-2 py-0.5">🔵 ×${v.azuis}</span>`:""}
         ${v.faltas?`<span class="text-orange-300 bg-orange-950/40 border border-orange-800/30 rounded-full px-2 py-0.5">⚠ ${v.faltas} falta${v.faltas!==1?"s":""} · ${gravLabel[v.gravidade||0]}</span>`:""}
       </div>
       ${v.obs?`<p class="text-xs text-green-300/50 italic border-l-2 border-green-800 pl-2">"${v.obs}"</p>`:""}
@@ -1677,6 +1685,7 @@ function calcPlayerScore(pid,games,expectedTotal,period){
       assists:safeAvg(pv.map(v=>v.assists||0)),
       amarelo:safeAvg(pv.map(v=>v.amarelos||0)),
       verm:safeAvg(pv.map(v=>v.vermelhos||0)),
+      azul:safeAvg(pv.map(v=>v.azuis||0)),
       faltas:safeAvg(pv.map(v=>v.faltas||0)),
       grav:safeAvg(pv.map(v=>v.gravidade||0)),
     });
@@ -1686,10 +1695,11 @@ function calcPlayerScore(pid,games,expectedTotal,period){
   const freqScore=played/Math.max(total,expectedTotal||total);
   const a=k=>pg.reduce((s,g)=>s+(g[k]||0),0)/pg.length;
   const note=a("note"),garra=a("garra"),comport=a("comport"),chutes=a("chutes"),desarmes=a("desarmes");
-  const gols=a("gols"),assists=a("assists"),amarelo=a("amarelo"),verm=a("verm"),faltas=a("faltas"),grav=a("grav");
+  const gols=a("gols"),assists=a("assists"),amarelo=a("amarelo"),verm=a("verm"),azul=a("azul"),faltas=a("faltas"),grav=a("grav");
   const gravMult=grav<=0?0.1:grav<=1?0.3:grav<=2?0.6:1;
   const cardY=period==="ano"?20/12:20;
   const cardR=period==="ano"?35/12:35;
+  const cardB=period==="ano"?10/12:10;
   const notePts=note>0?note*3:0;
   const golsPts=Math.min(gols,3)*8;
   const assistsPts=Math.min(assists,3)*5;
@@ -1698,9 +1708,9 @@ function calcPlayerScore(pid,games,expectedTotal,period){
   const comportPts=comport>0?comport*2:0;
   const desarmesPts=Math.min(desarmes,3)*1;
   const positive=Math.min(100,notePts+golsPts+assistsPts+chutesPts+garraPts+comportPts+desarmesPts);
-  const quality=positive-amarelo*cardY-verm*cardR-faltas*gravMult;
+  const quality=positive-amarelo*cardY-verm*cardR-azul*cardB-faltas*gravMult;
   const score=freqScore*Math.max(0,quality);
-  return{score:Math.max(0,score),freq:freqDisplay,note,garra,comport,chutes,desarmes,gols,assists,amarelo,verm,faltas,grav,played,total};
+  return{score:Math.max(0,score),freq:freqDisplay,note,garra,comport,chutes,desarmes,gols,assists,amarelo,verm,azul,faltas,grav,played,total};
 }
 function getPlayerStats(pid,filter){
   const notes=[],ga=[],aa=[]; let games=0;
@@ -1734,6 +1744,7 @@ function rankPlayerCard(p,i){
     p.assists>0?('<span class="text-blue-300/80">🅰 '+p.assists.toFixed(1)+'</span>'):"",
     p.amarelo>0?('<span class="text-amber-400/70">🟡 ×'+p.amarelo.toFixed(1)+'</span>'):"",
     p.verm>0?('<span class="text-red-400/70">🔴 ×'+p.verm.toFixed(1)+'</span>'):"",
+    p.azul>0?('<span class="text-blue-400/70">🔵 ×'+p.azul.toFixed(1)+'</span>'):"",
     p.faltas>0?('<span class="text-orange-400/70">⚠ '+p.faltas.toFixed(1)+' falta'+(p.faltas!==1?"s":"")+'</span>'):"",
   ].join("");
   const plural=p.total!==1?"s":"";
@@ -2383,6 +2394,7 @@ async function viewVoter(gid,vid){
         ${v.assists?`<span class="inline-flex items-center gap-1 overflow-hidden bg-blue-950/40 border border-blue-800/30 rounded-lg px-3 py-1.5 text-blue-300 leading-none">🅰 Assist.: ${v.assists}</span>`:""}
         ${v.amarelos?`<span class="inline-flex items-center gap-1 overflow-hidden bg-amber-950/40 border border-amber-800/30 rounded-lg px-3 py-1.5 text-amber-400 leading-none">🟡 Amarelo ×${v.amarelos}</span>`:""}
         ${v.vermelhos?`<span class="inline-flex items-center gap-1 overflow-hidden bg-red-950/40 border border-red-800/30 rounded-lg px-3 py-1.5 text-red-400 leading-none">🔴 Vermelho ×${v.vermelhos}</span>`:""}
+        ${v.azuis?`<span class="inline-flex items-center gap-1 overflow-hidden bg-blue-950/40 border border-blue-800/30 rounded-lg px-3 py-1.5 text-blue-400 leading-none">🔵 Azul ×${v.azuis}</span>`:""}
         ${v.faltas?`<span class="inline-flex items-center gap-1 overflow-hidden bg-orange-950/40 border border-orange-800/30 rounded-lg px-3 py-1.5 text-orange-300 leading-none">⚠ Faltas: ${v.faltas} (${gravLabel[v.gravidade||0]})</span>`:""}
       </div>
       ${v.obs?`<p class="text-xs text-green-300/60 italic border-l-2 border-green-700 pl-2">"${v.obs}"</p>`:""}
@@ -2477,6 +2489,7 @@ async function shareVotosPDF(gid){
     if(v.assists) stats.push(badge("rgba(23,37,84,0.5)","rgba(59,130,246,0.3)","#93c5fd",`🅰 Assist.: ${v.assists}`));
     if(v.amarelos) stats.push(badge("rgba(120,53,15,0.5)","rgba(217,119,6,0.3)","#fcd34d",`🟡 Amarelo x${v.amarelos}`));
     if(v.vermelhos) stats.push(badge("rgba(127,29,29,0.5)","rgba(220,38,38,0.3)","#fca5a5",`🔴 Vermelho x${v.vermelhos}`));
+    if(v.azuis) stats.push(badge("rgba(29,78,216,0.5)","rgba(37,99,235,0.3)","#93c5fd",`🔵 Azul x${v.azuis}`));
     if(v.faltas) stats.push(badge("rgba(124,45,18,0.5)","rgba(234,88,12,0.3)","#fdba74",`⚠ Faltas: ${v.faltas} (${gravLabel[v.gravidade||0]})`));
     return `<div style="background:#0b1a10;border:1px solid #1e3a27;border-radius:12px;padding:10px 12px;margin-bottom:6px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:${stats.length||v.obs?'8px':'0'};">
@@ -2717,7 +2730,7 @@ async function openEditVoter(gid,vid){
     editVoteState.ratings[pid]={
       note:v.note??0, goals:v.goals??0, assists:v.assists??0, chutes:v.chutes??0, desarmes:v.desarmes??0,
       obs:v.obs??"", garra:v.garra??0, comportamento:v.comportamento??0,
-      faltas:v.faltas??0, gravidade:v.gravidade??0, amarelos:v.amarelos??0, vermelhos:v.vermelhos??0
+      faltas:v.faltas??0, gravidade:v.gravidade??0, amarelos:v.amarelos??0, vermelhos:v.vermelhos??0, azuis:v.azuis??0
     };
   });
   openModal(`
@@ -2783,6 +2796,10 @@ function renderEditVoteCard(pid,game){
         <button class="counter-btn" id="evm-min-${pid}" onclick="adjEditVermelho('${pid}',-1)" ${(v.vermelhos||0)<=0?"disabled":""}>−</button>
         <span id="evm-${pid}" class="font-black text-red-300 w-4 text-center">${v.vermelhos||0}</span>
         <button class="counter-btn" onclick="adjEditVermelho('${pid}',1)">+</button></div>
+      <div class="flex items-center gap-1.5"><span class="text-blue-400/50">🔵</span>
+        <button class="counter-btn" id="eaz-min-${pid}" onclick="adjEditAzul('${pid}',-1)" ${(v.azuis||0)<=0?"disabled":""}>−</button>
+        <span id="eaz-${pid}" class="font-black text-blue-300 w-4 text-center">${v.azuis||0}</span>
+        <button class="counter-btn" onclick="adjEditAzul('${pid}',1)">+</button></div>
       <div class="flex items-center gap-1.5"><span class="text-orange-400/50">⚠</span>
         <button class="counter-btn" id="eft-min-${pid}" onclick="adjEditFalta('${pid}',-1)" ${(v.faltas||0)<=0?"disabled":""}>−</button>
         <span id="eft-${pid}" class="font-black text-orange-300 w-5 text-center">${v.faltas||0}</span>
@@ -2834,6 +2851,11 @@ function adjEditVermelho(pid,d){
   const e=document.getElementById("evm-"+pid); if(e) e.textContent=editVoteState.ratings[pid].vermelhos;
   const b=document.getElementById("evm-min-"+pid); if(b) b.disabled=editVoteState.ratings[pid].vermelhos<=0;
 }
+function adjEditAzul(pid,d){
+  editVoteState.ratings[pid].azuis=Math.max(0,Math.min(3,(editVoteState.ratings[pid].azuis||0)+d));
+  const e=document.getElementById("eaz-"+pid); if(e) e.textContent=editVoteState.ratings[pid].azuis;
+  const b=document.getElementById("eaz-min-"+pid); if(b) b.disabled=editVoteState.ratings[pid].azuis<=0;
+}
 function adjEditFalta(pid,d){
   editVoteState.ratings[pid].faltas=Math.max(0,Math.min(20,(editVoteState.ratings[pid].faltas||0)+d));
   const e=document.getElementById("eft-"+pid); if(e) e.textContent=editVoteState.ratings[pid].faltas;
@@ -2848,7 +2870,7 @@ async function saveEditVoter(){
     updates[`/ratings/${gid}/${vid}/${pid}`]={
       note:v.note,goals:v.goals,assists:v.assists,chutes:v.chutes||0,desarmes:v.desarmes||0,
       obs:(v.obs||"").trim(),garra:v.garra||0,comportamento:v.comportamento||0,
-      faltas:v.faltas||0,gravidade:v.gravidade||0,amarelos:v.amarelos||0,vermelhos:v.vermelhos||0,
+      faltas:v.faltas||0,gravidade:v.gravidade||0,amarelos:v.amarelos||0,vermelhos:v.vermelhos||0,azuis:v.azuis||0,
       ts:Date.now()
     };
   });
