@@ -3058,7 +3058,7 @@ if('serviceWorker' in navigator){
 }
 </script>
 
-<!-- ── Efeito de clima em tempo real (só na página Início) ── -->
+<!-- ── Efeito de clima em tempo real (todas as telas) ── -->
 <script>
 (function(){
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -3257,12 +3257,8 @@ if('serviceWorker' in navigator){
     ctx && ctx.clearRect(0, 0, W, H);
   }
 
-  function onInicio(){
-    var p = document.getElementById('page-inicio');
-    return !!p && p.classList.contains('active');
-  }
   function sync(){
-    if (mode && onInicio() && document.visibilityState === 'visible') start();
+    if (mode && document.visibilityState === 'visible') start();
     else stop();
   }
 
