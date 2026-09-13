@@ -16,6 +16,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet" />
   <style>
@@ -233,6 +234,27 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// ── Multi-tenant: cada cliente vendido roda com seu próprio TENANT_ID nesta constante ──
+const TENANT_ID = "afresp";
+function T(path){ return "tenants/"+TENANT_ID+(path?"/"+path:""); }
+
+// Login anônimo automático + vínculo permanente do usuário ao tenant desta instalação.
+// As regras do banco garantem: um uid só acessa o tenant gravado em /userTenant/{uid},
+// e essa gravação só pode acontecer uma vez (não dá pra "trocar" de tenant depois).
+function ensureAuth() {
+  return new Promise((resolve, reject) => {
+    firebase.auth().onAuthStateChanged(async user => {
+      if (!user) { firebase.auth().signInAnonymously().catch(reject); return; }
+      try {
+        const utRef = firebase.database().ref("userTenant/"+user.uid);
+        const snap = await utRef.once("value");
+        if (!snap.exists()) await utRef.set(TENANT_ID);
+        resolve(user);
+      } catch (e) { reject(e); }
+    }, reject);
+  });
+}
+
 // ── State ──
 const S = {
   players:{}, games:{}, ratings:{}, formations:{}, presenca:{}, ausencia:{},
@@ -348,21 +370,21 @@ function activePlayers() { return Object.entries(S.players).filter(([,p])=>p.act
 
 // ── Firebase Listeners ──
 function initListeners() {
-  db.ref("players").on("value",   s=>{ S.players=s.val()||{};    renderAll(); });
-  db.ref("games").on("value",     s=>{ S.games=s.val()||{};      renderAll(); });
-  db.ref("ratings").on("value",   s=>{ S.ratings=s.val()||{};    renderAll(); });
-  db.ref("formations").on("value",s=>{ S.formations=s.val()||{}; renderAll(); });
-  db.ref("presenca").on("value",  s=>{ S.presenca=s.val()||{};   renderAll(); });
-  db.ref("ausencia").on("value",  s=>{ S.ausencia=s.val()||{};   renderAll(); });
-  db.ref("config").on("value",    s=>{ if(s.val()) S.config=s.val(); });
+  db.ref(T("players")).on("value",   s=>{ S.players=s.val()||{};    renderAll(); });
+  db.ref(T("games")).on("value",     s=>{ S.games=s.val()||{};      renderAll(); });
+  db.ref(T("ratings")).on("value",   s=>{ S.ratings=s.val()||{};    renderAll(); });
+  db.ref(T("formations")).on("value",s=>{ S.formations=s.val()||{}; renderAll(); });
+  db.ref(T("presenca")).on("value",  s=>{ S.presenca=s.val()||{};   renderAll(); });
+  db.ref(T("ausencia")).on("value",  s=>{ S.ausencia=s.val()||{};   renderAll(); });
+  db.ref(T("config")).on("value",    s=>{ if(s.val()) S.config=s.val(); });
 }
 async function seedPlayersIfEmpty() {
-  const snap=await db.ref("players").once("value");
+  const snap=await db.ref(T("players")).once("value");
   if(snap.val()) return;
   const batch={};
-  INITIAL_PLAYERS.forEach(name=>{ const id=db.ref("players").push().key; batch[id]={name,active:true}; });
-  await db.ref("players").update(batch);
-  await db.ref("config/adminPin").set("afresp");
+  INITIAL_PLAYERS.forEach(name=>{ const id=db.ref(T("players")).push().key; batch[id]={name,active:true}; });
+  await db.ref(T("players")).update(batch);
+  await db.ref(T("config/adminPin")).set("afresp");
 }
 
 // ── Router ──
@@ -595,9 +617,9 @@ async function confirmarNome(){
     slot=extras.length?Math.max(...extras)+1:maxVg+1;
   }
   let pid=Object.entries(S.players).find(([,p])=>p.name&&p.name.toLowerCase()===nome.toLowerCase())?.[0];
-  if(!pid){pid=db.ref("players").push().key;await db.ref("players/"+pid).set({name:nome,active:true});}
-  if(slot<=maxVg&&!game.players?.[pid])await db.ref("games/"+game.id+"/players/"+pid).set({team:""});
-  await db.ref("presenca/"+game.id+"/"+slot).set({name:nome,uid:"guest_"+Date.now()});
+  if(!pid){pid=db.ref(T("players")).push().key;await db.ref(T("players/"+pid)).set({name:nome,active:true});}
+  if(slot<=maxVg&&!game.players?.[pid])await db.ref(T("games/"+game.id+"/players/"+pid)).set({team:""});
+  await db.ref(T("presenca/"+game.id+"/"+slot)).set({name:nome,uid:"guest_"+Date.now()});
   showToast("✅ "+nome+" confirmado!");
   if(input) input.value="";
 }
@@ -611,7 +633,7 @@ async function removePresenca(gameId,slot){
     const pid=Object.entries(S.players).find(([,p])=>p.name&&p.name.toLowerCase()===entry.name.toLowerCase())?.[0];
     if(pid) updates["games/"+gameId+"/players/"+pid]=null;
   }
-  await db.ref().update(updates);
+  await db.ref(T()).update(updates);
 }
 
 async function promoverEspera(gameId,slot){
@@ -633,7 +655,7 @@ async function promoverEspera(gameId,slot){
       updates["presenca/"+gameId+"/"+newMax]=entry;
       updates["presenca/"+gameId+"/"+slot]=null;
     }
-    await db.ref().update(updates);
+    await db.ref(T()).update(updates);
     showToast(entry.name+" confirmado como "+(newMax)+"º jogador ✅");
     return;
   }
@@ -641,13 +663,13 @@ async function promoverEspera(gameId,slot){
   updates["presenca/"+gameId+"/"+slot]=null;
   const pid=Object.entries(S.players).find(([,p])=>p.name&&p.name.toLowerCase()===entry.name.toLowerCase())?.[0];
   if(pid){const g=S.games[gameId];if(g&&!g.players?.[pid])updates["games/"+gameId+"/players/"+pid]={name:entry.name};}
-  await db.ref().update(updates);
+  await db.ref(T()).update(updates);
   showToast(entry.name+" movido para vaga "+freeSlot+" ✅");
 }
 async function resetPresenca(gameId){
   if(!S.adminOk)return;
   if(!confirm("Limpar toda a lista de presença deste jogo?"))return;
-  await db.ref("presenca/"+gameId).remove();
+  await db.ref(T("presenca/"+gameId)).remove();
 }
 async function registrarAusencia(){
   const input=document.getElementById("ausencia-nome");
@@ -663,8 +685,8 @@ async function registrarAusencia(){
   if(naLista){showToast(nome+" já confirmou presença!");return;}
   const motivoInput=document.getElementById("ausencia-motivo");
   const motivo=(motivoInput&&motivoInput.value||"").trim();
-  const pid=db.ref("ausencia/"+game.id).push().key;
-  await db.ref("ausencia/"+game.id+"/"+pid).set({name:nome,motivo:motivo||""});
+  const pid=db.ref(T("ausencia/"+game.id)).push().key;
+  await db.ref(T("ausencia/"+game.id+"/"+pid)).set({name:nome,motivo:motivo||""});
   showToast("❌ "+nome+" registrado como ausente.");
   if(input) input.value="";
   if(motivoInput) motivoInput.value="";
@@ -673,7 +695,7 @@ async function registrarAusencia(){
 }
 async function removeAusencia(gameId,pid){
   if(!S.adminOk)return;
-  await db.ref("ausencia/"+gameId+"/"+pid).remove();
+  await db.ref(T("ausencia/"+gameId+"/"+pid)).remove();
 }
 
 async function sharePresenca(){
@@ -1117,13 +1139,13 @@ function renderCampo() {
 
 async function assignTeam(pid,team,gameId){
   if(!gameId||!S.games[gameId])return;
-  await db.ref("games/"+gameId+"/players/"+pid).set({team});
+  await db.ref(T("games/"+gameId+"/players/"+pid)).set({team});
 }
 async function cyclePlayerTeam(pid,gameId){
   const g=S.games[gameId]; if(!g) return;
   const cur=(g.players?.[pid]?.team)||"";
   const next=cur===""?"vermelho":cur==="vermelho"?"azul":null;
-  await db.ref("games/"+gameId+"/players/"+pid+"/team").set(next);
+  await db.ref(T("games/"+gameId+"/players/"+pid+"/team")).set(next);
 }
 async function ciclarJogador(pid,gameId){
   const g=S.games[gameId]; if(!g) return;
@@ -1143,7 +1165,7 @@ async function ciclarJogador(pid,gameId){
     updates["games/"+gameId+"/players/"+pid+"/team"]="vermelho";
     updates["games/"+gameId+"/players/"+pid+"/goleiro"]=null;
   }
-  await db.ref().update(updates);
+  await db.ref(T()).update(updates);
 }
 async function limparTimes(gameId){
   const g=S.games[gameId]; if(!g||!g.players) return;
@@ -1152,7 +1174,7 @@ async function limparTimes(gameId){
     updates["games/"+gameId+"/players/"+pid+"/team"]="";
     updates["games/"+gameId+"/players/"+pid+"/goleiro"]=null;
   });
-  await db.ref().update(updates);
+  await db.ref(T()).update(updates);
   showToast("Times limpos.");
 }
 
@@ -1205,7 +1227,7 @@ async function onDragEnd(e) {
   const newY = parseFloat(tok?.style.top)/100;
   const game = latestGame();
   if (game && !isNaN(newX) && !isNaN(newY)) {
-    await db.ref(`formations/${game.id}/${pid}`).set({ x: newX, y: newY });
+    await db.ref(T(`formations/${game.id}/${pid}`)).set({ x: newX, y: newY });
   }
   dragState = null;
 }
@@ -1465,7 +1487,7 @@ async function submitVotes(){
         ts:Date.now()
       };
     });
-    await db.ref().update(updates);
+    await db.ref(T()).update(updates);
     voteState={gameId:null,ratings:{}};
     showSuccessModal();
   }catch(e){
@@ -2098,7 +2120,7 @@ async function confirmarSorteio(){
   const updates={};
   _sorteioVerm.forEach(pid=>{ updates["games/"+_sorteioGameId+"/players/"+pid+"/team"]="vermelho"; });
   _sorteioAzul.forEach(pid=>{ updates["games/"+_sorteioGameId+"/players/"+pid+"/team"]="azul"; });
-  await db.ref().update(updates);
+  await db.ref(T()).update(updates);
   closeModal();
   showToast("Times sorteados! Ajuste se necessário.");
 }
@@ -2110,33 +2132,33 @@ function handleCampoClick(pid,gameId){
   if(campoClicks[pid].count>=3){campoClicks[pid].count=0;toggleGoleiro(pid,gameId);return;}
   campoClicks[pid].timer=setTimeout(async()=>{
     const c=campoClicks[pid].count; campoClicks[pid].count=0;
-    if(c===1) await db.ref("games/"+gameId+"/players/"+pid+"/team").set("vermelho");
-    else if(c===2) await db.ref("games/"+gameId+"/players/"+pid+"/team").set("azul");
+    if(c===1) await db.ref(T("games/"+gameId+"/players/"+pid+"/team")).set("vermelho");
+    else if(c===2) await db.ref(T("games/"+gameId+"/players/"+pid+"/team")).set("azul");
   },400);
 }
 async function toggleGoleiro(pid,gameId){
   const g=S.games[gameId]; if(!g) return;
   const current=g.players?.[pid]?.goleiro===true;
-  await db.ref("games/"+gameId+"/players/"+pid+"/goleiro").set(!current);
+  await db.ref(T("games/"+gameId+"/players/"+pid+"/goleiro")).set(!current);
   showToast(!current?"🥅 Goleiro marcado! (3 cliques para desmarcar)":"Goleiro desmarcado.");
 }
 async function toggleGameStatus(gid){
   const g=S.games[gid]; if(!g) return;
   const next=g.status==="fechado"?"aberto":"fechado";
-  await db.ref("games/"+gid+"/status").set(next);
+  await db.ref(T("games/"+gid+"/status")).set(next);
   showToast(next==="fechado"?"🔓 Votação liberada!":"🔒 Votação bloqueada.");
 }
 async function createGame(){
   const date=document.getElementById("game-date")?.value;
   if(!date){alert("Escolha a data");return;}
-  const id=db.ref("games").push().key;
-  await db.ref("games/"+id).set({date,type:selectedGameType,status:"aberto",players:{},createdAt:Date.now()});
+  const id=db.ref(T("games")).push().key;
+  await db.ref(T("games/"+id)).set({date,type:selectedGameType,status:"aberto",players:{},createdAt:Date.now()});
   showToast("Jogo criado! Compartilhe o link #lista.");
 }
-async function addPlayer(){const i=document.getElementById("new-player");const n=i?.value?.trim();if(!n)return;const id=db.ref("players").push().key;await db.ref("players/"+id).set({name:n,active:true});if(i)i.value="";}
-async function removePlayer(id){if(!confirm(`Remover ${playerName(id)}?`))return;await db.ref("players/"+id+"/active").set(false);}
-async function restorePlayer(id){await db.ref("players/"+id+"/active").set(true);showToast("Jogador restaurado!");}
-async function deleteGame(id){if(!confirm("Excluir este jogo e todos os votos?"))return;const u={};u["games/"+id]=null;u["ratings/"+id]=null;u["formations/"+id]=null;await db.ref().update(u);showToast("Jogo e avaliações excluídos!");}
+async function addPlayer(){const i=document.getElementById("new-player");const n=i?.value?.trim();if(!n)return;const id=db.ref(T("players")).push().key;await db.ref(T("players/"+id)).set({name:n,active:true});if(i)i.value="";}
+async function removePlayer(id){if(!confirm(`Remover ${playerName(id)}?`))return;await db.ref(T("players/"+id+"/active")).set(false);}
+async function restorePlayer(id){await db.ref(T("players/"+id+"/active")).set(true);showToast("Jogador restaurado!");}
+async function deleteGame(id){if(!confirm("Excluir este jogo e todos os votos?"))return;const u={};u["games/"+id]=null;u["ratings/"+id]=null;u["formations/"+id]=null;await db.ref(T()).update(u);showToast("Jogo e avaliações excluídos!");}
 
 let editGameId=null, editTeams={}, editGoleiros=new Set();
 let adminPlayerSearch="", adminPlayersOpen=false, adminGamesOpen=true;
@@ -2194,11 +2216,11 @@ async function saveEditGame(){
   if(checked.length<2){alert("Selecione ao menos 2 jogadores");return;}
   const players={};
   checked.forEach(pid=>{ players[pid]={team:editTeams[pid]||"azul",goleiro:editGoleiros.has(pid)?true:false}; });
-  await db.ref("games/"+editGameId+"/players").set(players);
+  await db.ref(T("games/"+editGameId+"/players")).set(players);
   closeModal();
   alert("Jogo atualizado!");
 }
-async function savePin(){const p=document.getElementById("new-pin")?.value?.trim();if(!p||p.length<4){alert("PIN deve ter ao menos 4 dígitos");return;}await db.ref("config/adminPin").set(p);alert("PIN salvo!");}
+async function savePin(){const p=document.getElementById("new-pin")?.value?.trim();if(!p||p.length<4){alert("PIN deve ter ao menos 4 dígitos");return;}await db.ref(T("config/adminPin")).set(p);alert("PIN salvo!");}
 
 async function shareResultadoPDF(gid){
   const g=S.games[gid]; if(!g) return;
@@ -2375,7 +2397,7 @@ function openGameVotes(gid){
 async function viewVoter(gid,vid){
   const g=S.games[gid]; if(!g) return;
   openModal(`<div class="text-center py-8 text-green-300/40 text-sm">Carregando...</div>`);
-  const snap=await db.ref(`ratings/${gid}/${vid}`).once("value");
+  const snap=await db.ref(T(`ratings/${gid}/${vid}`)).once("value");
   const votes=snap.val()||{};
   const rows=Object.entries(votes).sort((a,b)=>(b[1].note||0)-(a[1].note||0));
   const gravLabel=["Nenhuma","Leve","Média","Grave"];
@@ -2473,7 +2495,7 @@ async function shareVotosPDF(gid){
   const bp=bestPlayerOfGame(gameObj);
   const gravLabel=["Nenhuma","Leve","Média","Grave"];
   const vid=voters[0];
-  const snap=await db.ref(`ratings/${gid}/${vid}`).once("value");
+  const snap=await db.ref(T(`ratings/${gid}/${vid}`)).once("value");
   const votes=snap.val()||{};
   const teamColor=t=>t==="vermelho"?"#f87171":t==="azul"?"#60a5fa":"#86efac";
   const teamDot=t=>t==="vermelho"?`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#ef4444;flex-shrink:0;margin-top:2px;"></span>`:t==="azul"?`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#3b82f6;flex-shrink:0;margin-top:2px;"></span>`:`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#22c55e;flex-shrink:0;margin-top:2px;"></span>`;
@@ -2725,14 +2747,14 @@ async function compartilharEscalacao(gameId){
 }
 async function deleteVoter(gid,vid){
   if(!confirm(`Excluir voto de ${playerName(vid)}? Ele poderá votar novamente.`)) return;
-  await db.ref(`ratings/${gid}/${vid}`).remove();
+  await db.ref(T(`ratings/${gid}/${vid}`)).remove();
   openGameVotes(gid);
 }
 async function openEditVoter(gid,vid){
   const g=S.games[gid]; if(!g) return;
   openModal(`<div class="text-center py-10 text-green-300/40 text-sm">Carregando votos...</div>`);
   // Busca direto do Firebase para garantir dados atualizados
-  const snap=await db.ref(`ratings/${gid}/${vid}`).once("value");
+  const snap=await db.ref(T(`ratings/${gid}/${vid}`)).once("value");
   const existing=snap.val()||{};
   const pids=getGamePlayerIds(g).filter(p=>p!==vid);
   editVoteState={gid,vid,ratings:{}};
@@ -2885,7 +2907,7 @@ async function saveEditVoter(){
       ts:Date.now()
     };
   });
-  await db.ref().update(updates);
+  await db.ref(T()).update(updates);
   openGameVotes(gid);
 }
 
@@ -2899,7 +2921,7 @@ async function atribuirTime(pid,gameId,team){
   const updates={};
   updates["games/"+gameId+"/players/"+pid+"/team"]=team;
   updates["games/"+gameId+"/players/"+pid+"/goleiro"]=null;
-  await db.ref().update(updates);
+  await db.ref(T()).update(updates);
 }
 const POSICOES=["","GK","ZAG","LAT","VOL","MEI","ATA","PNT"];
 async function ciclarPosicao(pid,gameId){
@@ -2909,7 +2931,7 @@ async function ciclarPosicao(pid,gameId){
   const idx=POSICOES.indexOf(cur);
   const next=POSICOES[(idx+1)%POSICOES.length];
   // Limpa drag salvo para que a posição por função seja usada
-  await db.ref().update({
+  await db.ref(T()).update({
     ["games/"+gameId+"/players/"+pid+"/pos"]: next||null,
     ["formations/"+gameId+"/"+pid]: null
   });
@@ -2922,12 +2944,12 @@ async function addRival(){
   const rivais=S.config.rivais||[];
   const dup=rivais.find(([a,b])=>(a.toLowerCase()===n1.toLowerCase()&&b.toLowerCase()===n2.toLowerCase())||(a.toLowerCase()===n2.toLowerCase()&&b.toLowerCase()===n1.toLowerCase()));
   if(dup){showToast("Par já existe.");return;}
-  await db.ref("config/rivais").set([...rivais,[n1,n2]]);
+  await db.ref(T("config/rivais")).set([...rivais,[n1,n2]]);
   showToast("Regra adicionada.");
 }
 async function removeRival(i){
   const rivais=(S.config.rivais||[]).filter((_,idx)=>idx!==i);
-  await db.ref("config/rivais").set(rivais.length?rivais:null);
+  await db.ref(T("config/rivais")).set(rivais.length?rivais:null);
   showToast("Regra removida.");
 }
 async function addCraque(){
@@ -2936,18 +2958,24 @@ async function addCraque(){
   if(!nome){showToast("Escolha um jogador.");return;}
   const craques=S.config.craques||[];
   if(craques.find(n=>n.toLowerCase()===nome.toLowerCase())){showToast(nome+" já é craque!");return;}
-  await db.ref("config/craques").set([...craques,nome]);
+  await db.ref(T("config/craques")).set([...craques,nome]);
   showToast("⭐ "+nome+" adicionado como craque.");
 }
 async function removeCraque(nome){
   const craques=(S.config.craques||[]).filter(n=>n.toLowerCase()!==nome.toLowerCase());
-  await db.ref("config/craques").set(craques.length?craques:null);
+  await db.ref(T("config/craques")).set(craques.length?craques:null);
   showToast(nome+" removido dos craques.");
 }
 function nextTuesday(){const d=new Date();const diff=(2-d.getDay()+7)%7||7;d.setDate(d.getDate()+diff);return d.toISOString().split("T")[0];}
 
 // ── Init ──
 (async()=>{
+  try{
+    await ensureAuth();
+  }catch(e){
+    document.body.innerHTML='<div style="padding:2rem;color:#fca5a5;font-family:sans-serif;text-align:center">Erro ao conectar. Verifique sua internet e recarregue a página.<br><span style="opacity:.6;font-size:12px">'+(e&&e.message||e)+'</span></div>';
+    return;
+  }
   await seedPlayersIfEmpty();
   initListeners();
   const _h=location.hash.slice(1);
