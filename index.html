@@ -859,7 +859,11 @@ function resetUser(){if(!confirm("Trocar de jogador?"))return;lsRemove("uid");S.
 function renderInicio(){renderPlayerSelect();renderGameStatus();}
 function renderPlayerSelect(){
   const el=document.getElementById("player-select-card"); if(!el) return;
-  el.innerHTML=`<div class="flex justify-end"><button onclick="logoutClub()" class="text-[10px] text-green-300/30 hover:text-red-400 transition-colors flex items-center gap-1">🚪 Sair deste clube</button></div>`;
+  el.innerHTML=`<div class="bg-[#132218] border border-red-900/40 rounded-xl p-4">
+    <div class="font-bold text-sm mb-1">🚪 Sair deste clube</div>
+    <p class="text-[10px] text-green-300/40 mb-3">Esquece o acesso salvo neste aparelho e volta pra tela de escolher clube. Use pra trocar de clube ou sair de um aparelho compartilhado.</p>
+    <button onclick="logoutClub()" class="w-full py-2 rounded-lg bg-red-950/60 border border-red-800/50 text-red-400 text-sm font-bold hover:bg-red-900/40 transition-colors">Sair</button>
+  </div>`;
   return;
   const latest=latestGame();
   const opts=activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
@@ -2067,11 +2071,6 @@ function renderAdmin(){
         <input id="new-pin" type="password" maxlength="6" value="${S.config.adminPin}" class="flex-1 bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-green-500"/>
         <button onclick="savePin()" class="px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-sm font-bold">Salvar</button>
       </div>
-    </div>
-    <div class="bg-[#132218] border border-red-900/40 rounded-xl p-4">
-      <div class="font-bold text-sm mb-1">🚪 Sair deste clube</div>
-      <p class="text-[10px] text-green-300/40 mb-3">Esquece o acesso salvo neste aparelho e volta pra tela de escolher clube. Use pra trocar de clube ou sair de um aparelho compartilhado.</p>
-      <button onclick="logoutClub()" class="w-full py-2 rounded-lg bg-red-950/60 border border-red-800/50 text-red-400 text-sm font-bold hover:bg-red-900/40 transition-colors">Sair</button>
     </div>
     <div class="bg-[#132218] border border-[#2a4a35] rounded-xl p-4">
       <div class="font-bold text-sm mb-3">➕ Novo Jogo</div>
