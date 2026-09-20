@@ -13,7 +13,7 @@
   (function(){
     try{
       var p=new URLSearchParams(location.search).get('time');
-      var org=(p||'afresp').toLowerCase().replace(/[^a-z0-9_-]/g,'')||'afresp';
+      var org=(p||'afresp').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9_-]/g,'')||'afresp';
       if(org==='afresp') return; // usa o manifest.json estático normal
       var qs='?time='+org;
       var manifest={
@@ -264,7 +264,7 @@ const _fbdb = firebase.database();
 // ── Multi-cliente: cada ?time=slug tem sua própria "gaveta" de dados ──
 const ORG = (function(){
   var p = new URLSearchParams(location.search).get('time');
-  var slug = (p || 'afresp').toLowerCase().replace(/[^a-z0-9_-]/g, '');
+  var slug = (p || 'afresp').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9_-]/g, '');
   return slug || 'afresp';
 })();
 const ORG_ROOT = 'orgs/' + ORG;
@@ -272,11 +272,6 @@ const db = {
   ref: function(path){ return (path === undefined || path === '') ? _fbdb.ref(ORG_ROOT) : _fbdb.ref(ORG_ROOT + '/' + path); }
 };
 const CLUB_NAME = ORG === 'afresp' ? 'AFRESP' : ORG.replace(/[-_]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-if (ORG !== 'afresp') {
-  document.title = '⚽ Pelada é Compromisso — ' + CLUB_NAME;
-  var _clubLabel = document.getElementById('club-name-label');
-  if (_clubLabel) _clubLabel.textContent = CLUB_NAME;
-}
 
 // ── Armazenamento local por cliente (não vaza sessão entre ?time= diferentes) ──
 function lsGet(name){
@@ -294,6 +289,18 @@ const S = {
   uid: lsGet("uid")||null,
   adminOk:false, rankFilter:"all", currentPage:"inicio", selectedGameId:null, selectedVoteGameId:null,
 };
+
+function clubDisplayName(){ return S.config.clubName || CLUB_NAME; }
+function applyClubBranding(){
+  document.title = '⚽ Pelada é Compromisso — ' + clubDisplayName();
+  var el = document.getElementById('club-name-label');
+  if (el) el.textContent = clubDisplayName();
+  var el2 = document.getElementById('site-login-club-name');
+  if (el2) el2.textContent = clubDisplayName();
+  var el3 = document.getElementById('site-login-members');
+  if (el3) el3.textContent = 'Membros ' + clubDisplayName() + ' — todas as telas';
+}
+applyClubBranding();
 
 // ── Site Auth ──
 let siteAuth = lsGet("access")==="ok";
@@ -409,7 +416,7 @@ function initListeners() {
   db.ref("formations").on("value",s=>{ S.formations=s.val()||{}; renderAll(); });
   db.ref("presenca").on("value",  s=>{ S.presenca=s.val()||{};   renderAll(); });
   db.ref("ausencia").on("value",  s=>{ S.ausencia=s.val()||{};   renderAll(); });
-  db.ref("config").on("value",    s=>{ if(s.val()) S.config=s.val(); });
+  db.ref("config").on("value",    s=>{ if(s.val()) S.config=s.val(); applyClubBranding(); });
 }
 async function seedPlayersIfEmpty() {
   const cfgSnap=await db.ref("config").once("value");
@@ -597,7 +604,7 @@ function renderLista() {
       <div class="flex items-start justify-between mb-3">
         <div>
           <h2 class="font-black text-base leading-none text-white">Pelada é Compromisso</h2>
-          <p class="text-green-300/50 text-xs mt-0.5">AFRESP &bull; ${diaSemana}, ${fmtDate(game.date)}</p>
+          <p class="text-green-300/50 text-xs mt-0.5">${clubDisplayName()} &bull; ${diaSemana}, ${fmtDate(game.date)}</p>
         </div>
         <div class="text-right">
           <div class="font-black text-2xl leading-none ${filled>=maxV?"text-green-400":"text-amber-400"}">${filled}<span class="text-green-300/25 text-base font-normal">/${maxV}</span></div>
@@ -762,7 +769,7 @@ async function sharePresenca(){
   const url=location.href.split("#")[0]+"#lista";
   const text=
     "🏆 *PELADA É COMPROMISSO*\n"
-    +"⚽ _AFRESP — Lista de Presença_\n"
+    +"⚽ _"+clubDisplayName()+" — Lista de Presença_\n"
     +(game?"📅 *"+diaSemana+", "+fmtDate(game.date)+"*\n":"")+sep
     +"\n\n✅ *CONFIRMADOS ("+filled+"/"+maxVs+")*"+(maxVs>TOTAL_VAGAS?" _(12 x 11)_":"")
     +(vagas>0?" — "+vagas+" vaga"+(vagas>1?"s":"")+" livre"+(vagas>1?"s":""):"")
@@ -1557,7 +1564,7 @@ function buildShareText(){
   const medals=["🥇","🥈","🥉"];
   const g0=games[0];
   const dateStr=g0&&g0.date?new Date(g0.date+"T12:00:00").toLocaleDateString("pt-BR"):"";
-  let txt="⚽ *Pelada & Compromisso — AFRESP*\n";
+  let txt="⚽ *Pelada & Compromisso — "+clubDisplayName()+"*\n";
   if(dateStr&&rankPeriod==="partida")txt+="📅 "+dateStr+"\n";
   txt+="📊 Ranking — "+periodLabel.charAt(0).toUpperCase()+periodLabel.slice(1)+"\n";
   txt+="👥 "+scores.length+" jogadores\n\n";
@@ -1567,7 +1574,7 @@ function buildShareText(){
     const medal=medals[i]?" "+medals[i]:"";
     txt+=pos+" "+p.name+" — "+pts+" pts"+medal+"\n";
   });
-  txt+="\n🏆 Avaliação do grupo — AFRESP";
+  txt+="\n🏆 Avaliação do grupo — "+clubDisplayName();
   return txt;
 }
 async function shareRanking(){
@@ -1593,7 +1600,7 @@ function buildGameShareText(gameId){
   const dateStr=game.date?d.toLocaleDateString("pt-BR")+" · "+dayNames[d.getDay()]:"";
   const typeLabel=game.type==="compromisso"?"Compromisso":"Pelada";
 
-  let txt="⚽ *Pelada & Compromisso — AFRESP*\n";
+  let txt="⚽ *Pelada & Compromisso — "+clubDisplayName()+"*\n";
   txt+="📅 "+dateStr+" · "+typeLabel+"\n\n";
 
   if(result){
@@ -2011,6 +2018,14 @@ function renderAdmin(){
       </div>
     </div>
     <div class="bg-[#132218] border border-[#2a4a35] rounded-xl p-4">
+      <div class="font-bold text-sm mb-3">🏷️ Nome do clube</div>
+      <p class="text-[10px] text-green-300/40 mb-2">Aparece no cabeçalho, PDFs e mensagens compartilhadas.</p>
+      <div class="flex gap-2">
+        <input id="new-club-name" type="text" maxlength="30" value="${clubDisplayName()}" class="flex-1 bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-green-500"/>
+        <button onclick="saveClubName()" class="px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-sm font-bold">Salvar</button>
+      </div>
+    </div>
+    <div class="bg-[#132218] border border-[#2a4a35] rounded-xl p-4">
       <div class="font-bold text-sm mb-3">🔐 PIN Admin</div>
       <div class="flex gap-2">
         <input id="new-pin" type="password" maxlength="6" value="${S.config.adminPin}" class="flex-1 bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-green-500"/>
@@ -2279,6 +2294,7 @@ async function saveEditGame(){
   alert("Jogo atualizado!");
 }
 async function savePin(){const p=document.getElementById("new-pin")?.value?.trim();if(!p||p.length<4){alert("PIN deve ter ao menos 4 dígitos");return;}await db.ref("config/adminPin").set(p);alert("PIN salvo!");}
+async function saveClubName(){const n=document.getElementById("new-club-name")?.value?.trim();if(!n){alert("Informe o nome do clube");return;}await db.ref("config/clubName").set(n);showToast("Nome do clube salvo!");}
 
 async function shareResultadoPDF(gid){
   const g=S.games[gid]; if(!g) return;
@@ -2329,7 +2345,7 @@ async function shareResultadoPDF(gid){
     </div>`).join("");
   const html=`<div style="background:#081510;padding:20px 16px;font-family:'Segoe UI',Arial,sans-serif;color:#fff;width:420px;">
     <div style="text-align:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #1e4a2a;">
-      <div style="font-size:9px;color:#4ade80;text-transform:uppercase;letter-spacing:3px;margin-bottom:4px;">⚽ AFRESP</div>
+      <div style="font-size:9px;color:#4ade80;text-transform:uppercase;letter-spacing:3px;margin-bottom:4px;">⚽ ${clubDisplayName()}</div>
       <div style="font-size:18px;font-weight:900;letter-spacing:0.5px;">PELADA É COMPROMISSO</div>
       <div style="font-size:11px;color:#86efac;margin-top:4px;">${diaSemana}, ${fmtDate(g.date)} · ${(g.type||"pelada").toUpperCase()}</div>
     </div>
@@ -2345,7 +2361,7 @@ async function shareResultadoPDF(gid){
       <div style="font-size:9px;color:#4ade80;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;font-weight:700;">🏆 Avaliação dos Jogadores</div>
       ${rankingRows||'<div style="text-align:center;color:#2a4a35;font-size:12px;padding:12px;">Nenhuma avaliação</div>'}
     </div>
-    <div style="text-align:center;margin-top:10px;font-size:9px;color:#2a4a35;">Pelada é Compromisso · AFRESP</div>
+    <div style="text-align:center;margin-top:10px;font-size:9px;color:#2a4a35;">Pelada é Compromisso · ${clubDisplayName()}</div>
   </div>`;
   showToast("Gerando PDF...",5000);
   const wrap=document.createElement("div");
@@ -2405,7 +2421,7 @@ async function shareGameResult(gid){
   if(!tabela) tabela="\nNenhuma avaliação ainda";
 
   const text="🏆 *PELADA É COMPROMISSO*\n"
-    +"⚽ _AFRESP — Resultado do Jogo_\n"
+    +"⚽ _"+clubDisplayName()+" — Resultado do Jogo_\n"
     +"📅 *"+diaSemana+", "+fmtDate(g.date)+"*\n"
     +sep
     +"\n\n🗳️ *MELHORES DO JOGO*"
@@ -2596,7 +2612,7 @@ async function shareVotosPDF(gid){
   const sectionTitle=(label,color)=>`<div style="display:flex;align-items:center;gap:7px;margin:12px 0 8px;"><span style="width:9px;height:9px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span><span style="font-size:10px;font-weight:900;color:${color};text-transform:uppercase;letter-spacing:1.5px;">${label}</span></div>`;
   const html=`<div style="background:#081510;padding:20px 16px;font-family:'Segoe UI',Arial,sans-serif;color:#fff;width:420px;">
     <div style="text-align:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #1e4a2a;">
-      <div style="font-size:9px;color:#4ade80;text-transform:uppercase;letter-spacing:3px;margin-bottom:4px;">AFRESP</div>
+      <div style="font-size:9px;color:#4ade80;text-transform:uppercase;letter-spacing:3px;margin-bottom:4px;">${clubDisplayName()}</div>
       <div style="font-size:18px;font-weight:900;letter-spacing:0.5px;">PELADA E COMPROMISSO</div>
       <div style="font-size:11px;color:#86efac;margin-top:4px;">Votos de ${playerName(vid)} &middot; ${diaSemana}, ${fmtDate(g.date)}</div>
     </div>
@@ -2610,7 +2626,7 @@ async function shareVotosPDF(gid){
     </div>`:""}
     ${sortedVerm.length?sectionTitle("Time Vermelho","#ef4444")+""+sortedVerm.map(renderCard).join(""):""}
     ${sortedAzul.length?sectionTitle("Time Azul","#3b82f6")+""+sortedAzul.map(renderCard).join(""):""}
-    <div style="text-align:center;margin-top:12px;font-size:9px;color:#2a4a35;">Pelada e Compromisso · AFRESP</div>
+    <div style="text-align:center;margin-top:12px;font-size:9px;color:#2a4a35;">Pelada e Compromisso · ${clubDisplayName()}</div>
   </div>`;
   showToast("Gerando PDF...",5000);
   const wrap=document.createElement("div");
@@ -2728,7 +2744,7 @@ async function compartilharEscalacao(gameId){
     +'<div style="text-align:center;padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.1)">'
     +'<div style="font-size:20px;margin-bottom:3px">⚽</div>'
     +'<div style="font-weight:900;font-size:15px;letter-spacing:1px">PELADA É COMPROMISSO</div>'
-    +'<div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:2px">AFRESP · '+diaSemana+fmtDate(game.date)+'</div>'
+    +'<div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:2px">'+clubDisplayName()+' · '+diaSemana+fmtDate(game.date)+'</div>'
     +'<div style="margin-top:6px;font-size:10px;font-weight:700;color:rgba(74,222,128,0.65);letter-spacing:2px;text-transform:uppercase">Escalação Confirmada</div>'
     +'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
@@ -2769,13 +2785,13 @@ async function compartilharEscalacao(gameId){
     mainDiv.appendChild(fieldClone);
     const footer=document.createElement("div");
     footer.style.cssText="margin-top:10px;text-align:center;font-size:9px;color:rgba(255,255,255,0.15)";
-    footer.textContent="AFRESP · Pelada é Compromisso";
+    footer.textContent=clubDisplayName()+" · Pelada é Compromisso";
     mainDiv.appendChild(footer);
   } else {
     // No campo available — add footer directly
     const footer=document.createElement("div");
     footer.style.cssText="margin-top:12px;text-align:center;font-size:9px;color:rgba(255,255,255,0.15)";
-    footer.textContent="AFRESP · Pelada é Compromisso";
+    footer.textContent=clubDisplayName()+" · Pelada é Compromisso";
     if(mainDiv)mainDiv.appendChild(footer);
   }
   document.body.appendChild(wrap);
@@ -3050,7 +3066,7 @@ function nextTuesday(){const d=new Date();const diff=(2-d.getDay()+7)%7||7;d.set
     <div style="text-align:center;margin-bottom:28px">
       <div style="font-size:52px;margin-bottom:10px;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.5))">⚽</div>
       <div style="font-weight:900;font-size:22px;letter-spacing:1.5px;color:#fff;line-height:1.1">PELADA É COMPROMISSO</div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:6px;letter-spacing:4px;text-transform:uppercase">AFRESP</div>
+      <div id="site-login-club-name" style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:6px;letter-spacing:4px;text-transform:uppercase">AFRESP</div>
     </div>
 
     <!-- OPÇÃO 1: Acesso com senha -->
@@ -3059,7 +3075,7 @@ function nextTuesday(){const d=new Date();const diff=(2-d.getDay()+7)%7||7;d.set
         <span style="font-size:20px">🔐</span>
         <div>
           <div style="font-weight:900;font-size:15px;color:#fff">Acesso completo</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:1px">Membros AFRESP — todas as telas</div>
+          <div id="site-login-members" style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:1px">Membros AFRESP — todas as telas</div>
         </div>
       </div>
       <div style="height:1px;background:rgba(255,255,255,0.06);margin:14px 0"></div>
