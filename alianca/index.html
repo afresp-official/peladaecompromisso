@@ -17,13 +17,14 @@
       if(!qp){
         var parts = location.pathname.split('/').filter(Boolean);
         var idx = parts.indexOf('peladaecompromisso');
-        seg = idx>=0 ? parts[idx+1] : (parts.length ? parts[parts.length-1] : null);
+        seg = idx>=0 ? parts[idx+1] : null;
         if (seg) { try { seg = decodeURIComponent(seg); } catch(e) {} }
       }
-      var raw = qp || seg || 'afresp';
+      var raw = qp || seg;
+      if(!raw) return null; // nenhum clube identificado na URL - mostra a tela de escolha
       var slug = raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9_-]/g,'');
-      return slug || 'afresp';
-    }catch(e){ return 'afresp'; }
+      return slug || null;
+    }catch(e){ return null; }
   })();
   </script>
   <link rel="manifest" id="pwa-manifest" href="/peladaecompromisso/manifest.json" />
@@ -31,7 +32,7 @@
   (function(){
     try{
       var org=window.__ORG_SLUG__;
-      if(org==='afresp') return; // usa o manifest.json estático normal
+      if(!org || org==='afresp') return; // sem clube ainda, ou é o afresp: usa o manifest.json estático normal
       var qs='?time='+org;
       var manifest={
         name:"Pelada é Compromisso",
@@ -279,7 +280,8 @@ firebase.initializeApp(firebaseConfig);
 const _fbdb = firebase.database();
 
 // ── Multi-cliente: cada cliente tem sua própria "gaveta" de dados (detecção em window.__ORG_SLUG__, ver <head>) ──
-const ORG = window.__ORG_SLUG__ || 'afresp';
+const ORG_KNOWN = !!window.__ORG_SLUG__;
+const ORG = window.__ORG_SLUG__ || '_gate_'; // placeholder inofensivo até o clube ser escolhido na tela de acesso
 const ORG_ROOT = 'orgs/' + ORG;
 const db = {
   ref: function(path){ return (path === undefined || path === '') ? _fbdb.ref(ORG_ROOT) : _fbdb.ref(ORG_ROOT + '/' + path); }
@@ -313,7 +315,7 @@ function applyClubBranding(){
   var el3 = document.getElementById('site-login-members');
   if (el3) el3.textContent = 'Membros ' + clubDisplayName() + ' — todas as telas';
 }
-applyClubBranding();
+if (ORG_KNOWN) applyClubBranding();
 
 // ── Site Auth ──
 let siteAuth = lsGet("access")==="ok";
@@ -3055,8 +3057,58 @@ async function removeCraque(nome){
 }
 function nextTuesday(){const d=new Date();const diff=(2-d.getDay()+7)%7||7;d.setDate(d.getDate()+diff);return d.toISOString().split("T")[0];}
 
+// ── Escolha de clube (quando a URL não identifica nenhum) ──
+function scanKnownOrgAccess(){
+  try{
+    for (var i=0;i<localStorage.length;i++){
+      var k = localStorage.key(i);
+      var m = k && k.match(/^pelada_(.+)_access$/);
+      if (m && localStorage.getItem(k)==='ok') return m[1];
+    }
+    if (localStorage.getItem('afresp_access')==='ok') return 'afresp'; // sessão bem antiga, antes do multi-cliente
+  }catch(e){}
+  return null;
+}
+async function submitClubGate(){
+  const nameInput = document.getElementById('gate-club-input');
+  const passInput = document.getElementById('gate-pass-input');
+  const errEl = document.getElementById('gate-error');
+  const btn = document.getElementById('gate-submit-btn');
+  const rawName = (nameInput && nameInput.value || '').trim();
+  const pass = (passInput && passInput.value || '').trim();
+  const showErr = (msg)=>{ if(errEl){errEl.textContent=msg;errEl.style.display='block';} };
+  if (errEl) errEl.style.display = 'none';
+  if (!rawName || !pass) { showErr('Preencha o nome do clube e a senha.'); return; }
+  const slug = rawName.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9_-]/g,'');
+  if (!slug) { showErr('Nome de clube inválido.'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Verificando...'; }
+  try{
+    const snap = await _fbdb.ref('orgs/'+slug+'/config').once('value');
+    const cfg = snap.val();
+    const expected = cfg ? (cfg.sitePass || slug) : null;
+    if (!cfg || pass.toLowerCase() !== String(expected).toLowerCase()) {
+      showErr('Clube ou senha incorretos.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
+      return;
+    }
+    localStorage.setItem('pelada_'+slug+'_access', 'ok');
+    location.href = '/peladaecompromisso/?time=' + slug;
+  }catch(e){
+    showErr('Erro ao verificar. Tente novamente.');
+    if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
+  }
+}
+
 // ── Init ──
 (async()=>{
+  if (!ORG_KNOWN) {
+    const known = scanKnownOrgAccess();
+    if (known) { location.href = '/peladaecompromisso/?time=' + known; return; }
+    const gate = document.getElementById('club-gate-overlay');
+    if (gate) gate.style.display = 'flex';
+    setTimeout(()=>{const i=document.getElementById('gate-club-input');if(i)i.focus();},120);
+    return;
+  }
   await seedPlayersIfEmpty();
   initListeners();
   const _h=location.hash.slice(1);
@@ -3070,6 +3122,26 @@ function nextTuesday(){const d=new Date();const diff=(2-d.getDay()+7)%7||7;d.set
   }
 })();
 </script>
+
+<!-- Club Gate Overlay (quando a URL não identifica nenhum clube) -->
+<div id="club-gate-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#081510;flex-direction:column;align-items:center;justify-content:center;padding:20px;overflow-y:auto">
+  <div style="width:100%;max-width:360px">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-size:52px;margin-bottom:10px;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.5))">⚽</div>
+      <div style="font-weight:900;font-size:22px;letter-spacing:1.5px;color:#fff;line-height:1.1">PELADA É COMPROMISSO</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:6px;letter-spacing:2px;text-transform:uppercase">Acesso do clube</div>
+    </div>
+    <div style="background:#0d2016;border:1.5px solid rgba(74,222,128,0.2);border-radius:20px;padding:22px 20px">
+      <label style="display:block;font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Nome do clube</label>
+      <input id="gate-club-input" type="text" placeholder="Ex: Afresp" autocomplete="off" style="width:100%;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#fff;font-size:16px;margin-bottom:14px" onkeydown="if(event.key==='Enter')document.getElementById('gate-pass-input').focus()" />
+      <label style="display:block;font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Senha</label>
+      <input id="gate-pass-input" type="password" placeholder="Senha de acesso" style="width:100%;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#fff;font-size:16px;margin-bottom:6px" onkeydown="if(event.key==='Enter')submitClubGate()" />
+      <p id="gate-error" style="display:none;color:#f87171;font-size:12px;margin:6px 0 10px"></p>
+      <button id="gate-submit-btn" onclick="submitClubGate()" style="width:100%;padding:13px;border-radius:12px;background:#16a34a;color:#fff;font-weight:900;border:none;font-size:15px;margin-top:8px;cursor:pointer">Entrar</button>
+    </div>
+    <p style="text-align:center;color:rgba(255,255,255,0.25);font-size:11px;margin-top:18px">Não sabe o acesso do seu clube? Fale com o administrador.</p>
+  </div>
+</div>
 
 <!-- Site Login Overlay -->
 <div id="site-login-overlay" style="display:none;position:fixed;inset:0;z-index:9998;background:#081510;flex-direction:column;align-items:center;justify-content:center;padding:20px;overflow-y:auto">
