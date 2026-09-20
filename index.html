@@ -8,7 +8,34 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Pelada" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <link rel="manifest" href="/peladaecompromisso/manifest.json" />
+  <link rel="manifest" id="pwa-manifest" href="/peladaecompromisso/manifest.json" />
+  <script>
+  (function(){
+    try{
+      var p=new URLSearchParams(location.search).get('time');
+      var org=(p||'afresp').toLowerCase().replace(/[^a-z0-9_-]/g,'')||'afresp';
+      if(org==='afresp') return; // usa o manifest.json estático normal
+      var qs='?time='+org;
+      var manifest={
+        name:"Pelada é Compromisso",
+        short_name:"Pelada",
+        description:"Gestão de Pelada Semanal",
+        start_url:"/peladaecompromisso/"+qs+"#inicio",
+        scope:"/peladaecompromisso/",
+        display:"standalone",
+        background_color:"#081510",
+        theme_color:"#0d2016",
+        orientation:"portrait-primary",
+        icons:[
+          {src:"/peladaecompromisso/icon-192.png",sizes:"192x192",type:"image/png",purpose:"any maskable"},
+          {src:"/peladaecompromisso/icon-512.png",sizes:"512x512",type:"image/png",purpose:"any maskable"}
+        ]
+      };
+      var blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+      document.getElementById('pwa-manifest').setAttribute('href',URL.createObjectURL(blob));
+    }catch(e){}
+  })();
+  </script>
   <link rel="apple-touch-icon" href="/peladaecompromisso/icon-180.png" />
   <title>⚽ Pelada é Compromisso — AFRESP</title>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -138,7 +165,7 @@
   <span class="text-2xl">⚽</span>
   <div>
     <div class="font-black text-base leading-none">Pelada e compromisso</div>
-    <div class="text-[10px] text-green-400 uppercase tracking-widest font-semibold mt-0.5">AFRESP</div>
+    <div id="club-name-label" class="text-[10px] text-green-400 uppercase tracking-widest font-semibold mt-0.5">AFRESP</div>
   </div>
   <div id="user-chip" class="ml-auto"></div>
 </header>
@@ -232,18 +259,44 @@ const firebaseConfig = {
   appId: "1:592996953063:web:fe6e640b37725a3a1b6b42"
 };
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const _fbdb = firebase.database();
+
+// ── Multi-cliente: cada ?time=slug tem sua própria "gaveta" de dados ──
+const ORG = (function(){
+  var p = new URLSearchParams(location.search).get('time');
+  var slug = (p || 'afresp').toLowerCase().replace(/[^a-z0-9_-]/g, '');
+  return slug || 'afresp';
+})();
+const ORG_ROOT = 'orgs/' + ORG;
+const db = {
+  ref: function(path){ return (path === undefined || path === '') ? _fbdb.ref(ORG_ROOT) : _fbdb.ref(ORG_ROOT + '/' + path); }
+};
+const CLUB_NAME = ORG === 'afresp' ? 'AFRESP' : ORG.replace(/[-_]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+if (ORG !== 'afresp') {
+  document.title = '⚽ Pelada é Compromisso — ' + CLUB_NAME;
+  var _clubLabel = document.getElementById('club-name-label');
+  if (_clubLabel) _clubLabel.textContent = CLUB_NAME;
+}
+
+// ── Armazenamento local por cliente (não vaza sessão entre ?time= diferentes) ──
+function lsGet(name){
+  var v=localStorage.getItem('pelada_'+ORG+'_'+name);
+  if(v===null && ORG==='afresp') v=localStorage.getItem('afresp_'+name); // compat com sessão antiga
+  return v;
+}
+function lsSet(name,val){ localStorage.setItem('pelada_'+ORG+'_'+name,val); }
+function lsRemove(name){ localStorage.removeItem('pelada_'+ORG+'_'+name); if(ORG==='afresp') localStorage.removeItem('afresp_'+name); }
 
 // ── State ──
 const S = {
   players:{}, games:{}, ratings:{}, formations:{}, presenca:{}, ausencia:{},
-  config:{adminPin:"afresp"},
-  uid: localStorage.getItem("afresp_uid")||null,
+  config:{adminPin:ORG,sitePass:ORG},
+  uid: lsGet("uid")||null,
   adminOk:false, rankFilter:"all", currentPage:"inicio", selectedGameId:null, selectedVoteGameId:null,
 };
 
 // ── Site Auth ──
-let siteAuth = localStorage.getItem("afresp_access")==="ok";
+let siteAuth = lsGet("access")==="ok";
 const FREE_PAGES = new Set(["lista","votar","ranking","campo"]);
 let _pendingSitePage = "inicio";
 
@@ -260,9 +313,9 @@ function hideSiteLogin(){
 }
 function checkSitePass(){
   const val=(document.getElementById("site-pass-input")?.value||"").trim();
-  if(val.toLowerCase()==="afresp"){
+  if(val.toLowerCase()===(S.config.sitePass||ORG).toLowerCase()){
     siteAuth=true;
-    localStorage.setItem("afresp_access","ok");
+    lsSet("access","ok");
     hideSiteLogin();
     goTo(_pendingSitePage||"inicio");
   }else{
@@ -359,12 +412,14 @@ function initListeners() {
   db.ref("config").on("value",    s=>{ if(s.val()) S.config=s.val(); });
 }
 async function seedPlayersIfEmpty() {
+  const cfgSnap=await db.ref("config").once("value");
+  if(!cfgSnap.val()) await db.ref("config/adminPin").set(ORG);
   const snap=await db.ref("players").once("value");
   if(snap.val()) return;
+  if(ORG!=='afresp') return; // cliente novo começa com elenco vazio; admin cadastra o próprio time
   const batch={};
   INITIAL_PLAYERS.forEach(name=>{ const id=db.ref("players").push().key; batch[id]={name,active:true}; });
   await db.ref("players").update(batch);
-  await db.ref("config/adminPin").set("afresp");
 }
 
 // ── Router ──
@@ -756,7 +811,7 @@ function renderUserChip() {
     el.innerHTML=`<button onclick="goTo('inicio')" class="text-[10px] text-amber-400 border border-amber-800/40 rounded-full px-2.5 py-1">Escolha seu nome</button>`;
   }
 }
-function resetUser(){if(!confirm("Trocar de jogador?"))return;localStorage.removeItem("afresp_uid");S.uid=null;renderAll();}
+function resetUser(){if(!confirm("Trocar de jogador?"))return;lsRemove("uid");S.uid=null;renderAll();}
 
 // ── INÍCIO ──
 function renderInicio(){renderPlayerSelect();renderGameStatus();}
@@ -776,7 +831,7 @@ function renderPlayerSelect(){
       }).join("")}
     </div>`);
 }
-function selectPlayer(id){S.uid=id;localStorage.setItem("afresp_uid",id);renderAll();const vc=document.getElementById("vote-container");if(vc)vc.scrollIntoView({behavior:"smooth",block:"start"});}
+function selectPlayer(id){S.uid=id;lsSet("uid",id);renderAll();const vc=document.getElementById("vote-container");if(vc)vc.scrollIntoView({behavior:"smooth",block:"start"});}
 function filterVotarNames(q){const g=document.getElementById("votar-name-grid");if(!g)return;const lq=q.toLowerCase();g.querySelectorAll("button[data-name]").forEach(b=>{b.style.display=b.dataset.name.toLowerCase().includes(lq)?'':'none';});}
 function medianGoals(arr){
   if(!arr.length) return 0;
@@ -3112,7 +3167,7 @@ if('serviceWorker' in navigator){
   // ── Localização: São Paulo capital (AFRESP) ──
   var LAT = -23.5505, LON = -46.6333;
   var WEATHER_URL = 'https://api.open-meteo.com/v1/forecast?latitude=' + LAT + '&longitude=' + LON + '&current_weather=true&timezone=America%2FSao_Paulo';
-  var CACHE_KEY = 'afresp_weather_v2';
+  var CACHE_KEY = 'pelada_' + ORG + '_weather_v2';
   var CACHE_TTL_MS = 10 * 60 * 1000; // 10 min
 
   // intensity: 1=garoa/chuva fraca, 2=chuva moderada, 3=chuva forte/temporal (storm=true se trovoada)
