@@ -859,7 +859,8 @@ function resetUser(){if(!confirm("Trocar de jogador?"))return;lsRemove("uid");S.
 function renderInicio(){renderPlayerSelect();renderGameStatus();}
 function renderPlayerSelect(){
   const el=document.getElementById("player-select-card"); if(!el) return;
-  el.innerHTML=""; return;
+  el.innerHTML=`<div class="flex justify-end"><button onclick="logoutClub()" class="text-[10px] text-green-300/30 hover:text-red-400 transition-colors flex items-center gap-1">🚪 Sair deste clube</button></div>`;
+  return;
   const latest=latestGame();
   const opts=activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
   el.innerHTML=card(`<p class="font-black text-base mb-1">Quem é você? 👋</p>
