@@ -2067,6 +2067,11 @@ function renderAdmin(){
         <button onclick="savePin()" class="px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-sm font-bold">Salvar</button>
       </div>
     </div>
+    <div class="bg-[#132218] border border-red-900/40 rounded-xl p-4">
+      <div class="font-bold text-sm mb-1">🚪 Sair deste clube</div>
+      <p class="text-[10px] text-green-300/40 mb-3">Esquece o acesso salvo neste aparelho e volta pra tela de escolher clube. Use pra trocar de clube ou sair de um aparelho compartilhado.</p>
+      <button onclick="logoutClub()" class="w-full py-2 rounded-lg bg-red-950/60 border border-red-800/50 text-red-400 text-sm font-bold hover:bg-red-900/40 transition-colors">Sair</button>
+    </div>
     <div class="bg-[#132218] border border-[#2a4a35] rounded-xl p-4">
       <div class="font-bold text-sm mb-3">➕ Novo Jogo</div>
       <div class="space-y-3">
@@ -2330,6 +2335,12 @@ async function saveEditGame(){
 }
 async function savePin(){const p=document.getElementById("new-pin")?.value?.trim();if(!p||p.length<4){alert("PIN deve ter ao menos 4 dígitos");return;}await db.ref("config/adminPin").set(p);alert("PIN salvo!");}
 async function saveClubName(){const n=document.getElementById("new-club-name")?.value?.trim();if(!n){alert("Informe o nome do clube");return;}await db.ref("config/clubName").set(n);showToast("Nome do clube salvo!");}
+function logoutClub(){
+  if(!confirm("Sair deste clube neste aparelho?"))return;
+  lsRemove("access");
+  lsRemove("uid");
+  location.href="/peladaecompromisso/";
+}
 
 async function shareResultadoPDF(gid){
   const g=S.games[gid]; if(!g) return;
