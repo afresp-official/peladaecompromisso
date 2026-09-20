@@ -8,12 +8,29 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Pelada" />
   <meta name="mobile-web-app-capable" content="yes" />
+  <script>
+  // Detecta o cliente: ?time=slug OU pasta na URL (ex: /peladaecompromisso/alianca)
+  window.__ORG_SLUG__ = (function(){
+    try{
+      var qp = new URLSearchParams(location.search).get('time');
+      var seg = null;
+      if(!qp){
+        var parts = location.pathname.split('/').filter(Boolean);
+        var idx = parts.indexOf('peladaecompromisso');
+        seg = idx>=0 ? parts[idx+1] : (parts.length ? parts[parts.length-1] : null);
+        if (seg) { try { seg = decodeURIComponent(seg); } catch(e) {} }
+      }
+      var raw = qp || seg || 'afresp';
+      var slug = raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9_-]/g,'');
+      return slug || 'afresp';
+    }catch(e){ return 'afresp'; }
+  })();
+  </script>
   <link rel="manifest" id="pwa-manifest" href="/peladaecompromisso/manifest.json" />
   <script>
   (function(){
     try{
-      var p=new URLSearchParams(location.search).get('time');
-      var org=(p||'afresp').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9_-]/g,'')||'afresp';
+      var org=window.__ORG_SLUG__;
       if(org==='afresp') return; // usa o manifest.json estático normal
       var qs='?time='+org;
       var manifest={
@@ -261,12 +278,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const _fbdb = firebase.database();
 
-// ── Multi-cliente: cada ?time=slug tem sua própria "gaveta" de dados ──
-const ORG = (function(){
-  var p = new URLSearchParams(location.search).get('time');
-  var slug = (p || 'afresp').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9_-]/g, '');
-  return slug || 'afresp';
-})();
+// ── Multi-cliente: cada cliente tem sua própria "gaveta" de dados (detecção em window.__ORG_SLUG__, ver <head>) ──
+const ORG = window.__ORG_SLUG__ || 'afresp';
 const ORG_ROOT = 'orgs/' + ORG;
 const db = {
   ref: function(path){ return (path === undefined || path === '') ? _fbdb.ref(ORG_ROOT) : _fbdb.ref(ORG_ROOT + '/' + path); }
