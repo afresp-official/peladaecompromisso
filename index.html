@@ -43,6 +43,7 @@
     .counter-btn:disabled { opacity:0.3; cursor:not-allowed; }
     .badge-pelada { background:#14532d; color:#4ade80; }
     .badge-compromisso { background:#1e3a5f; color:#60a5fa; }
+    .badge-cancelado { background:#450a0a; color:#f87171; }
     .team-toggle { padding:0.25rem 0.75rem; border-radius:9999px; font-size:0.68rem; font-weight:700; border:2px solid; cursor:pointer; transition:all 0.15s; min-width:68px; text-align:center; }
     .team-toggle.is-azul { background:#0a1628; border-color:#2563eb; color:#93c5fd; }
     .team-toggle.is-azul:hover { background:#1e3a8a; color:#bfdbfe; }
@@ -334,12 +335,13 @@ function avgNote(arr) { if(!arr||!arr.length) return null; return (arr.reduce((s
 function playerName(id) { return S.players[id]?.name||"?"; }
 function latestGame() {
   const ids=Object.keys(S.games); if(!ids.length) return null;
-  return ids.sort((a,b)=>(S.games[b].date||"").localeCompare(S.games[a].date||"")).map(id=>({id,...S.games[id]}))[0];
+  const sorted=ids.sort((a,b)=>(S.games[b].date||"").localeCompare(S.games[a].date||"")).map(id=>({id,...S.games[id]}));
+  return sorted.find(g=>!g.cancelled)||sorted[0];
 }
 function nextGame(){
   const today=new Date().toISOString().split('T')[0];
   const ids=Object.keys(S.games); if(!ids.length) return null;
-  const upcoming=ids.filter(id=>S.games[id].date>=today).sort((a,b)=>(S.games[a].date||"").localeCompare(S.games[b].date||""));
+  const upcoming=ids.filter(id=>S.games[id].date>=today&&!S.games[id].cancelled).sort((a,b)=>(S.games[a].date||"").localeCompare(S.games[b].date||""));
   if(upcoming.length) return{id:upcoming[0],...S.games[upcoming[0]]};
   return latestGame();
 }
@@ -830,10 +832,18 @@ function renderGameStatus(){
       <div class="flex items-start justify-between mb-3">
         <div>
           <div class="text-[10px] ${isLatest?"text-green-400/60":"text-green-300/30"} uppercase tracking-widest font-semibold mb-1">${isLatest?"Último jogo":"Jogo anterior"}</div>
-          <div class="font-black text-xl">${fmtDate(game.date)} <span class="text-green-400">·</span> Terça</div>
+          <div class="font-black text-xl ${game.cancelled?"text-green-100/40 line-through decoration-red-500/70":""}">${fmtDate(game.date)} <span class="text-green-400">·</span> Terça</div>
         </div>
-        ${badge(game.type)}
+        <div class="flex flex-col items-end gap-1">
+          ${badge(game.type)}
+          ${game.cancelled?`<span class="badge-cancelado text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">⛈️ Cancelado</span>`:""}
+        </div>
       </div>
+      ${game.cancelled?`
+      <div class="bg-red-950/30 border border-red-800/40 rounded-xl p-3 text-center">
+        <p class="text-red-300 text-sm font-bold">⛈️ Jogo cancelado${game.cancelReason?`: ${game.cancelReason}`:""}</p>
+      </div>
+      `:`
       <div class="flex gap-3 text-xs text-green-300/60 mb-3 flex-wrap">
         <span>👥 ${displayCount}</span><span>🗳️ ${voters}</span>
         ${(verm||azul)?`<span>🔴${verm} × 🔵${azul}</span>`:""}
@@ -876,6 +886,7 @@ function renderGameStatus(){
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         Compartilhar resultado
       </button>`:""}
+      `}
       `, "", "game-card-"+game.id);
   }).join("")+`</div>`;
 }
@@ -1998,9 +2009,10 @@ function renderAdmin(){
         const voterCount = S.ratings[g.id] ? Object.keys(S.ratings[g.id]).length : 0;
         return `<div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0b1a10] border border-[#2a4a35]">
           <div class="flex-1 min-w-0">
-            <div class="text-sm font-semibold">${fmtDate(g.date)} — ${g.type==="compromisso"?"Compromisso":"Pelada"}</div>
+            <div class="text-sm font-semibold">${fmtDate(g.date)} — ${g.type==="compromisso"?"Compromisso":"Pelada"}${g.cancelled?` <span class="text-red-400">· CANCELADO</span>`:""}</div>
             <div class="text-[10px] text-green-300/40">👥${pids.length}${(v||a)?` · 🔴${v}×🔵${a}`:""} · 🗳️${voterCount}</div>
           </div>
+          <button onclick="toggleGameCancelled('${g.id}')" title="${g.cancelled?"Reativar jogo":"Marcar como cancelado"}" class="px-2.5 py-1.5 rounded-lg text-xs font-bold ${g.cancelled?'bg-red-950/60 border border-red-800/50 text-red-400':'bg-[#1a1000] border border-amber-800/40 text-amber-400'}">${g.cancelled?"↩️":"⛈️"}</button>
           <button onclick="toggleGameStatus('${g.id}')" class="px-2.5 py-1.5 rounded-lg text-xs font-bold ${g.status==='fechado'?'bg-green-900/60 border border-green-600/50 text-green-300':'bg-amber-950/60 border border-amber-700/40 text-amber-400'}">${g.status==="fechado"?"🔓":"🔒"}</button>
           <button onclick="openEditGame('${g.id}')" class="px-2.5 py-1.5 rounded-lg bg-[#1a3825] border border-green-800/50 text-green-400 text-xs font-bold">✏️</button>
           <button onclick="openGameVotes('${g.id}')" class="px-2.5 py-1.5 rounded-lg bg-amber-950/60 border border-amber-700/40 text-amber-400 text-xs font-bold">🗳️</button>
@@ -2125,6 +2137,19 @@ async function toggleGameStatus(gid){
   const next=g.status==="fechado"?"aberto":"fechado";
   await db.ref("games/"+gid+"/status").set(next);
   showToast(next==="fechado"?"🔓 Votação liberada!":"🔒 Votação bloqueada.");
+}
+async function toggleGameCancelled(gid){
+  const g=S.games[gid]; if(!g) return;
+  if(g.cancelled){
+    await db.ref("games/"+gid+"/cancelled").remove();
+    await db.ref("games/"+gid+"/cancelReason").remove();
+    showToast("✅ Jogo reativado.");
+  }else{
+    const reason=(prompt("Motivo do cancelamento (opcional):","Chuva")||"").trim();
+    const u={};u["games/"+gid+"/cancelled"]=true;if(reason)u["games/"+gid+"/cancelReason"]=reason;
+    await db.ref().update(u);
+    showToast("⛈️ Jogo marcado como cancelado.");
+  }
 }
 async function createGame(){
   const date=document.getElementById("game-date")?.value;
