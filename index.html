@@ -285,6 +285,27 @@
   </div>
 </div>
 
+<!-- Master Admin Overlay (gerenciar todos os clubes) -->
+<div id="master-admin-overlay" style="display:none;position:fixed;inset:0;z-index:10000;background:#081510;flex-direction:column;padding:16px;overflow-y:auto">
+  <div style="width:100%;max-width:480px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:36px;margin-bottom:4px">🛠️</div>
+      <div style="font-weight:900;font-size:18px;color:#fff">Painel Master</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px;letter-spacing:1px;text-transform:uppercase">Gerenciar clubes</div>
+    </div>
+    <div style="background:#0d2016;border:1.5px solid rgba(74,222,128,0.2);border-radius:16px;padding:16px;margin-bottom:16px">
+      <div style="font-weight:800;font-size:13px;color:#fff;margin-bottom:10px">+ Novo clube</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <input id="madmin-new-name" type="text" placeholder="Nome do clube" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 10px;color:#fff;font-size:13px;width:100%"/>
+        <input id="madmin-new-pass" type="text" placeholder="Senha (opcional)" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 10px;color:#fff;font-size:13px;width:100%"/>
+      </div>
+      <button onclick="createNewClub()" style="width:100%;padding:10px;border-radius:8px;background:#16a34a;color:#fff;font-weight:800;font-size:13px;border:none;cursor:pointer">Criar clube</button>
+    </div>
+    <div id="madmin-list"></div>
+    <button onclick="hideMasterAdmin()" style="width:100%;margin-top:8px;padding:10px;border-radius:8px;background:transparent;color:rgba(255,255,255,0.3);font-size:12px;border:1px solid rgba(255,255,255,0.1);cursor:pointer">← Voltar</button>
+  </div>
+</div>
+
 <script>
 // ── Firebase ──
 const firebaseConfig = {
@@ -334,6 +355,13 @@ function applyClubBranding(){
   if (el2) el2.textContent = clubDisplayName();
   var el3 = document.getElementById('site-login-members');
   if (el3) el3.textContent = 'Membros ' + clubDisplayName() + ' — todas as telas';
+}
+function applyTabVisibility(){
+  const disabled = new Set(S.config.disabledTabs || []);
+  ["lista","campo","votar","ranking","historico"].forEach(function(tab){
+    const btn = document.getElementById('nav-'+tab);
+    if (btn) btn.style.display = disabled.has(tab) ? 'none' : '';
+  });
 }
 if (ORG_KNOWN) applyClubBranding();
 
@@ -451,7 +479,7 @@ function initListeners() {
   db.ref("formations").on("value",s=>{ S.formations=s.val()||{}; renderAll(); });
   db.ref("presenca").on("value",  s=>{ S.presenca=s.val()||{};   renderAll(); });
   db.ref("ausencia").on("value",  s=>{ S.ausencia=s.val()||{};   renderAll(); });
-  db.ref("config").on("value",    s=>{ if(s.val()) S.config=s.val(); applyClubBranding(); });
+  db.ref("config").on("value",    s=>{ if(s.val()) S.config=s.val(); applyClubBranding(); applyTabVisibility(); });
 }
 async function seedPlayersIfEmpty() {
   const cfgSnap=await db.ref("config").once("value");
@@ -466,6 +494,7 @@ async function seedPlayersIfEmpty() {
 
 // ── Router ──
 function goTo(page) {
+  if((S.config.disabledTabs||[]).includes(page)) page="inicio";
   if(page==="admin"&&!S.adminOk){showAdminPin();return;}
   if(!siteAuth&&!FREE_PAGES.has(page)){showSiteLogin(page);return;}
   history.replaceState(null,"","#"+page);
@@ -3090,6 +3119,10 @@ async function removeCraque(nome){
 function nextTuesday(){const d=new Date();const diff=(2-d.getDay()+7)%7||7;d.setDate(d.getDate()+diff);return d.toISOString().split("T")[0];}
 
 // ── Escolha de clube (quando a URL não identifica nenhum) ──
+const MASTER_ADMIN_PASS = "Laisa@100";
+function slugify(raw){
+  return (raw||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9_-]/g,'');
+}
 function scanKnownOrgAccess(){
   try{
     for (var i=0;i<localStorage.length;i++){
@@ -3111,8 +3144,13 @@ async function submitClubGate(){
   const showErr = (msg)=>{ if(errEl){errEl.textContent=msg;errEl.style.display='block';} };
   if (errEl) errEl.style.display = 'none';
   if (!rawName || !pass) { showErr('Preencha o nome do clube e a senha.'); return; }
-  const slug = rawName.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9_-]/g,'');
+  const slug = slugify(rawName);
   if (!slug) { showErr('Nome de clube inválido.'); return; }
+  if (slug === 'admin') {
+    if (pass !== MASTER_ADMIN_PASS) { showErr('Senha incorreta.'); return; }
+    showMasterAdmin();
+    return;
+  }
   if (btn) { btn.disabled = true; btn.textContent = 'Verificando...'; }
   try{
     const snap = await _fbdb.ref('orgs/'+slug+'/config').once('value');
@@ -3128,6 +3166,115 @@ async function submitClubGate(){
   }catch(e){
     showErr('Erro ao verificar. Tente novamente.');
     if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
+  }
+}
+
+// ── Painel Master (gerenciar todos os clubes) ──
+const MADMIN_TABS = [["lista","Presença"],["campo","Campo"],["votar","Votar"],["ranking","Ranking"],["historico","Histórico"]];
+function showMasterAdmin(){
+  const gate = document.getElementById('club-gate-overlay'); if (gate) gate.style.display = 'none';
+  const el = document.getElementById('master-admin-overlay'); if (el) el.style.display = 'flex';
+  loadMasterAdminClubs();
+}
+function hideMasterAdmin(){
+  location.href = '/peladaecompromisso/';
+}
+async function loadMasterAdminClubs(){
+  const el = document.getElementById('madmin-list'); if (!el) return;
+  el.innerHTML = '<p style="color:rgba(255,255,255,0.3);font-size:12px;text-align:center">Carregando clubes...</p>';
+  try{
+    const snap = await _fbdb.ref('orgs').once('value');
+    const orgs = snap.val() || {};
+    const slugs = Object.keys(orgs).sort();
+    if (!slugs.length) { el.innerHTML = '<p style="color:rgba(255,255,255,0.3);font-size:12px;text-align:center">Nenhum clube cadastrado ainda.</p>'; return; }
+    el.innerHTML = slugs.map(function(slug){
+      const org = orgs[slug] || {};
+      const cfg = org.config || {};
+      const disabled = new Set(cfg.disabledTabs || []);
+      const playerCount = org.players ? Object.keys(org.players).length : 0;
+      const gameCount = org.games ? Object.keys(org.games).length : 0;
+      return '<div style="background:#0d2016;border:1px solid rgba(74,222,128,0.15);border-radius:14px;padding:14px;margin-bottom:12px">'
+        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px">'
+        + '<div><div style="font-weight:900;font-size:14px;color:#fff">' + (cfg.clubName || slug) + '</div>'
+        + '<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px">/' + slug + ' &middot; ' + playerCount + ' jogadores &middot; ' + gameCount + ' jogos</div></div>'
+        + '<button onclick="deleteClub(\'' + slug + '\')" style="font-size:10px;color:#f87171;background:rgba(127,29,29,0.3);border:1px solid rgba(220,38,38,0.3);border-radius:8px;padding:5px 9px;white-space:nowrap">Excluir</button>'
+        + '</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
+        + '<input id="madmin-name-' + slug + '" type="text" value="' + (cfg.clubName || '').replace(/"/g,'&quot;') + '" placeholder="Nome do clube" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 10px;color:#fff;font-size:12px;width:100%"/>'
+        + '<input id="madmin-pass-' + slug + '" type="text" value="' + (cfg.sitePass || '').replace(/"/g,'&quot;') + '" placeholder="Senha de acesso" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 10px;color:#fff;font-size:12px;width:100%"/>'
+        + '</div>'
+        + '<div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Abas habilitadas</div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">'
+        + MADMIN_TABS.map(function(t){
+            const key=t[0], label=t[1];
+            return '<label style="display:flex;align-items:center;gap:4px;font-size:11px;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.04);border-radius:20px;padding:4px 10px;cursor:pointer">'
+              + '<input id="madmin-tab-' + slug + '-' + key + '" type="checkbox" ' + (disabled.has(key)?'':'checked') + ' style="accent-color:#16a34a"/> ' + label + '</label>';
+          }).join('')
+        + '</div>'
+        + '<div style="display:flex;gap:10px;align-items:center">'
+        + '<button onclick="saveClubEdits(\'' + slug + '\')" style="flex:1;padding:9px;border-radius:8px;background:#16a34a;color:#fff;font-weight:800;font-size:12px;border:none;cursor:pointer">Salvar</button>'
+        + '<a href="/peladaecompromisso/?time=' + slug + '" target="_blank" style="font-size:11px;color:#86efac;text-decoration:underline;white-space:nowrap">abrir ↗</a>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  }catch(e){
+    el.innerHTML = '<p style="color:#f87171;font-size:12px;text-align:center">Erro ao carregar clubes.</p>';
+  }
+}
+async function createNewClub(){
+  const nameInput = document.getElementById('madmin-new-name');
+  const passInput = document.getElementById('madmin-new-pass');
+  const name = (nameInput && nameInput.value || '').trim();
+  const pass = (passInput && passInput.value || '').trim();
+  if (!name) { alert('Informe o nome do clube.'); return; }
+  const slug = slugify(name);
+  if (!slug) { alert('Nome de clube inválido.'); return; }
+  if (slug === 'admin') { alert('Esse nome é reservado, escolha outro.'); return; }
+  try{
+    const existing = (await _fbdb.ref('orgs/'+slug+'/config').once('value')).val();
+    if (existing) { alert('Já existe um clube com esse nome.'); return; }
+    await _fbdb.ref('orgs/'+slug+'/config').set({ clubName: name, sitePass: pass || slug, adminPin: slug });
+    if (nameInput) nameInput.value = '';
+    if (passInput) passInput.value = '';
+    alert('Clube "' + name + '" criado!\nLink: /peladaecompromisso/?time=' + slug);
+    loadMasterAdminClubs();
+  }catch(e){
+    alert('Erro ao criar clube. Tente novamente.');
+  }
+}
+async function saveClubEdits(slug){
+  const nameInput = document.getElementById('madmin-name-'+slug);
+  const passInput = document.getElementById('madmin-pass-'+slug);
+  const name = (nameInput && nameInput.value || '').trim();
+  const pass = (passInput && passInput.value || '').trim();
+  const disabledTabs = [];
+  MADMIN_TABS.forEach(function(t){
+    const key=t[0];
+    const cb = document.getElementById('madmin-tab-'+slug+'-'+key);
+    if (cb && !cb.checked) disabledTabs.push(key);
+  });
+  try{
+    const updates = {};
+    updates['orgs/'+slug+'/config/clubName'] = name || slug;
+    updates['orgs/'+slug+'/config/sitePass'] = pass || slug;
+    updates['orgs/'+slug+'/config/disabledTabs'] = disabledTabs.length ? disabledTabs : null;
+    await _fbdb.ref().update(updates);
+    alert('Clube atualizado!');
+    loadMasterAdminClubs();
+  }catch(e){
+    alert('Erro ao salvar. Tente novamente.');
+  }
+}
+async function deleteClub(slug){
+  if (!confirm('Excluir o clube "' + slug + '" e TODOS os dados dele (jogadores, jogos, votos)?\n\nIsso não pode ser desfeito.')) return;
+  const typed = prompt('Pra confirmar, digite o nome do clube exatamente assim: ' + slug);
+  if (typed !== slug) { alert('Cancelado.'); return; }
+  try{
+    await _fbdb.ref('orgs/'+slug).remove();
+    alert('Clube excluído.');
+    loadMasterAdminClubs();
+  }catch(e){
+    alert('Erro ao excluir. Tente novamente.');
   }
 }
 
