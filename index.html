@@ -919,8 +919,8 @@ function renderInicio(){renderPlayerSelect();renderGameStatus();}
 function renderPlayerSelect(){
   const el=document.getElementById("player-select-card"); if(!el) return;
   el.innerHTML=`<div class="flex justify-end">
-    <button onclick="logoutClub()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1a2e1f] border border-[#2a4a35] text-green-300/60 hover:text-green-300 hover:border-green-700/50 font-semibold text-xs transition-colors">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    <button onclick="logoutClub()" class="flex items-center gap-1.5 px-3 h-9 rounded-xl bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors shadow-lg">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       Sair do clube
     </button>
   </div>`;
