@@ -1,4 +1,4 @@
-const CACHE = 'pelada-v21';
+const CACHE = 'pelada-v22';
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/peladaecompromisso/'])));
   self.skipWaiting();

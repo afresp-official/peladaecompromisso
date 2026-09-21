@@ -3248,7 +3248,7 @@ async function submitClubGate(){
 // ── Painel Master (gerenciar todos os clubes) ──
 const MADMIN_TABS = [["lista","Presença"],["campo","Campo"],["votar","Votar"],["ranking","Ranking"],["historico","Histórico"]];
 function teamEditorRowHtml(name, color){
-  const opts = TEAM_COLORS.map(function(c){ return '<option value="'+c+'" '+(c===color?'selected':'')+'>'+c+'</option>'; }).join('');
+  const opts = TEAM_COLORS.map(function(c){ return '<option value="'+c+'" '+(c===color?'selected':'')+' style="background:#0f1f14;color:#fff">'+c+'</option>'; }).join('');
   return '<div class="team-editor-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:center">'
     + '<input type="text" value="'+(name||'').replace(/"/g,'&quot;')+'" placeholder="Nome do time" class="team-name-input" style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 9px;color:#fff;font-size:12px"/>'
     + '<select class="team-color-input" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 6px;color:#fff;font-size:12px">'+opts+'</select>'
