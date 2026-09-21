@@ -90,10 +90,18 @@
     .badge-compromisso { background:#1e3a5f; color:#60a5fa; }
     .badge-cancelado { background:#450a0a; color:#f87171; }
     .team-toggle { padding:0.25rem 0.75rem; border-radius:9999px; font-size:0.68rem; font-weight:700; border:2px solid; cursor:pointer; transition:all 0.15s; min-width:68px; text-align:center; }
-    .team-toggle.is-azul { background:#0a1628; border-color:#2563eb; color:#93c5fd; }
-    .team-toggle.is-azul:hover { background:#1e3a8a; color:#bfdbfe; }
-    .team-toggle.is-verm { background:#7f1d1d; border-color:#ef4444; color:#fff; }
-    .team-toggle.is-verm:hover { background:#991b1b; }
+    .team-toggle.is-azul, .team-toggle.is-blue { background:#0a1628; border-color:#2563eb; color:#93c5fd; }
+    .team-toggle.is-azul:hover, .team-toggle.is-blue:hover { background:#1e3a8a; color:#bfdbfe; }
+    .team-toggle.is-verm, .team-toggle.is-red { background:#7f1d1d; border-color:#ef4444; color:#fff; }
+    .team-toggle.is-verm:hover, .team-toggle.is-red:hover { background:#991b1b; }
+    .team-toggle.is-yellow { background:#422006; border-color:#ca8a04; color:#fde047; }
+    .team-toggle.is-yellow:hover { background:#713f12; }
+    .team-toggle.is-green { background:#052e16; border-color:#16a34a; color:#86efac; }
+    .team-toggle.is-green:hover { background:#14532d; }
+    .team-toggle.is-purple { background:#2e1065; border-color:#9333ea; color:#d8b4fe; }
+    .team-toggle.is-purple:hover { background:#4c1d95; }
+    .team-toggle.is-orange { background:#431407; border-color:#ea580c; color:#fdba74; }
+    .team-toggle.is-orange:hover { background:#7c2d12; }
     /* chips de seleção de jogadores */
     .pchip { cursor:pointer; border-radius:0.75rem; border:2px solid; padding:0.5rem 0.6rem; transition:all 0.15s; text-align:center; user-select:none; }
     .pchip-off  { background:#0b1710; border-color:#1e3a27; color:#3d6349; }
@@ -117,9 +125,13 @@
       box-shadow:0 4px 10px rgba(0,0,0,0.6), inset 0 1px 3px rgba(255,255,255,0.25), 0 0 0 1px rgba(0,0,0,0.3);
       color:#fff; white-space:pre-line; padding:2px;
     }
-    .disc-red  { background:radial-gradient(circle at 35% 30%, #f87171, #991b1b); }
-    .disc-blue { background:radial-gradient(circle at 35% 30%, #60a5fa, #1e3a8a); }
-    .disc-gray { background:radial-gradient(circle at 35% 30%, #6b7280, #1f2937); }
+    .disc-red    { background:radial-gradient(circle at 35% 30%, #f87171, #991b1b); }
+    .disc-blue   { background:radial-gradient(circle at 35% 30%, #60a5fa, #1e3a8a); }
+    .disc-yellow { background:radial-gradient(circle at 35% 30%, #fde047, #a16207); }
+    .disc-green  { background:radial-gradient(circle at 35% 30%, #4ade80, #166534); }
+    .disc-purple { background:radial-gradient(circle at 35% 30%, #c084fc, #6b21a8); }
+    .disc-orange { background:radial-gradient(circle at 35% 30%, #fb923c, #9a3412); }
+    .disc-gray   { background:radial-gradient(circle at 35% 30%, #6b7280, #1f2937); }
     .token-disc:hover { box-shadow:0 4px 14px rgba(0,0,0,0.8), inset 0 1px 3px rgba(255,255,255,0.35), 0 0 0 2px rgba(255,255,255,0.3); }
     .slide-in { animation:slideIn 0.25s ease; }
     @keyframes slideIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
@@ -299,6 +311,9 @@
         <input id="madmin-new-name" type="text" placeholder="Nome do clube" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 10px;color:#fff;font-size:13px;width:100%"/>
         <input id="madmin-new-pass" type="text" placeholder="Senha (opcional)" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 10px;color:#fff;font-size:13px;width:100%"/>
       </div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Times do clube</div>
+      <div id="madmin-new-teams" style="margin-bottom:8px"></div>
+      <button type="button" onclick="addTeamRow('madmin-new-teams')" style="width:100%;padding:7px;border-radius:8px;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5);font-size:11px;border:1px dashed rgba(255,255,255,0.15);cursor:pointer;margin-bottom:12px">+ Adicionar time</button>
       <button onclick="createNewClub()" style="width:100%;padding:10px;border-radius:8px;background:#16a34a;color:#fff;font-weight:800;font-size:13px;border:none;cursor:pointer">Criar clube</button>
     </div>
     <div id="madmin-list"></div>
@@ -346,6 +361,20 @@ const S = {
   adminOk:false, rankFilter:"all", currentPage:"inicio", selectedGameId:null, selectedVoteGameId:null,
 };
 
+// ── Times do clube (configuráveis por Admin; padrão = Vermelho/Azul, igual sempre foi) ──
+const DEFAULT_TEAMS = [
+  {key:"vermelho", label:"Vermelho", color:"red"},
+  {key:"azul",     label:"Azul",     color:"blue"},
+];
+const TEAM_COLORS = ["red","blue","yellow","green","purple","orange"];
+const TEAM_EMOJI = {red:"🔴",blue:"🔵",yellow:"🟡",green:"🟢",purple:"🟣",orange:"🟠"};
+const TEAM_RGB = {red:"220,38,38",blue:"37,99,235",yellow:"202,138,4",green:"22,163,74",purple:"147,51,234",orange:"234,88,12"};
+const TEAM_RGB_LIGHT = {red:"248,113,113",blue:"96,165,250",yellow:"253,224,71",green:"74,222,128",purple:"192,132,252",orange:"251,146,60"};
+function TEAMS(){
+  const t = S.config.teams;
+  return (Array.isArray(t) && t.length>=2) ? t : DEFAULT_TEAMS;
+}
+function teamByKey(key){ return TEAMS().find(t=>t.key===key) || null; }
 function clubDisplayName(){ return S.config.clubName || CLUB_NAME; }
 function applyClubBranding(){
   document.title = '⚽ Pelada é Compromisso — ' + clubDisplayName();
@@ -415,9 +444,9 @@ const DEF_POS = [
   {x:.35,y:.30},{x:.35,y:.70},                                             // extra FWD
   {x:.13,y:.30},{x:.13,y:.70},                                             // extra DEF
 ];
-function defaultPos(team, idx) {
+function defaultPos(mirror, idx) {
   const base = DEF_POS[Math.min(idx, DEF_POS.length-1)];
-  if (team==="azul") return { x: 1 - base.x, y: base.y }; // mirror horizontally
+  if (mirror) return { x: 1 - base.x, y: base.y }; // mirror horizontally (time da direita)
   return { ...base };
 }
 
@@ -431,14 +460,14 @@ function getPlayerTeam(g, pid) {
   return "";
 }
 function teamBadge(t) {
-  if (t==="vermelho") return `<span class="inline-block w-2.5 h-2.5 rounded-full bg-red-500 shrink-0"></span>`;
-  if (t==="azul")     return `<span class="inline-block w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0"></span>`;
-  return "";
+  const tm=teamByKey(t); if(!tm) return "";
+  const rgb=TEAM_RGB[tm.color]||"107,114,128";
+  return `<span class="inline-block w-2.5 h-2.5 rounded-full shrink-0" style="background:rgb(${rgb})"></span>`;
 }
 function teamLabel(t) {
-  if (t==="vermelho") return `<span class="text-[10px] font-bold text-red-400 bg-red-950/60 border border-red-800/40 px-1.5 py-0.5 rounded-full">🔴 Vermelho</span>`;
-  if (t==="azul")     return `<span class="text-[10px] font-bold text-blue-400 bg-blue-950/60 border border-blue-800/40 px-1.5 py-0.5 rounded-full">🔵 Azul</span>`;
-  return "";
+  const tm=teamByKey(t); if(!tm) return "";
+  const rgb=TEAM_RGB[tm.color]||"107,114,128";
+  return `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style="color:rgb(${rgb});background:rgba(${rgb},0.15);border:1px solid rgba(${rgb},0.4)">${TEAM_EMOJI[tm.color]||"⚪"} ${tm.label}</span>`;
 }
 function abbrev(name) {
   const words = name.trim().split(/\s+/);
@@ -937,11 +966,17 @@ function calcGameResult(game){
   pids.forEach(pid=>{
     playerGoals[pid]=medianGoals(voters.map(v=>v[pid]?.goals||0));
   });
-  const vermScore=pids.filter(p=>getPlayerTeam(game,p)==="vermelho").reduce((s,p)=>s+(playerGoals[p]||0),0);
-  const azulScore=pids.filter(p=>getPlayerTeam(game,p)==="azul").reduce((s,p)=>s+(playerGoals[p]||0),0);
+  const teams=TEAMS();
+  const scores=teams.map(t=>({
+    team:t,
+    score:pids.filter(p=>getPlayerTeam(game,p)===t.key).reduce((s,p)=>s+(playerGoals[p]||0),0),
+  }));
   const scorers=pids.filter(p=>playerGoals[p]>0).map(p=>({name:playerName(p),team:getPlayerTeam(game,p),goals:playerGoals[p]}))
     .sort((a,b)=>b.goals-a.goals);
-  return{vermScore,azulScore,scorers};
+  const result={scores,scorers};
+  // Compat: clubes com exatamente 2 times (o padrão) continuam expondo vermScore/azulScore
+  if(teams.length===2){ result.vermScore=scores[0].score; result.azulScore=scores[1].score; }
+  return result;
 }
 
 function renderGameStatus(){
@@ -957,8 +992,8 @@ function renderGameStatus(){
     const pids=getGamePlayerIds(game);
     const presCount=Object.keys(S.presenca[game.id]||{}).length;
     const displayCount=presCount>0?presCount:pids.length;
-    const verm=pids.filter(pid=>getPlayerTeam(game,pid)==="vermelho").length;
-    const azul=pids.filter(pid=>getPlayerTeam(game,pid)==="azul").length;
+    const teamCounts=TEAMS().map(t=>({t,n:pids.filter(pid=>getPlayerTeam(game,pid)===t.key).length}));
+    const teamCountsLabel=teamCounts.some(tc=>tc.n>0)?teamCounts.map(tc=>(TEAM_EMOJI[tc.t.color]||"⚪")+tc.n).join(" × "):"";
     const result=voters>0?calcGameResult(game):null;
     return card(`
       <div class="flex items-start justify-between mb-3">
@@ -978,31 +1013,30 @@ function renderGameStatus(){
       `:`
       <div class="flex gap-3 text-xs text-green-300/60 mb-3 flex-wrap">
         <span>👥 ${displayCount}</span><span>🗳️ ${voters}</span>
-        ${(verm||azul)?`<span>🔴${verm} × 🔵${azul}</span>`:""}
+        ${teamCountsLabel?`<span>${teamCountsLabel}</span>`:""}
       </div>
       ${result?`
       <div class="bg-[#0b1710] border border-[#1e3a27] rounded-xl p-3 mb-3">
-        <div class="flex items-center justify-center gap-5 mb-2">
-          <div class="text-center">
-            <div class="font-black text-3xl text-red-400">${result.vermScore}</div>
-            <div class="text-[10px] text-red-400/60 font-bold uppercase tracking-wide mt-0.5">🔴 Vermelho</div>
-          </div>
-          <div class="text-green-300/20 font-black text-xl">×</div>
-          <div class="text-center">
-            <div class="font-black text-3xl text-blue-400">${result.azulScore}</div>
-            <div class="text-[10px] text-blue-400/60 font-bold uppercase tracking-wide mt-0.5">🔵 Azul</div>
-          </div>
+        <div class="flex items-center justify-center gap-5 mb-2 flex-wrap">
+          ${result.scores.map((s,i)=>{
+            const rgb=TEAM_RGB[s.team.color]||"107,114,128";
+            return (i>0?'<div class="text-green-300/20 font-black text-xl">×</div>':'')
+              +'<div class="text-center"><div class="font-black text-3xl" style="color:rgb('+rgb+')">'+s.score+'</div>'
+              +'<div class="text-[10px] font-bold uppercase tracking-wide mt-0.5" style="color:rgba('+rgb+',0.7)">'+(TEAM_EMOJI[s.team.color]||"⚪")+' '+s.team.label+'</div></div>';
+          }).join("")}
         </div>
         ${result.scorers.length?`
         <div class="border-t border-[#1e3a27] pt-2 mt-1">
           <div class="text-[10px] text-green-300/30 uppercase tracking-wider mb-1.5">⚽ Artilheiros</div>
-          <div class="flex gap-2">
-            <div class="flex-1 flex flex-col gap-1">
-              ${result.scorers.filter(s=>s.team==="vermelho").map(s=>`<div class="px-2 py-1.5 rounded-lg bg-red-950/70 border border-red-800/40 text-center"><div class="text-[10px] font-semibold text-red-300 leading-snug break-words">${s.name}</div><div class="text-[11px] leading-tight mt-1">${"⚽".repeat(Math.min(s.goals,8))}</div></div>`).join("")}
-            </div>
-            <div class="flex-1 flex flex-col gap-1">
-              ${result.scorers.filter(s=>s.team==="azul").map(s=>`<div class="px-2 py-1.5 rounded-lg bg-blue-950/70 border border-blue-800/40 text-center"><div class="text-[10px] font-semibold text-blue-300 leading-snug break-words">${s.name}</div><div class="text-[11px] leading-tight mt-1">${"⚽".repeat(Math.min(s.goals,8))}</div></div>`).join("")}
-            </div>
+          <div class="flex gap-2 flex-wrap">
+            ${TEAMS().map(t=>{
+              const rgb=TEAM_RGB[t.color]||"107,114,128";
+              const list=result.scorers.filter(s=>s.team===t.key);
+              if(!list.length) return "";
+              return '<div class="flex-1 min-w-[90px] flex flex-col gap-1">'
+                +list.map(s=>'<div class="px-2 py-1.5 rounded-lg text-center" style="background:rgba('+rgb+',0.18);border:1px solid rgba('+rgb+',0.4)"><div class="text-[10px] font-semibold leading-snug break-words" style="color:rgba('+rgb+',0.95)">'+s.name+'</div><div class="text-[11px] leading-tight mt-1">'+"⚽".repeat(Math.min(s.goals,8))+'</div></div>').join("")
+                +'</div>';
+            }).join("")}
           </div>
         </div>`:""}
         ${(()=>{const bp=bestPlayerOfGame(game);return bp?`<div class="border-t border-[#1e3a27] pt-2 mt-2 flex items-center gap-2"><span class="text-yellow-400 text-base">⭐</span><div><div class="text-[10px] text-yellow-400/50 uppercase tracking-wider font-bold">Melhor jogador</div><div class="text-sm font-black text-yellow-300">${bp.name} <span class="text-yellow-400/50 font-normal text-xs">${bp.score} pts${bp.note?` · nota ${bp.note}`:""}</span></div></div></div>`:""})()}
@@ -1047,6 +1081,10 @@ function renderCampo() {
   const game = gameRaw;
   if (!game) { el.innerHTML=`<div class="text-center py-20 text-green-300/40 text-sm">Nenhum jogo cadastrado ainda.</div>`; return; }
 
+  const teams = TEAMS();
+  const pitchTeams = teams.slice(0,2);   // sempre 2 lados no campo (formato "ganhou fica")
+  const benchTeams = teams.slice(2);     // 3º time (ou mais) fica aguardando, fora do gramado
+
   const allPids = getGamePlayerIds(game);
   const presSlots = S.presenca[game.id]||{};
   const maxV = game.maxVagas || TOTAL_VAGAS;
@@ -1060,8 +1098,8 @@ function renderCampo() {
   const formation = S.formations[game.id] || {};
 
   // Calcular posições: usa formação salva ou padrão por time/índice
-  const vermPids = pids.filter(p=>getPlayerTeam(game,p)==="vermelho");
-  const azulPids = pids.filter(p=>getPlayerTeam(game,p)==="azul");
+  const teamPidsMap = {};
+  teams.forEach(t=>{ teamPidsMap[t.key] = pids.filter(p=>getPlayerTeam(game,p)===t.key); });
   const semPids  = pids.filter(p=>!getPlayerTeam(game,p));
 
   // Posições por função no campo
@@ -1075,30 +1113,42 @@ function renderCampo() {
     PNT: [{x:.44,y:.10},{x:.44,y:.90}],
   };
   const roleCounts={};
-  function posOfByRole(team,role){
+  function posOfByRole(teamKey,role){
     if(!ROLE_SLOTS[role]) return null;
-    const key=team+"_"+role;
+    const key=teamKey+"_"+role;
     const idx=roleCounts[key]||0; roleCounts[key]=idx+1;
     const base=ROLE_SLOTS[role][Math.min(idx,ROLE_SLOTS[role].length-1)];
-    return team==="vermelho"?{...base}:{x:1-base.x,y:base.y};
+    const mirror = pitchTeams[1] && teamKey===pitchTeams[1].key;
+    return mirror?{x:1-base.x,y:base.y}:{...base};
   }
 
   function posOf(pid) {
     const team = getPlayerTeam(game, pid);
     const role = game.players?.[pid]?.pos||"";
+    const isP0 = pitchTeams[0] && team===pitchTeams[0].key;
+    const isP1 = pitchTeams[1] && team===pitchTeams[1].key;
     // Posição por função tem prioridade sobre drag salvo
-    if(role&&team){const rp=posOfByRole(team,role);if(rp)return rp;}
+    if(role&&(isP0||isP1)){const rp=posOfByRole(team,role);if(rp)return rp;}
     if (formation[pid]) return formation[pid];
-    const arr = team==="vermelho" ? vermPids : team==="azul" ? azulPids : semPids;
-    const idx = arr.indexOf(pid);
-    if (team==="vermelho" || team==="azul") return defaultPos(team, idx);
+    if (isP0 || isP1) {
+      const arr = teamPidsMap[team];
+      const idx = arr.indexOf(pid);
+      return defaultPos(isP1, idx);
+    }
+    const idx = semPids.indexOf(pid);
     return { x: 0.5, y: 0.5 - 0.06*(semPids.length/2 - idx) };
   }
 
-  const tokens = pids.map(pid => {
+  // Só entram no gramado: sem time, ou num dos 2 times que estão jogando agora
+  const gridPids = pids.filter(pid=>{
+    const t=getPlayerTeam(game,pid);
+    return !t || (pitchTeams[0]&&t===pitchTeams[0].key) || (pitchTeams[1]&&t===pitchTeams[1].key);
+  });
+  const tokens = gridPids.map(pid => {
     const team = getPlayerTeam(game, pid);
     const pos  = posOf(pid);
-    const discClass = team==="vermelho"?"disc-red":team==="azul"?"disc-blue":"disc-gray";
+    const tc = teamByKey(team);
+    const discClass = tc ? ("disc-"+tc.color) : "disc-gray";
     const name = playerName(pid);
     const ab = abbrev(name);
     return `<div id="tk-${pid}" class="player-token" style="left:${pos.x*100}%;top:${pos.y*100}%"
@@ -1107,47 +1157,91 @@ function renderCampo() {
     </div>`;
   }).join("");
 
-  const verm = vermPids.length, azul = azulPids.length;
+  const anyTeamAssigned = teams.some(t=>teamPidsMap[t.key].length>0);
   const semPidsOrdered = pids.filter(p=>!getPlayerTeam(game,p));
   // Modo leitura: times já definidos e usuário não é admin
-  const readOnly = (verm>0||azul>0) && !S.adminOk;
+  const readOnly = anyTeamAssigned && !S.adminOk;
 
   const POS_LABELS={"GK":"🥅 Goleiro","ZAG":"🛡 Zagueiro","LAT":"↕ Lateral","VOL":"🔄 Volante","MEI":"🎯 Meia","ATA":"⚡ Atacante","PNT":"🔥 Ponta"};
-  function playerCard(pid,team){
+  function playerCard(pid,teamKey){
     const role=game.players?.[pid]?.pos||"";
     const posLabel=POS_LABELS[role]||"— pos";
-    const isVerm=team==="vermelho";
-    const cardStyle=isVerm?"background:rgba(200,30,30,0.25);border:1px solid rgba(220,80,80,0.35)":"background:rgba(30,60,200,0.25);border:1px solid rgba(80,130,220,0.35)";
-    const posBg=isVerm?"background:rgba(180,20,20,0.6)":"background:rgba(20,40,180,0.6)";
-    const posColor=isVerm?"color:#fca5a5":"color:#93c5fd";
+    const tIdx=teams.findIndex(t=>t.key===teamKey);
+    const tc=teams[tIdx]||teams[0];
+    const nextTeam=teams[(tIdx+1)%teams.length];
+    const rgb=TEAM_RGB[tc.color]||"107,114,128";
+    const cardStyle="background:rgba("+rgb+",0.25);border:1px solid rgba("+rgb+",0.45)";
+    const posBg="background:rgba("+rgb+",0.6)";
     return '<div class="flex items-center gap-2 px-2 py-1.5 rounded-lg" style="'+cardStyle+'">'
       +'<div class="flex-1 min-w-0">'
       +'<p class="text-xs font-bold text-white truncate leading-tight">'+playerName(pid)+'</p>'
       +(readOnly
-        ?'<span class="text-[10px] px-1.5 py-0.5 rounded-full mt-0.5 font-bold inline-block" style="'+posBg+';'+posColor+'">'+posLabel+'</span>'
-        :'<button onclick="ciclarPosicao(\''+pid+'\',\''+game.id+'\')" class="text-[10px] px-1.5 py-0.5 rounded-full mt-0.5 font-bold" style="'+posBg+';'+posColor+'">'+posLabel+'</button>')
+        ?'<span class="text-[10px] px-1.5 py-0.5 rounded-full mt-0.5 font-bold inline-block text-white" style="'+posBg+'">'+posLabel+'</span>'
+        :'<button onclick="ciclarPosicao(\''+pid+'\',\''+game.id+'\')" class="text-[10px] px-1.5 py-0.5 rounded-full mt-0.5 font-bold text-white" style="'+posBg+'">'+posLabel+'</button>')
       +'</div>'
-      +(readOnly?'':'<button onclick="atribuirTime(\''+pid+'\',\''+game.id+'\','+(isVerm?'\'azul\'':'\'vermelho\'')+') " class="shrink-0 text-white/40 hover:text-white text-base leading-none px-0.5" title="Trocar time">'+(isVerm?'🔵':'🔴')+'</button>')
+      +(readOnly?'':'<button onclick="atribuirTime(\''+pid+'\',\''+game.id+'\',\''+nextTeam.key+'\')" class="shrink-0 text-white/40 hover:text-white text-base leading-none px-0.5" title="Mudar para '+nextTeam.label+'">'+(TEAM_EMOJI[nextTeam.color]||"⚪")+'</button>')
       +'</div>';
   }
 
-  const vermPanel = vermPids.length
-    ? vermPids.map(pid=>playerCard(pid,"vermelho")).join("")
-    : '<p class="text-xs text-red-300/40 text-center py-3 italic">nenhum jogador</p>';
-  const azulPanel = azulPids.length
-    ? azulPids.map(pid=>playerCard(pid,"azul")).join("")
-    : '<p class="text-xs text-blue-300/40 text-center py-3 italic">nenhum jogador</p>';
+  const teamPanelsHtml = pitchTeams.map(t=>{
+    const rgb=TEAM_RGB[t.color]||"107,114,128";
+    const list=teamPidsMap[t.key]||[];
+    const panel = list.length ? list.map(pid=>playerCard(pid,t.key)).join("") : '<p class="text-xs text-center py-3 italic" style="color:rgba('+rgb+',0.6)">nenhum jogador</p>';
+    return '<div class="rounded-xl overflow-hidden" style="background:rgba('+rgb+',0.22);border:1.5px solid rgba('+rgb+',0.5)">'
+      +'<div class="px-3 py-2.5 flex items-center gap-2" style="background:rgba('+rgb+',0.35);border-bottom:1px solid rgba('+rgb+',0.3)">'
+      +'<span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-lg" style="background:rgb('+rgb+')"></span>'
+      +'<span class="text-xs font-black text-white uppercase tracking-wider flex-1">'+t.label+'</span>'
+      +'<span class="text-sm font-black text-white px-2 py-0.5 rounded-full" style="background:rgba('+rgb+',0.55)">'+list.length+'</span>'
+      +'</div>'
+      +'<div class="p-2 space-y-1.5">'+panel+'</div>'
+      +'</div>';
+  }).join("");
+
+  function teamSwapButtons(pid,size){
+    return teams.map(tt=>{
+      const rgb=TEAM_RGB[tt.color]||"107,114,128";
+      return '<button onclick="atribuirTime(\''+pid+'\',\''+game.id+'\',\''+tt.key+'\')" class="'+size+' rounded-full shrink-0 active:scale-90 transition-transform" style="background:rgba('+rgb+',0.85);box-shadow:0 2px 8px rgba('+rgb+',0.4)" title="'+tt.label+'"></button>';
+    }).join("");
+  }
+
   const semChips = semPidsOrdered.map(pid=>{
     const name=playerName(pid);
     const ini=name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();
     return '<div class="flex items-center gap-2 px-2.5 py-2 rounded-xl" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12)">'
       +'<div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black text-white/60" style="background:rgba(255,255,255,0.1)">'+ini+'</div>'
       +'<span class="flex-1 text-xs font-semibold text-white/90 truncate leading-tight">'+name+'</span>'
-      +(readOnly?''
-        :'<button onclick="atribuirTime(\''+pid+'\',\''+game.id+'\',\'vermelho\')" class="w-7 h-7 rounded-full shrink-0 active:scale-90 transition-transform" style="background:rgba(220,38,38,0.85);box-shadow:0 2px 8px rgba(220,38,38,0.4)"></button>'
-        +'<button onclick="atribuirTime(\''+pid+'\',\''+game.id+'\',\'azul\')" class="w-7 h-7 rounded-full shrink-0 active:scale-90 transition-transform" style="background:rgba(37,99,235,0.85);box-shadow:0 2px 8px rgba(37,99,235,0.4)"></button>')
+      +(readOnly?'':teamSwapButtons(pid,"w-7 h-7"))
       +'</div>';
   }).join("");
+
+  const benchHtml = benchTeams.map(t=>{
+    const rgb=TEAM_RGB[t.color]||"107,114,128";
+    const list=teamPidsMap[t.key]||[];
+    if(!list.length) return "";
+    const chips = list.map(pid=>{
+      const name=playerName(pid);
+      const ini=name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();
+      return '<div class="flex items-center gap-2 px-2.5 py-2 rounded-xl" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12)">'
+        +'<div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black text-white/60" style="background:rgba(255,255,255,0.1)">'+ini+'</div>'
+        +'<span class="flex-1 text-xs font-semibold text-white/90 truncate leading-tight">'+name+'</span>'
+        +(readOnly?'':teamSwapButtons(pid,"w-6 h-6"))
+        +'</div>';
+    }).join("");
+    return '<div class="mb-2 rounded-xl overflow-hidden" style="background:rgba('+rgb+',0.1);border:1px solid rgba('+rgb+',0.3)">'
+      +'<div class="flex items-center gap-2 px-3 py-2.5" style="border-bottom:1px solid rgba(255,255,255,0.07)">'
+      +'<span class="w-2 h-2 rounded-full shrink-0" style="background:rgb('+rgb+')"></span>'
+      +'<span class="text-[10px] font-black uppercase tracking-widest flex-1" style="color:rgba('+rgb+',0.9)">'+t.label+' — aguardando</span>'
+      +'<span class="text-[10px] font-black text-white/30">'+list.length+' jogadores</span>'
+      +'</div>'
+      +'<div class="grid grid-cols-2 gap-1.5 p-2">'+chips+'</div>'
+      +'</div>';
+  }).join("");
+
+  const leftTeam = pitchTeams[0], rightTeam = pitchTeams[1];
+  const leftRgb = leftTeam?(TEAM_RGB[leftTeam.color]||"220,38,38"):"220,38,38";
+  const rightRgb = rightTeam?(TEAM_RGB[rightTeam.color]||"37,99,235"):"37,99,235";
+  const leftLabel = (leftTeam?.label||"TIME 1").toUpperCase();
+  const rightLabel = (rightTeam?.label||"TIME 2").toUpperCase();
 
   el.innerHTML = `
     <!-- Header -->
@@ -1157,43 +1251,27 @@ function renderCampo() {
         <div class="font-black text-base leading-tight">Escalação</div>
       </div>
       <div class="flex gap-1.5">
-        ${(verm>0||azul>0)?'<button onclick="compartilharEscalacao(\''+game.id+'\')" class="px-3 h-9 rounded-xl font-black text-xs flex items-center gap-1" style="background:rgba(22,101,52,0.7);border:1px solid rgba(74,222,128,0.35);color:#86efac">📄 PDF</button>':''}
+        ${anyTeamAssigned?'<button onclick="compartilharEscalacao(\''+game.id+'\')" class="px-3 h-9 rounded-xl font-black text-xs flex items-center gap-1" style="background:rgba(22,101,52,0.7);border:1px solid rgba(74,222,128,0.35);color:#86efac">📄 PDF</button>':''}
         ${S.adminOk?'<button onclick="sortearTimes(\''+game.id+'\')" class="px-3 h-9 rounded-xl bg-purple-900/60 border border-purple-700/50 text-purple-300 font-black text-xs flex items-center gap-1.5">🎲 Sortear</button>':''}
         ${S.adminOk?'<button onclick="limparTimes(\''+game.id+'\')" class="px-3 h-9 rounded-xl bg-red-950/50 border border-red-900/40 text-red-400 font-black text-xs">Limpar</button>':''}
       </div>
     </div>
 
-    <!-- Dois painéis de time -->
-    <div class="grid grid-cols-2 gap-2 mb-2">
-      <div class="rounded-xl overflow-hidden" style="background:rgba(120,10,10,0.85);border:1.5px solid rgba(220,50,50,0.5)">
-        <div class="px-3 py-2.5 flex items-center gap-2" style="background:rgba(180,20,20,0.7);border-bottom:1px solid rgba(220,50,50,0.3)">
-          <span class="w-2.5 h-2.5 rounded-full bg-red-400 shrink-0 shadow-lg" style="box-shadow:0 0 6px #f87171"></span>
-          <span class="text-xs font-black text-white uppercase tracking-wider flex-1">Vermelho</span>
-          <span class="text-sm font-black text-red-200 bg-red-900/60 px-2 py-0.5 rounded-full">${verm}</span>
-        </div>
-        <div class="p-2 space-y-1.5">${vermPanel}</div>
-      </div>
-      <div class="rounded-xl overflow-hidden" style="background:rgba(10,20,120,0.85);border:1.5px solid rgba(50,100,220,0.5)">
-        <div class="px-3 py-2.5 flex items-center gap-2" style="background:rgba(20,40,180,0.7);border-bottom:1px solid rgba(50,100,220,0.3)">
-          <span class="w-2.5 h-2.5 rounded-full bg-blue-400 shrink-0" style="box-shadow:0 0 6px #60a5fa"></span>
-          <span class="text-xs font-black text-white uppercase tracking-wider flex-1">Azul</span>
-          <span class="text-sm font-black text-blue-200 bg-blue-900/60 px-2 py-0.5 rounded-full">${azul}</span>
-        </div>
-        <div class="p-2 space-y-1.5">${azulPanel}</div>
-      </div>
-    </div>
+    <!-- Painéis dos 2 times em campo -->
+    <div class="grid grid-cols-2 gap-2 mb-2">${teamPanelsHtml}</div>
+    ${benchHtml}
     ${semPidsOrdered.length?`
     <div class="mb-2 rounded-xl overflow-hidden" style="background:rgba(8,20,12,0.92);border:1px solid rgba(255,255,255,0.1)">
       <div class="flex items-center gap-2 px-3 py-2.5" style="border-bottom:1px solid rgba(255,255,255,0.07)">
         <span class="text-[10px] font-black text-white/40 uppercase tracking-widest flex-1">Sem time</span>
         <span class="text-[10px] font-black text-white/30">${semPidsOrdered.length} jogadores</span>
-        <span class="text-[10px] text-white/25 ml-1">· toque <span style="color:rgba(220,38,38,0.8)">V</span> ou <span style="color:rgba(37,99,235,0.8)">A</span></span>
+        <span class="text-[10px] text-white/25 ml-1">· toque numa cor</span>
       </div>
       <div class="grid grid-cols-2 gap-1.5 p-2">${semChips}</div>
     </div>`:""}
 
 
-    <!-- Campo landscape: vermelho esquerda, azul direita -->
+    <!-- Campo landscape: time 1 esquerda, time 2 direita -->
     <div id="campo-field" class="relative mx-auto rounded-2xl overflow-hidden shadow-2xl border-2 border-[#1e4a1e]"
          style="width:100%;aspect-ratio:105/68">
 
@@ -1219,8 +1297,8 @@ function renderCampo() {
         <!-- círculo central -->
         <circle cx="52.5" cy="34" r="9.15" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
         <circle cx="52.5" cy="34" r="0.7" fill="rgba(255,255,255,0.9)"/>
-        <!-- área grande esquerda (vermelho defende) -->
-        <rect x="0" y="13.84" width="16.5" height="40.32" fill="rgba(255,100,100,0.05)" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
+        <!-- área grande esquerda -->
+        <rect x="0" y="13.84" width="16.5" height="40.32" fill="rgba(${leftRgb},0.08)" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
         <!-- área pequena esquerda -->
         <rect x="0" y="24.84" width="5.5" height="18.32" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6"/>
         <!-- pênalti esquerda -->
@@ -1228,9 +1306,9 @@ function renderCampo() {
         <!-- arco pênalti esquerda -->
         <path d="M 16.5 26.5 A 9.15 9.15 0 0 1 16.5 41.5" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
         <!-- gol esquerda -->
-        <rect x="-2.5" y="27.34" width="2.5" height="13.32" fill="rgba(255,100,100,0.15)" stroke="rgba(255,255,255,0.7)" stroke-width="0.5"/>
-        <!-- área grande direita (azul defende) -->
-        <rect x="88.5" y="13.84" width="16.5" height="40.32" fill="rgba(100,100,255,0.05)" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
+        <rect x="-2.5" y="27.34" width="2.5" height="13.32" fill="rgba(${leftRgb},0.2)" stroke="rgba(255,255,255,0.7)" stroke-width="0.5"/>
+        <!-- área grande direita -->
+        <rect x="88.5" y="13.84" width="16.5" height="40.32" fill="rgba(${rightRgb},0.08)" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
         <!-- área pequena direita -->
         <rect x="99.5" y="24.84" width="5.5" height="18.32" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6"/>
         <!-- pênalti direita -->
@@ -1238,15 +1316,15 @@ function renderCampo() {
         <!-- arco pênalti direita -->
         <path d="M 88.5 26.5 A 9.15 9.15 0 0 0 88.5 41.5" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="0.7"/>
         <!-- gol direita -->
-        <rect x="105" y="27.34" width="2.5" height="13.32" fill="rgba(100,100,255,0.15)" stroke="rgba(255,255,255,0.7)" stroke-width="0.5"/>
+        <rect x="105" y="27.34" width="2.5" height="13.32" fill="rgba(${rightRgb},0.2)" stroke="rgba(255,255,255,0.7)" stroke-width="0.5"/>
         <!-- cantos -->
         <path d="M 0 3 A 3 3 0 0 1 3 0"    fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6"/>
         <path d="M 102 0 A 3 3 0 0 1 105 3" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6"/>
         <path d="M 0 65 A 3 3 0 0 0 3 68"    fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6"/>
         <path d="M 102 68 A 3 3 0 0 0 105 65" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6"/>
         <!-- labels times no campo -->
-        <text x="26" y="5.5" text-anchor="middle" fill="rgba(255,120,120,0.5)" font-size="3.8" font-weight="bold" font-family="system-ui">VERMELHO</text>
-        <text x="79" y="5.5" text-anchor="middle" fill="rgba(120,160,255,0.5)" font-size="3.8" font-weight="bold" font-family="system-ui">AZUL</text>
+        <text x="26" y="5.5" text-anchor="middle" fill="rgba(${leftRgb},0.6)" font-size="3.8" font-weight="bold" font-family="system-ui">${leftLabel}</text>
+        <text x="79" y="5.5" text-anchor="middle" fill="rgba(${rightRgb},0.6)" font-size="3.8" font-weight="bold" font-family="system-ui">${rightLabel}</text>
       </svg>
 
       <!-- Tokens dos jogadores -->
@@ -1257,6 +1335,7 @@ function renderCampo() {
   // Reattach drag listeners (after innerHTML)
   attachDragListeners();
 }
+
 
 async function assignTeam(pid,team,gameId){
   if(!gameId||!S.games[gameId])return;
@@ -1974,13 +2053,14 @@ function renderHistorico(){
   if(!games.length){el.innerHTML=`<div class="text-center py-12 text-green-300/40 text-sm">Nenhum jogo ainda.</div>`;return;}
   el.innerHTML=games.map(game=>{
     const pids=getGamePlayerIds(game), voters=S.ratings[game.id]?Object.keys(S.ratings[game.id]).length:0;
-    const verm=pids.filter(p=>getPlayerTeam(game,p)==="vermelho").length;
-    const azul=pids.filter(p=>getPlayerTeam(game,p)==="azul").length;
+    const teams=TEAMS();
+    const teamCounts=teams.map(t=>({t,n:pids.filter(p=>getPlayerTeam(game,p)===t.key).length}));
+    const teamCountsLabel=teamCounts.some(tc=>tc.n>0)?teamCounts.map(tc=>(TEAM_EMOJI[tc.t.color]||"⚪")+tc.n).join("×"):"";
     const expanded=expandedGames.has(game.id);
     let detail="";
     if(expanded){
       const gr=S.ratings[game.id]||{};
-      const byTeam={vermelho:[],azul:[],sem:[]};
+      const byTeam={sem:[]}; teams.forEach(t=>{ byTeam[t.key]=[]; });
       pids.forEach(pid=>{
         const votes=Object.values(gr).map(v=>v[pid]).filter(Boolean);
         const note=votes.length?avgNote(votes.map(v=>v.note)):null;
@@ -1988,13 +2068,13 @@ function renderHistorico(){
         const assists=votes.length?Math.round(votes.reduce((s,v)=>s+(v.assists||0),0)/votes.length):0;
         const obsList=Object.entries(gr).map(([vid,vv])=>({voter:playerName(vid),obs:vv[pid]?.obs})).filter(o=>o.obs&&o.obs.trim());
         const t=getPlayerTeam(game,pid)||"sem";
-        byTeam[t].push({pid,note,goals,assists,obsList});
+        (byTeam[t]||byTeam.sem).push({pid,note,goals,assists,obsList});
       });
-      const rg=(arr,tk)=>{
+      const rg=(arr,teamObj)=>{
         const s=arr.filter(p=>p.note!==null).sort((a,b)=>parseFloat(b.note)-parseFloat(a.note));
         if(!s.length) return "";
-        const h=tk==="vermelho"?`<div class="flex items-center gap-1.5 mb-1.5"><span class="w-2 h-2 rounded-full bg-red-500"></span><span class="text-[10px] font-bold text-red-400 uppercase">Vermelho</span></div>`
-                :tk==="azul"?`<div class="flex items-center gap-1.5 mb-1.5"><span class="w-2 h-2 rounded-full bg-blue-500"></span><span class="text-[10px] font-bold text-blue-400 uppercase">Azul</span></div>`:""
+        const rgb=teamObj?(TEAM_RGB[teamObj.color]||"107,114,128"):null;
+        const h=teamObj?`<div class="flex items-center gap-1.5 mb-1.5"><span class="w-2 h-2 rounded-full" style="background:rgb(${rgb})"></span><span class="text-[10px] font-bold uppercase" style="color:rgb(${rgb})">${teamObj.label}</span></div>`:"";
         return h+s.map((p,i)=>`<div class="mb-1.5">
           <div class="flex items-center gap-2 text-sm">
             <span class="text-green-300/30 text-xs w-4 text-right">${i+1}.</span>
@@ -2006,12 +2086,13 @@ function renderHistorico(){
           ${p.obsList.map(o=>`<p class="text-[11px] text-green-300/40 italic border-l-2 border-green-900 pl-2 ml-6 mt-0.5">"${o.obs}" <span class="not-italic text-green-300/25">— ${o.voter}</span></p>`).join("")}
         </div>`).join("");
       };
-      detail=`<div class="mt-3 border-t border-[#2a4a35] pt-3 space-y-3">${rg(byTeam.vermelho,"vermelho")}${rg(byTeam.azul,"azul")}${rg(byTeam.sem,"sem")}${!byTeam.vermelho.concat(byTeam.azul,byTeam.sem).filter(p=>p.note!==null).length?'<p class="text-xs text-green-300/40">Nenhum voto ainda.</p>':""}</div>`;
+      const allRated=Object.values(byTeam).flat().filter(p=>p.note!==null);
+      detail=`<div class="mt-3 border-t border-[#2a4a35] pt-3 space-y-3">${teams.map(t=>rg(byTeam[t.key],t)).join("")}${rg(byTeam.sem,null)}${!allRated.length?'<p class="text-xs text-green-300/40">Nenhum voto ainda.</p>':""}</div>`;
     }
     return `<div class="bg-[#132218] border border-[#2a4a35] rounded-xl p-4 cursor-pointer" onclick="toggleGame('${game.id}')">
       <div class="flex items-center justify-between">
         <div><div class="font-black text-sm">${fmtDate(game.date)} — Terça</div>
-          <div class="flex items-center gap-2 mt-1">${badge(game.type)}<span class="text-[10px] text-green-300/40">👥${pids.length} · 🗳️${voters}</span>${(verm||azul)?`<span class="text-[10px] text-green-300/40">🔴${verm}×🔵${azul}</span>`:""}</div></div>
+          <div class="flex items-center gap-2 mt-1">${badge(game.type)}<span class="text-[10px] text-green-300/40">👥${pids.length} · 🗳️${voters}</span>${teamCountsLabel?`<span class="text-[10px] text-green-300/40">${teamCountsLabel}</span>`:""}</div></div>
         <span class="text-green-300/40 text-lg">${expanded?"▲":"▼"}</span>
       </div>${detail}
     </div>`;
@@ -2144,13 +2225,13 @@ function renderAdmin(){
       </button>
       ${adminGamesOpen&&games.length?`<div class="space-y-2 mt-3">${games.map(g=>{
         const pids=getGamePlayerIds(g);
-        const v=pids.filter(p=>getPlayerTeam(g,p)==="vermelho").length;
-        const a=pids.filter(p=>getPlayerTeam(g,p)==="azul").length;
+        const teamCounts=TEAMS().map(t=>({t,n:pids.filter(p=>getPlayerTeam(g,p)===t.key).length}));
+        const teamSummary=teamCounts.some(tc=>tc.n>0)?" · "+teamCounts.map(tc=>(TEAM_EMOJI[tc.t.color]||"⚪")+tc.n).join("×"):"";
         const voterCount = S.ratings[g.id] ? Object.keys(S.ratings[g.id]).length : 0;
         return `<div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0b1a10] border border-[#2a4a35]">
           <div class="flex-1 min-w-0">
             <div class="text-sm font-semibold">${fmtDate(g.date)} — ${g.type==="compromisso"?"Compromisso":"Pelada"}${g.cancelled?` <span class="text-red-400">· CANCELADO</span>`:""}</div>
-            <div class="text-[10px] text-green-300/40">👥${pids.length}${(v||a)?` · 🔴${v}×🔵${a}`:""} · 🗳️${voterCount}</div>
+            <div class="text-[10px] text-green-300/40">👥${pids.length}${teamSummary} · 🗳️${voterCount}</div>
           </div>
           <button onclick="toggleGameCancelled('${g.id}')" title="${g.cancelled?"Reativar jogo":"Marcar como cancelado"}" class="px-2.5 py-1.5 rounded-lg text-xs font-bold ${g.cancelled?'bg-red-950/60 border border-red-800/50 text-red-400':'bg-[#1a1000] border border-amber-800/40 text-amber-400'}">${g.cancelled?"↩️":"⛈️"}</button>
           <button onclick="toggleGameStatus('${g.id}')" class="px-2.5 py-1.5 rounded-lg text-xs font-bold ${g.status==='fechado'?'bg-green-900/60 border border-green-600/50 text-green-300':'bg-amber-950/60 border border-amber-700/40 text-amber-400'}">${g.status==="fechado"?"🔓":"🔒"}</button>
@@ -2162,7 +2243,7 @@ function renderAdmin(){
   </div>`;
 }
 
-let _sorteioGameId=null, _sorteioPids=[], _sorteioVerm=[], _sorteioAzul=[];
+let _sorteioGameId=null, _sorteioPids=[], _sorteioGroups={};
 function sortearTimes(gameId){
   const g=S.games[gameId]; if(!g) return;
   const allPids=getGamePlayerIds(g);
@@ -2178,67 +2259,58 @@ function sortearTimes(gameId){
   mostrarSorteio();
 }
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
+function sortearTentativa(teams,arr,craqueNames){
+  const craquePids=arr.filter(pid=>craqueNames.has((S.players[pid]?.name||"").toLowerCase()));
+  const normaisPids=arr.filter(pid=>!craqueNames.has((S.players[pid]?.name||"").toLowerCase()));
+  shuffle(craquePids); shuffle(normaisPids);
+  const groups={}; teams.forEach(t=>{ groups[t.key]=[]; });
+  // Craques em rodízio pelos times (0→time1, 1→time2, 2→time3, 3→time1...)
+  craquePids.forEach((pid,i)=>{ groups[teams[i%teams.length].key].push(pid); });
+  // Distribui normais sempre pro time com menos gente (balanceia mesmo com N times)
+  normaisPids.forEach(pid=>{
+    let minKey=teams[0].key;
+    teams.forEach(t=>{ if(groups[t.key].length<groups[minKey].length) minKey=t.key; });
+    groups[minKey].push(pid);
+  });
+  return groups;
+}
+function sorteioTemConflitoDeRival(teams,groups){
+  return (S.config.rivais||[]).some(([n1,n2])=>{
+    const pid1=_sorteioPids.find(pid=>(S.players[pid]?.name||"").toLowerCase()===n1.toLowerCase());
+    const pid2=_sorteioPids.find(pid=>(S.players[pid]?.name||"").toLowerCase()===n2.toLowerCase());
+    if(!pid1||!pid2) return false;
+    return teams.some(t=>groups[t.key].includes(pid1)&&groups[t.key].includes(pid2));
+  });
+}
 function mostrarSorteio(){
+  const teams=TEAMS();
   const craqueNames=new Set((S.config.craques||[]).map(n=>n.toLowerCase()));
   const arr=[..._sorteioPids];
 
-  // Separa craques e normais
-  const craquePids=arr.filter(pid=>craqueNames.has((S.players[pid]?.name||"").toLowerCase()));
-  const normaisPids=arr.filter(pid=>!craqueNames.has((S.players[pid]?.name||"").toLowerCase()));
+  // Tenta várias vezes até achar uma combinação sem rivais no mesmo time (mais confiável que "trocar depois")
+  let groups=sortearTentativa(teams,arr,craqueNames);
+  let tentativas=1;
+  while(sorteioTemConflitoDeRival(teams,groups)&&tentativas<300){
+    groups=sortearTentativa(teams,arr,craqueNames);
+    tentativas++;
+  }
 
-  // Embaralha cada grupo independentemente
-  shuffle(craquePids); shuffle(normaisPids);
-
-  // Alterna craques: 0→verm, 1→azul, 2→verm...
-  const verm=[], azul=[];
-  craquePids.forEach((pid,i)=>{ if(i%2===0) verm.push(pid); else azul.push(pid); });
-
-  // Distribui normais para balancear
-  const targetVerm=Math.ceil(arr.length/2);
-  normaisPids.forEach(pid=>{ if(verm.length<targetVerm) verm.push(pid); else azul.push(pid); });
-
-  _sorteioVerm=verm; _sorteioAzul=azul;
-
-  // Regras de rivais: nunca no mesmo time
-  (S.config.rivais||[]).forEach(([n1,n2])=>{
-    const pid1=_sorteioPids.find(pid=>(S.players[pid]?.name||"").toLowerCase()===n1.toLowerCase());
-    const pid2=_sorteioPids.find(pid=>(S.players[pid]?.name||"").toLowerCase()===n2.toLowerCase());
-    if(!pid1||!pid2) return;
-    const v1=_sorteioVerm.includes(pid1), v2=_sorteioVerm.includes(pid2);
-    if(v1===v2){
-      // Estão no mesmo time — troca pid2 para o outro time, move um normal para compensar
-      if(v1){
-        _sorteioVerm=_sorteioVerm.filter(p=>p!==pid2);
-        const swap=_sorteioAzul.filter(p=>p!==pid1&&p!==pid2).pop();
-        if(swap){_sorteioAzul=_sorteioAzul.filter(p=>p!==swap);_sorteioVerm.push(swap);}
-        _sorteioAzul.push(pid2);
-      } else {
-        _sorteioAzul=_sorteioAzul.filter(p=>p!==pid2);
-        const swap=_sorteioVerm.filter(p=>p!==pid1&&p!==pid2).pop();
-        if(swap){_sorteioVerm=_sorteioVerm.filter(p=>p!==swap);_sorteioAzul.push(swap);}
-        _sorteioVerm.push(pid2);
-      }
-    }
-  });
-
+  _sorteioGroups=groups;
 
   openModal(`
     <h3 class="font-black text-base mb-4">🎲 Sorteio de Times</h3>
-    <div class="grid grid-cols-2 gap-3 mb-4">
-      <div class="bg-red-950/40 border border-red-800/40 rounded-xl p-3">
-        <div class="flex items-center gap-1.5 mb-2">
-          <span class="w-2 h-2 rounded-full bg-red-500"></span>
-          <span class="text-red-400 font-black text-xs uppercase">Vermelho (${_sorteioVerm.length})</span>
-        </div>
-        <div class="space-y-1">${_sorteioVerm.map(pid=>'<p class="text-sm text-red-200/80 font-semibold truncate">'+playerName(pid)+'</p>').join("")}</div>
-      </div>
-      <div class="bg-blue-950/40 border border-blue-800/40 rounded-xl p-3">
-        <div class="flex items-center gap-1.5 mb-2">
-          <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-          <span class="text-blue-400 font-black text-xs uppercase">Azul (${_sorteioAzul.length})</span>
-        </div>
-        <div class="space-y-1">${_sorteioAzul.map(pid=>'<p class="text-sm text-blue-200/80 font-semibold truncate">'+playerName(pid)+'</p>').join("")}</div>
-      </div>
+    <div class="grid gap-3 mb-4" style="grid-template-columns:repeat(${teams.length},minmax(0,1fr))">
+      ${teams.map(t=>{
+        const rgb=TEAM_RGB[t.color]||"107,114,128";
+        const list=groups[t.key]||[];
+        return `<div class="rounded-xl p-3" style="background:rgba(${rgb},0.18);border:1px solid rgba(${rgb},0.4)">
+          <div class="flex items-center gap-1.5 mb-2">
+            <span class="w-2 h-2 rounded-full" style="background:rgb(${rgb})"></span>
+            <span class="font-black text-xs uppercase" style="color:rgb(${rgb})">${t.label} (${list.length})</span>
+          </div>
+          <div class="space-y-1">${list.map(pid=>'<p class="text-sm font-semibold truncate" style="color:rgba('+rgb+',0.9)">'+playerName(pid)+'</p>').join("")}</div>
+        </div>`;
+      }).join("")}
     </div>
     <div class="flex gap-2">
       <button onclick="mostrarSorteio()" class="flex-1 py-2.5 rounded-xl bg-purple-900/60 border border-purple-700/50 text-purple-300 font-bold text-sm hover:bg-purple-800/60">🔀 Ressortear</button>
@@ -2248,8 +2320,9 @@ function mostrarSorteio(){
 }
 async function confirmarSorteio(){
   const updates={};
-  _sorteioVerm.forEach(pid=>{ updates["games/"+_sorteioGameId+"/players/"+pid+"/team"]="vermelho"; });
-  _sorteioAzul.forEach(pid=>{ updates["games/"+_sorteioGameId+"/players/"+pid+"/team"]="azul"; });
+  Object.keys(_sorteioGroups).forEach(key=>{
+    _sorteioGroups[key].forEach(pid=>{ updates["games/"+_sorteioGameId+"/players/"+pid+"/team"]=key; });
+  });
   await db.ref().update(updates);
   closeModal();
   showToast("Times sorteados! Ajuste se necessário.");
@@ -2326,12 +2399,12 @@ function openEditGame(gid){
     <div class="space-y-1.5 max-h-[55vh] overflow-y-auto pr-1 mb-4" id="edit-player-list">
       ${displayPlayers.map(p=>{
         const inGame=pids.includes(p.id)||presNames.has(p.name.toLowerCase());
-        const team=editTeams[p.id]||"azul";
+        const team=teamByKey(editTeams[p.id])||TEAMS()[0];
         return `<div class="flex items-center gap-2 bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-2.5 py-2">
           <input type="checkbox" id="ep-${p.id}" value="${p.id}" ${inGame?"checked":""} class="accent-green-500 w-4 h-4 shrink-0" onchange="toggleEditPlayer('${p.id}',this.checked)"/>
           <span class="flex-1 text-sm font-semibold truncate">${p.name}</span>
-          <button id="et-${p.id}" onclick="toggleEditTeam('${p.id}')" class="team-toggle ${team==="vermelho"?"is-verm":"is-azul"}" ${inGame?"":"disabled style='opacity:0.3'"}>
-            ${team==="vermelho"?"🔴 Verm":"🔵 Azul"}
+          <button id="et-${p.id}" onclick="toggleEditTeam('${p.id}')" class="team-toggle is-${team.color}" ${inGame?"":"disabled style='opacity:0.3'"}>
+            ${TEAM_EMOJI[team.color]||"⚪"} ${team.label.slice(0,6)}
           </button>
         </div>`;
       }).join("")}
@@ -2340,17 +2413,20 @@ function openEditGame(gid){
   `);
 }
 function toggleEditPlayer(pid,checked){
-  if(checked){ editTeams[pid]=editTeams[pid]||"azul"; }
+  if(checked){ editTeams[pid]=editTeams[pid]||TEAMS()[0].key; }
   else { delete editTeams[pid]; }
   const btn=document.getElementById("et-"+pid);
   if(btn){ btn.disabled=!checked; btn.style.opacity=checked?"1":"0.3"; }
 }
 function toggleEditTeam(pid){
-  editTeams[pid]=editTeams[pid]==="vermelho"?"azul":"vermelho";
+  const teams=TEAMS();
+  const idx=teams.findIndex(t=>t.key===editTeams[pid]);
+  const next=teams[(idx+1)%teams.length];
+  editTeams[pid]=next.key;
   const btn=document.getElementById("et-"+pid);
   if(btn){
-    btn.className="team-toggle "+(editTeams[pid]==="vermelho"?"is-verm":"is-azul");
-    btn.textContent=editTeams[pid]==="vermelho"?"🔴 Verm":"🔵 Azul";
+    btn.className="team-toggle is-"+next.color;
+    btn.textContent=(TEAM_EMOJI[next.color]||"⚪")+" "+next.label.slice(0,6);
   }
 }
 async function saveEditGame(){
@@ -2358,7 +2434,7 @@ async function saveEditGame(){
   const checked=[...document.querySelectorAll("#edit-player-list input:checked")].map(c=>c.value);
   if(checked.length<2){alert("Selecione ao menos 2 jogadores");return;}
   const players={};
-  checked.forEach(pid=>{ players[pid]={team:editTeams[pid]||"azul",goleiro:editGoleiros.has(pid)?true:false}; });
+  checked.forEach(pid=>{ players[pid]={team:editTeams[pid]||TEAMS()[0].key,goleiro:editGoleiros.has(pid)?true:false}; });
   await db.ref("games/"+editGameId+"/players").set(players);
   closeModal();
   alert("Jogo atualizado!");
@@ -3171,9 +3247,37 @@ async function submitClubGate(){
 
 // ── Painel Master (gerenciar todos os clubes) ──
 const MADMIN_TABS = [["lista","Presença"],["campo","Campo"],["votar","Votar"],["ranking","Ranking"],["historico","Histórico"]];
+function teamEditorRowHtml(name, color){
+  const opts = TEAM_COLORS.map(function(c){ return '<option value="'+c+'" '+(c===color?'selected':'')+'>'+c+'</option>'; }).join('');
+  return '<div class="team-editor-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:center">'
+    + '<input type="text" value="'+(name||'').replace(/"/g,'&quot;')+'" placeholder="Nome do time" class="team-name-input" style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 9px;color:#fff;font-size:12px"/>'
+    + '<select class="team-color-input" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 6px;color:#fff;font-size:12px">'+opts+'</select>'
+    + '<button type="button" onclick="this.closest(\'.team-editor-row\').remove()" style="background:rgba(127,29,29,0.3);border:1px solid rgba(220,38,38,0.3);color:#f87171;border-radius:8px;padding:6px 9px;font-size:12px;cursor:pointer">✕</button>'
+    + '</div>';
+}
+function seedTeamEditor(containerId, teams){
+  const el = document.getElementById(containerId); if (!el) return;
+  el.innerHTML = teams.map(function(t){ return teamEditorRowHtml(t.label, t.color); }).join('');
+}
+function addTeamRow(containerId){
+  const el = document.getElementById(containerId); if (!el) return;
+  const used = new Set([].slice.call(el.querySelectorAll('.team-color-input')).map(function(s){return s.value;}));
+  const next = TEAM_COLORS.find(function(c){return !used.has(c);}) || TEAM_COLORS[0];
+  el.insertAdjacentHTML('beforeend', teamEditorRowHtml('', next));
+}
+function readTeamsFromEditor(containerId){
+  const el = document.getElementById(containerId); if (!el) return [];
+  const rows = [].slice.call(el.querySelectorAll('.team-editor-row'));
+  return rows.map(function(r){
+    const name = r.querySelector('.team-name-input').value.trim();
+    const color = r.querySelector('.team-color-input').value;
+    return name ? {key: slugify(name)||color, label: name, color: color} : null;
+  }).filter(Boolean);
+}
 function showMasterAdmin(){
   const gate = document.getElementById('club-gate-overlay'); if (gate) gate.style.display = 'none';
   const el = document.getElementById('master-admin-overlay'); if (el) el.style.display = 'flex';
+  seedTeamEditor('madmin-new-teams', DEFAULT_TEAMS);
   loadMasterAdminClubs();
 }
 function hideMasterAdmin(){
@@ -3203,6 +3307,9 @@ async function loadMasterAdminClubs(){
         + '<input id="madmin-name-' + slug + '" type="text" value="' + (cfg.clubName || '').replace(/"/g,'&quot;') + '" placeholder="Nome do clube" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 10px;color:#fff;font-size:12px;width:100%"/>'
         + '<input id="madmin-pass-' + slug + '" type="text" value="' + (cfg.sitePass || '').replace(/"/g,'&quot;') + '" placeholder="Senha de acesso" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 10px;color:#fff;font-size:12px;width:100%"/>'
         + '</div>'
+        + '<div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Times do clube</div>'
+        + '<div id="madmin-teams-' + slug + '" style="margin-bottom:6px"></div>'
+        + '<button type="button" onclick="addTeamRow(\'madmin-teams-' + slug + '\')" style="width:100%;padding:6px;border-radius:8px;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5);font-size:10px;border:1px dashed rgba(255,255,255,0.15);cursor:pointer;margin-bottom:12px">+ Adicionar time</button>'
         + '<div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Abas habilitadas</div>'
         + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">'
         + MADMIN_TABS.map(function(t){
@@ -3217,6 +3324,11 @@ async function loadMasterAdminClubs(){
         + '</div>'
         + '</div>';
     }).join('');
+    slugs.forEach(function(slug){
+      const cfg = (orgs[slug] && orgs[slug].config) || {};
+      const teams = (Array.isArray(cfg.teams) && cfg.teams.length>=2) ? cfg.teams : DEFAULT_TEAMS;
+      seedTeamEditor('madmin-teams-'+slug, teams);
+    });
   }catch(e){
     el.innerHTML = '<p style="color:#f87171;font-size:12px;text-align:center">Erro ao carregar clubes.</p>';
   }
@@ -3230,10 +3342,12 @@ async function createNewClub(){
   const slug = slugify(name);
   if (!slug) { alert('Nome de clube inválido.'); return; }
   if (slug === 'admin') { alert('Esse nome é reservado, escolha outro.'); return; }
+  const teams = readTeamsFromEditor('madmin-new-teams');
+  if (teams.length < 2) { alert('Cadastre pelo menos 2 times.'); return; }
   try{
     const existing = (await _fbdb.ref('orgs/'+slug+'/config').once('value')).val();
     if (existing) { alert('Já existe um clube com esse nome.'); return; }
-    await _fbdb.ref('orgs/'+slug+'/config').set({ clubName: name, sitePass: pass || slug, adminPin: slug });
+    await _fbdb.ref('orgs/'+slug+'/config').set({ clubName: name, sitePass: pass || slug, adminPin: slug, teams: teams });
     if (nameInput) nameInput.value = '';
     if (passInput) passInput.value = '';
     alert('Clube "' + name + '" criado!\nLink: /peladaecompromisso/?time=' + slug);
@@ -3253,11 +3367,14 @@ async function saveClubEdits(slug){
     const cb = document.getElementById('madmin-tab-'+slug+'-'+key);
     if (cb && !cb.checked) disabledTabs.push(key);
   });
+  const teams = readTeamsFromEditor('madmin-teams-'+slug);
+  if (teams.length < 2) { alert('O clube precisa de pelo menos 2 times.'); return; }
   try{
     const updates = {};
     updates['orgs/'+slug+'/config/clubName'] = name || slug;
     updates['orgs/'+slug+'/config/sitePass'] = pass || slug;
     updates['orgs/'+slug+'/config/disabledTabs'] = disabledTabs.length ? disabledTabs : null;
+    updates['orgs/'+slug+'/config/teams'] = teams;
     await _fbdb.ref().update(updates);
     alert('Clube atualizado!');
     loadMasterAdminClubs();
