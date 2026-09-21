@@ -305,8 +305,8 @@
       <div style="font-weight:900;font-size:18px;color:#fff">Painel Master</div>
       <div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px;letter-spacing:1px;text-transform:uppercase">Gerenciar clubes</div>
     </div>
-    <div style="background:#0d2016;border:1.5px solid rgba(74,222,128,0.2);border-radius:16px;padding:16px;margin-bottom:16px">
-      <div style="font-weight:800;font-size:13px;color:#fff;margin-bottom:10px">+ Novo clube</div>
+    <div style="background:linear-gradient(160deg,#102a1b,#0a1a11);border:1.5px solid rgba(74,222,128,0.22);border-radius:18px;padding:16px;margin-bottom:16px;box-shadow:0 6px 20px rgba(0,0,0,0.3)">
+      <div style="font-weight:800;font-size:13px;color:#fff;margin-bottom:10px">✨ Novo clube</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
         <input id="madmin-new-name" type="text" placeholder="Nome do clube" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 10px;color:#fff;font-size:13px;width:100%"/>
         <input id="madmin-new-pass" type="text" placeholder="Senha (opcional)" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 10px;color:#fff;font-size:13px;width:100%"/>
@@ -370,6 +370,7 @@ const TEAM_COLORS = ["red","blue","yellow","green","purple","orange"];
 const TEAM_EMOJI = {red:"🔴",blue:"🔵",yellow:"🟡",green:"🟢",purple:"🟣",orange:"🟠"};
 const TEAM_RGB = {red:"220,38,38",blue:"37,99,235",yellow:"202,138,4",green:"22,163,74",purple:"147,51,234",orange:"234,88,12"};
 const TEAM_RGB_LIGHT = {red:"248,113,113",blue:"96,165,250",yellow:"253,224,71",green:"74,222,128",purple:"192,132,252",orange:"251,146,60"};
+const TEAM_COLOR_LABELS = {red:"Vermelho",blue:"Azul",yellow:"Amarelo",green:"Verde",purple:"Roxo",orange:"Laranja"};
 function TEAMS(){
   const t = S.config.teams;
   return (Array.isArray(t) && t.length>=2) ? t : DEFAULT_TEAMS;
@@ -3249,10 +3250,12 @@ async function submitClubGate(){
 // ── Painel Master (gerenciar todos os clubes) ──
 const MADMIN_TABS = [["lista","Presença"],["campo","Campo"],["votar","Votar"],["ranking","Ranking"],["historico","Histórico"]];
 function teamEditorRowHtml(name, color){
-  const opts = TEAM_COLORS.map(function(c){ return '<option value="'+c+'" '+(c===color?'selected':'')+' style="background:#0f1f14;color:#fff">'+c+'</option>'; }).join('');
-  return '<div class="team-editor-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:center">'
+  const opts = TEAM_COLORS.map(function(c){ return '<option value="'+c+'" '+(c===color?'selected':'')+' style="background:#0f1f14;color:#fff">'+(TEAM_COLOR_LABELS[c]||c)+'</option>'; }).join('');
+  const rgb = TEAM_RGB_LIGHT[color] || TEAM_RGB_LIGHT.red;
+  return '<div class="team-editor-row" style="display:flex;gap:7px;margin-bottom:7px;align-items:center">'
+    + '<span class="team-color-dot" style="width:15px;height:15px;border-radius:50%;flex-shrink:0;background:rgb('+rgb+');box-shadow:0 0 0 2px rgba(255,255,255,0.08),0 0 8px rgba('+rgb+',0.5)"></span>'
     + '<input type="text" value="'+(name||'').replace(/"/g,'&quot;')+'" placeholder="Nome do time" class="team-name-input" style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 9px;color:#fff;font-size:12px"/>'
-    + '<select class="team-color-input" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 6px;color:#fff;font-size:12px">'+opts+'</select>'
+    + '<select class="team-color-input" onchange="this.closest(\'.team-editor-row\').querySelector(\'.team-color-dot\').style.background=\'rgb(\'+(TEAM_RGB_LIGHT[this.value]||TEAM_RGB_LIGHT.red)+\')\'" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 6px;color:#fff;font-size:12px">'+opts+'</select>'
     + '<button type="button" onclick="this.closest(\'.team-editor-row\').remove()" style="background:rgba(127,29,29,0.3);border:1px solid rgba(220,38,38,0.3);color:#f87171;border-radius:8px;padding:6px 9px;font-size:12px;cursor:pointer">✕</button>'
     + '</div>';
 }
@@ -3298,21 +3301,28 @@ async function loadMasterAdminClubs(){
       const disabled = new Set(cfg.disabledTabs || []);
       const playerCount = org.players ? Object.keys(org.players).length : 0;
       const gameCount = org.games ? Object.keys(org.games).length : 0;
-      return '<div style="background:#0d2016;border:1px solid rgba(74,222,128,0.15);border-radius:14px;padding:14px;margin-bottom:12px">'
-        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px">'
-        + '<div><div style="font-weight:900;font-size:14px;color:#fff">' + (cfg.clubName || slug) + '</div>'
-        + '<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px">/' + slug + ' &middot; ' + playerCount + ' jogadores &middot; ' + gameCount + ' jogos</div></div>'
-        + '<button onclick="deleteClub(\'' + slug + '\')" style="font-size:10px;color:#f87171;background:rgba(127,29,29,0.3);border:1px solid rgba(220,38,38,0.3);border-radius:8px;padding:5px 9px;white-space:nowrap">Excluir</button>'
+      const teamsForDots = (Array.isArray(cfg.teams) && cfg.teams.length) ? cfg.teams : DEFAULT_TEAMS;
+      const dotsHtml = teamsForDots.map(function(t){ return '<span style="width:9px;height:9px;border-radius:50%;display:inline-block;background:rgb(' + (TEAM_RGB_LIGHT[t.color]||TEAM_RGB_LIGHT.red) + ');box-shadow:0 0 0 2px #0d2016"></span>'; }).join('');
+      return '<div style="background:linear-gradient(160deg,#102a1b,#0a1a11);border:1px solid rgba(74,222,128,0.16);border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 6px 20px rgba(0,0,0,0.3)">'
+        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px">'
+        + '<div style="display:flex;align-items:center;gap:10px;min-width:0">'
+        + '<div style="width:36px;height:36px;border-radius:11px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🛡️</div>'
+        + '<div style="min-width:0"><div style="font-weight:900;font-size:15px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (cfg.clubName || slug) + '</div>'
+        + '<div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:2px;display:flex;align-items:center;gap:5px;flex-wrap:wrap"><span>/' + slug + '</span><span>&middot;</span><span>' + playerCount + ' jogadores</span><span>&middot;</span><span>' + gameCount + ' jogos</span></div></div>'
         + '</div>'
-        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
-        + '<input id="madmin-name-' + slug + '" type="text" value="' + (cfg.clubName || '').replace(/"/g,'&quot;') + '" placeholder="Nome do clube" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 10px;color:#fff;font-size:12px;width:100%"/>'
-        + '<input id="madmin-pass-' + slug + '" type="text" value="' + (cfg.sitePass || '').replace(/"/g,'&quot;') + '" placeholder="Senha de acesso" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 10px;color:#fff;font-size:12px;width:100%"/>'
+        + '<button onclick="deleteClub(\'' + slug + '\')" style="font-size:10px;color:#f87171;background:rgba(127,29,29,0.25);border:1px solid rgba(220,38,38,0.3);border-radius:9px;padding:6px 10px;white-space:nowrap;font-weight:700;cursor:pointer;flex-shrink:0">Excluir</button>'
         + '</div>'
-        + '<div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Times do clube</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'
+        + '<input id="madmin-name-' + slug + '" type="text" value="' + (cfg.clubName || '').replace(/"/g,'&quot;') + '" placeholder="Nome do clube" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:9px 10px;color:#fff;font-size:12px;width:100%"/>'
+        + '<input id="madmin-pass-' + slug + '" type="text" value="' + (cfg.sitePass || '').replace(/"/g,'&quot;') + '" placeholder="Senha de acesso" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:9px 10px;color:#fff;font-size:12px;width:100%"/>'
+        + '</div>'
+        + '<div style="height:1px;background:rgba(255,255,255,0.06);margin:0 0 14px"></div>'
+        + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><span style="font-size:10px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:1px">👕 Times do clube</span>' + dotsHtml + '</div>'
         + '<div id="madmin-teams-' + slug + '" style="margin-bottom:6px"></div>'
-        + '<button type="button" onclick="addTeamRow(\'madmin-teams-' + slug + '\')" style="width:100%;padding:6px;border-radius:8px;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.5);font-size:10px;border:1px dashed rgba(255,255,255,0.15);cursor:pointer;margin-bottom:12px">+ Adicionar time</button>'
-        + '<div style="font-size:10px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Abas habilitadas</div>'
-        + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">'
+        + '<button type="button" onclick="addTeamRow(\'madmin-teams-' + slug + '\')" style="width:100%;padding:7px;border-radius:9px;background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.5);font-size:10px;border:1px dashed rgba(255,255,255,0.15);cursor:pointer;margin-bottom:14px">+ Adicionar time</button>'
+        + '<div style="height:1px;background:rgba(255,255,255,0.06);margin:0 0 14px"></div>'
+        + '<div style="font-size:10px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📑 Abas habilitadas</div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">'
         + MADMIN_TABS.map(function(t){
             const key=t[0], label=t[1];
             return '<label style="display:flex;align-items:center;gap:4px;font-size:11px;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.04);border-radius:20px;padding:4px 10px;cursor:pointer">'
@@ -3320,7 +3330,7 @@ async function loadMasterAdminClubs(){
           }).join('')
         + '</div>'
         + '<div style="display:flex;gap:10px;align-items:center">'
-        + '<button onclick="saveClubEdits(\'' + slug + '\')" style="flex:1;padding:9px;border-radius:8px;background:#16a34a;color:#fff;font-weight:800;font-size:12px;border:none;cursor:pointer">Salvar</button>'
+        + '<button onclick="saveClubEdits(\'' + slug + '\')" style="flex:1;padding:10px;border-radius:10px;background:#16a34a;color:#fff;font-weight:800;font-size:12px;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(22,163,74,0.35)">Salvar</button>'
         + '<a href="/peladaecompromisso/?time=' + slug + '" target="_blank" style="font-size:11px;color:#86efac;text-decoration:underline;white-space:nowrap">abrir ↗</a>'
         + '</div>'
         + '</div>';
