@@ -483,6 +483,7 @@ function badge(t) {
     : `<span class="badge-pelada text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Pelada</span>`;
 }
 function fmtDate(iso) { if(!iso) return ""; const [y,m,d]=iso.split("-"); return `${d}/${m}/${y}`; }
+function weekdayLabel(iso) { if(!iso) return ""; const dias=["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"]; const [y,m,d]=iso.split("-"); return dias[new Date(+y,+m-1,+d).getDay()]; }
 function avgNote(arr) { if(!arr||!arr.length) return null; return (arr.reduce((s,v)=>s+v,0)/arr.length).toFixed(1); }
 function playerName(id) { return S.players[id]?.name||"?"; }
 function latestGame() {
@@ -999,7 +1000,7 @@ function renderGameStatus(){
       <div class="flex items-start justify-between mb-3">
         <div>
           <div class="text-[10px] ${isLatest?"text-green-400/60":"text-green-300/30"} uppercase tracking-widest font-semibold mb-1">${isLatest?"Último jogo":"Jogo anterior"}</div>
-          <div class="font-black text-xl ${game.cancelled?"text-green-100/40 line-through decoration-red-500/70":""}">${fmtDate(game.date)} <span class="text-green-400">·</span> Terça</div>
+          <div class="font-black text-xl ${game.cancelled?"text-green-100/40 line-through decoration-red-500/70":""}">${fmtDate(game.date)} <span class="text-green-400">·</span> ${weekdayLabel(game.date)}</div>
         </div>
         <div class="flex flex-col items-end gap-1">
           ${badge(game.type)}
@@ -2091,7 +2092,7 @@ function renderHistorico(){
     }
     return `<div class="bg-[#132218] border border-[#2a4a35] rounded-xl p-4 cursor-pointer" onclick="toggleGame('${game.id}')">
       <div class="flex items-center justify-between">
-        <div><div class="font-black text-sm">${fmtDate(game.date)} — Terça</div>
+        <div><div class="font-black text-sm">${fmtDate(game.date)} — ${weekdayLabel(game.date)}</div>
           <div class="flex items-center gap-2 mt-1">${badge(game.type)}<span class="text-[10px] text-green-300/40">👥${pids.length} · 🗳️${voters}</span>${teamCountsLabel?`<span class="text-[10px] text-green-300/40">${teamCountsLabel}</span>`:""}</div></div>
         <span class="text-green-300/40 text-lg">${expanded?"▲":"▼"}</span>
       </div>${detail}
