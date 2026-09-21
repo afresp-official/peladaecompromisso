@@ -859,7 +859,12 @@ function resetUser(){if(!confirm("Trocar de jogador?"))return;lsRemove("uid");S.
 function renderInicio(){renderPlayerSelect();renderGameStatus();}
 function renderPlayerSelect(){
   const el=document.getElementById("player-select-card"); if(!el) return;
-  el.innerHTML=`<div class="flex justify-end"><button onclick="logoutClub()" class="flex items-center gap-1.5 bg-red-950/40 border border-red-800/40 rounded-full px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-900/40 transition-colors">🚪 Sair do clube</button></div>`;
+  el.innerHTML=`<div class="flex justify-end">
+    <button onclick="logoutClub()" class="group flex items-center gap-2 pl-2 pr-4 py-2 rounded-full bg-gradient-to-br from-red-600 to-red-800 text-white font-black text-[11px] uppercase tracking-wide shadow-lg shadow-red-950/50 border border-red-400/20 hover:shadow-xl hover:shadow-red-900/60 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200">
+      <span class="flex items-center justify-center size-6 rounded-full bg-white/15 group-hover:bg-white/25 transition-colors text-sm">🚪</span>
+      Sair do clube
+    </button>
+  </div>`;
   return;
   const latest=latestGame();
   const opts=activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
