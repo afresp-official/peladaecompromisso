@@ -2267,14 +2267,30 @@ function sortearTentativa(teams,arr,craqueNames){
   const normaisPids=arr.filter(pid=>!craqueNames.has((S.players[pid]?.name||"").toLowerCase()));
   shuffle(craquePids); shuffle(normaisPids);
   const groups={}; teams.forEach(t=>{ groups[t.key]=[]; });
-  // Craques em rodízio pelos times (0→time1, 1→time2, 2→time3, 3→time1...)
-  craquePids.forEach((pid,i)=>{ groups[teams[i%teams.length].key].push(pid); });
-  // Distribui normais sempre pro time com menos gente (balanceia mesmo com N times)
-  normaisPids.forEach(pid=>{
-    let minKey=teams[0].key;
-    teams.forEach(t=>{ if(groups[t.key].length<groups[minKey].length) minKey=t.key; });
-    groups[minKey].push(pid);
-  });
+
+  // Com 3+ times ("ganhou fica"), prioriza encher os 2 times de campo (até o tamanho ideal)
+  // antes de mandar gente pro(s) time(s) reserva — em vez de balancear os N times igualmente.
+  const pitchTeams = teams.slice(0,2);
+  const benchTeams = teams.slice(2);
+  const usePitchPriority = benchTeams.length>0;
+  const perPitchTarget = Math.max(1, Math.ceil(defaultVagas()/teams.length));
+
+  function minKeyOf(keys){
+    let minKey=keys[0];
+    keys.forEach(k=>{ if(groups[k].length<groups[minKey].length) minKey=k; });
+    return minKey;
+  }
+  function assign(pid){
+    if(usePitchPriority){
+      const openPitch=pitchTeams.map(t=>t.key).filter(k=>groups[k].length<perPitchTarget);
+      if(openPitch.length){ groups[minKeyOf(openPitch)].push(pid); return; }
+      groups[minKeyOf(benchTeams.map(t=>t.key))].push(pid);
+    }else{
+      groups[minKeyOf(teams.map(t=>t.key))].push(pid);
+    }
+  }
+  craquePids.forEach(assign);
+  normaisPids.forEach(assign);
   return groups;
 }
 function sorteioTemConflitoDeRival(teams,groups){
