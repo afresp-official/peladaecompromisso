@@ -3338,22 +3338,22 @@ async function createNewClub(){
   const passInput = document.getElementById('madmin-new-pass');
   const name = (nameInput && nameInput.value || '').trim();
   const pass = (passInput && passInput.value || '').trim();
-  if (!name) { alert('Informe o nome do clube.'); return; }
+  if (!name) { showToast('Informe o nome do clube.'); return; }
   const slug = slugify(name);
-  if (!slug) { alert('Nome de clube inválido.'); return; }
-  if (slug === 'admin') { alert('Esse nome é reservado, escolha outro.'); return; }
+  if (!slug) { showToast('Nome de clube inválido.'); return; }
+  if (slug === 'admin') { showToast('Esse nome é reservado, escolha outro.'); return; }
   const teams = readTeamsFromEditor('madmin-new-teams');
-  if (teams.length < 2) { alert('Cadastre pelo menos 2 times.'); return; }
+  if (teams.length < 2) { showToast('Cadastre pelo menos 2 times.'); return; }
   try{
     const existing = (await _fbdb.ref('orgs/'+slug+'/config').once('value')).val();
-    if (existing) { alert('Já existe um clube com esse nome.'); return; }
+    if (existing) { showToast('Já existe um clube com esse nome.'); return; }
     await _fbdb.ref('orgs/'+slug+'/config').set({ clubName: name, sitePass: pass || slug, adminPin: slug, teams: teams });
     if (nameInput) nameInput.value = '';
     if (passInput) passInput.value = '';
-    alert('Clube "' + name + '" criado!\nLink: /peladaecompromisso/?time=' + slug);
+    showToast('✅ Clube "' + name + '" criado! Link: ?time=' + slug, 5000);
     loadMasterAdminClubs();
   }catch(e){
-    alert('Erro ao criar clube. Tente novamente.');
+    showToast('Erro ao criar clube. Tente novamente.');
   }
 }
 async function saveClubEdits(slug){
@@ -3368,7 +3368,7 @@ async function saveClubEdits(slug){
     if (cb && !cb.checked) disabledTabs.push(key);
   });
   const teams = readTeamsFromEditor('madmin-teams-'+slug);
-  if (teams.length < 2) { alert('O clube precisa de pelo menos 2 times.'); return; }
+  if (teams.length < 2) { showToast('O clube precisa de pelo menos 2 times.'); return; }
   try{
     const updates = {};
     updates['orgs/'+slug+'/config/clubName'] = name || slug;
@@ -3376,22 +3376,22 @@ async function saveClubEdits(slug){
     updates['orgs/'+slug+'/config/disabledTabs'] = disabledTabs.length ? disabledTabs : null;
     updates['orgs/'+slug+'/config/teams'] = teams;
     await _fbdb.ref().update(updates);
-    alert('Clube atualizado!');
+    showToast('✅ Clube atualizado!');
     loadMasterAdminClubs();
   }catch(e){
-    alert('Erro ao salvar. Tente novamente.');
+    showToast('Erro ao salvar. Tente novamente.');
   }
 }
 async function deleteClub(slug){
   if (!confirm('Excluir o clube "' + slug + '" e TODOS os dados dele (jogadores, jogos, votos)?\n\nIsso não pode ser desfeito.')) return;
   const typed = prompt('Pra confirmar, digite o nome do clube exatamente assim: ' + slug);
-  if (typed !== slug) { alert('Cancelado.'); return; }
+  if (typed !== slug) { showToast('Cancelado.'); return; }
   try{
     await _fbdb.ref('orgs/'+slug).remove();
-    alert('Clube excluído.');
+    showToast('🗑️ Clube excluído.');
     loadMasterAdminClubs();
   }catch(e){
-    alert('Erro ao excluir. Tente novamente.');
+    showToast('Erro ao excluir. Tente novamente.');
   }
 }
 
@@ -3495,7 +3495,7 @@ async function deleteClub(slug){
 </div>
 
 <!-- Toast -->
-<div id="toast" style="position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(12px);background:#15803d;color:#fff;padding:10px 20px;border-radius:999px;font-weight:700;font-size:13px;opacity:0;transition:all .3s;z-index:200;white-space:nowrap;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,.4)"></div>
+<div id="toast" style="position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(12px);background:#15803d;color:#fff;padding:10px 20px;border-radius:999px;font-weight:700;font-size:13px;opacity:0;transition:all .3s;z-index:10050;white-space:nowrap;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,.4)"></div>
 
 <!-- Modal de sucesso -->
 <div id="success-modal" class="hidden fixed inset-0 z-50 items-center justify-center p-6">
