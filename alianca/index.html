@@ -859,11 +859,7 @@ function resetUser(){if(!confirm("Trocar de jogador?"))return;lsRemove("uid");S.
 function renderInicio(){renderPlayerSelect();renderGameStatus();}
 function renderPlayerSelect(){
   const el=document.getElementById("player-select-card"); if(!el) return;
-  el.innerHTML=`<div class="bg-[#132218] border border-red-900/40 rounded-xl p-4">
-    <div class="font-bold text-sm mb-1">🚪 Sair deste clube</div>
-    <p class="text-[10px] text-green-300/40 mb-3">Esquece o acesso salvo neste aparelho e volta pra tela de escolher clube. Use pra trocar de clube ou sair de um aparelho compartilhado.</p>
-    <button onclick="logoutClub()" class="w-full py-2 rounded-lg bg-red-950/60 border border-red-800/50 text-red-400 text-sm font-bold hover:bg-red-900/40 transition-colors">Sair</button>
-  </div>`;
+  el.innerHTML=`<div class="flex justify-end"><button onclick="logoutClub()" class="flex items-center gap-1.5 bg-red-950/40 border border-red-800/40 rounded-full px-3 py-1.5 text-xs font-bold text-red-400 hover:bg-red-900/40 transition-colors">🚪 Sair do clube</button></div>`;
   return;
   const latest=latestGame();
   const opts=activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
