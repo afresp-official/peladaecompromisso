@@ -510,7 +510,7 @@ function initListeners() {
   db.ref("formations").on("value",s=>{ S.formations=s.val()||{}; renderAll(); });
   db.ref("presenca").on("value",  s=>{ S.presenca=s.val()||{};   renderAll(); });
   db.ref("ausencia").on("value",  s=>{ S.ausencia=s.val()||{};   renderAll(); });
-  db.ref("config").on("value",    s=>{ if(s.val()) S.config=s.val(); applyClubBranding(); applyTabVisibility(); });
+  db.ref("config").on("value",    s=>{ if(s.val()) S.config=s.val(); applyClubBranding(); applyTabVisibility(); if(typeof window.__weatherConfigChanged==="function") window.__weatherConfigChanged(); });
 }
 async function seedPlayersIfEmpty() {
   const cfgSnap=await db.ref("config").once("value");
@@ -3337,6 +3337,11 @@ async function loadMasterAdminClubs(){
         + '<input id="madmin-vagas-' + slug + '" type="number" min="2" value="' + (cfg.totalVagas || 22) + '" style="width:64px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:9px 10px;color:#fff;font-size:12px;text-align:center"/>'
         + '<span style="font-size:10.5px;color:rgba(255,255,255,0.35);line-height:1.3">vagas na lista de presença por jogo — aumente se o clube tem 3+ times, pra caber todo mundo</span>'
         + '</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">'
+        + '<input id="madmin-lat-' + slug + '" type="text" inputmode="decimal" value="' + (typeof cfg.lat==='number'?cfg.lat:'') + '" placeholder="Latitude" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:9px 10px;color:#fff;font-size:12px;width:100%"/>'
+        + '<input id="madmin-lon-' + slug + '" type="text" inputmode="decimal" value="' + (typeof cfg.lon==='number'?cfg.lon:'') + '" placeholder="Longitude" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:9px 10px;color:#fff;font-size:12px;width:100%"/>'
+        + '</div>'
+        + '<div style="font-size:10.5px;color:rgba(255,255,255,0.35);line-height:1.3;margin-bottom:14px">localização do jogo, pra chover no app só quando chover de verdade aí — pegue no Google Maps: toque e segure o local no mapa, copia as duas coordenadas que aparecem</div>'
         + '<div style="height:1px;background:rgba(255,255,255,0.06);margin:0 0 14px"></div>'
         + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><span style="font-size:10px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:1px">👕 Times do clube</span>' + dotsHtml + '</div>'
         + '<div id="madmin-teams-' + slug + '" style="margin-bottom:6px"></div>'
@@ -3392,9 +3397,16 @@ async function saveClubEdits(slug){
   const nameInput = document.getElementById('madmin-name-'+slug);
   const passInput = document.getElementById('madmin-pass-'+slug);
   const vagasInput = document.getElementById('madmin-vagas-'+slug);
+  const latInput = document.getElementById('madmin-lat-'+slug);
+  const lonInput = document.getElementById('madmin-lon-'+slug);
   const name = (nameInput && nameInput.value || '').trim();
   const pass = (passInput && passInput.value || '').trim();
   const vagas = Math.max(2, Number(vagasInput && vagasInput.value) || 22);
+  const latVal = (latInput && latInput.value || '').trim().replace(',','.');
+  const lonVal = (lonInput && lonInput.value || '').trim().replace(',','.');
+  const lat = latVal ? Number(latVal) : null;
+  const lon = lonVal ? Number(lonVal) : null;
+  if ((latVal && isNaN(lat)) || (lonVal && isNaN(lon))) { showToast('Latitude/longitude inválida.'); return; }
   const disabledTabs = [];
   MADMIN_TABS.forEach(function(t){
     const key=t[0];
@@ -3410,6 +3422,8 @@ async function saveClubEdits(slug){
     updates['orgs/'+slug+'/config/disabledTabs'] = disabledTabs.length ? disabledTabs : null;
     updates['orgs/'+slug+'/config/teams'] = teams;
     updates['orgs/'+slug+'/config/totalVagas'] = vagas;
+    updates['orgs/'+slug+'/config/lat'] = lat;
+    updates['orgs/'+slug+'/config/lon'] = lon;
     await _fbdb.ref().update(updates);
     showToast('✅ Clube atualizado!');
     loadMasterAdminClubs();
@@ -3577,10 +3591,16 @@ if('serviceWorker' in navigator){
   var W = 0, H = 0, dpr = 1, raf = 0, running = false, mode = null, intensity = 1, storm = false, lightningT = 0, particles = [];
   var WIND = -0.55; // leve inclinação da chuva p/ esquerda
 
-  // ── Localização: São Paulo capital (AFRESP) ──
-  var LAT = -23.5505, LON = -46.6333;
-  var WEATHER_URL = 'https://api.open-meteo.com/v1/forecast?latitude=' + LAT + '&longitude=' + LON + '&current_weather=true&timezone=America%2FSao_Paulo';
-  var CACHE_KEY = 'pelada_' + ORG + '_weather_v2';
+  // ── Localização: cada clube define a sua (config.lat/config.lon, via Painel Master). ──
+  // Sem config ainda carregada (ou clube sem localização definida), cai no fallback abaixo.
+  var FALLBACK_LAT = -23.5505, FALLBACK_LON = -46.6333; // fallback genérico: São Paulo capital
+  var lastLatLonKey = null;
+  function currentLatLon(){
+    var cfg = (typeof S !== 'undefined' && S.config) || {};
+    var lat = (typeof cfg.lat === 'number') ? cfg.lat : FALLBACK_LAT;
+    var lon = (typeof cfg.lon === 'number') ? cfg.lon : FALLBACK_LON;
+    return { lat: lat, lon: lon };
+  }
   var CACHE_TTL_MS = 10 * 60 * 1000; // 10 min
 
   // intensity: 1=garoa/chuva fraca, 2=chuva moderada, 3=chuva forte/temporal (storm=true se trovoada)
@@ -3593,23 +3613,23 @@ if('serviceWorker' in navigator){
     return { mode: null }; // neve ou código desconhecido: sem efeito
   }
 
-  function readCache(){
+  function readCache(cacheKey){
     try {
-      var raw = localStorage.getItem(CACHE_KEY);
+      var raw = localStorage.getItem(cacheKey);
       if (!raw) return undefined;
       var data = JSON.parse(raw);
       if (!data || Date.now() - data.t > CACHE_TTL_MS) return undefined;
       return data.cls;
     } catch (e) { return undefined; }
   }
-  function readStale(){
+  function readStale(cacheKey){
     try {
-      var raw = localStorage.getItem(CACHE_KEY);
+      var raw = localStorage.getItem(cacheKey);
       return raw ? JSON.parse(raw).cls : null;
     } catch (e) { return null; }
   }
-  function writeCache(cls){
-    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), cls: cls })); } catch (e) {}
+  function writeCache(cacheKey, cls){
+    try { localStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), cls: cls })); } catch (e) {}
   }
 
   function setMode(cls){
@@ -3622,17 +3642,21 @@ if('serviceWorker' in navigator){
   }
 
   function refreshWeather(force){
-    var cached = force ? undefined : readCache();
+    var ll = currentLatLon();
+    lastLatLonKey = ll.lat + ',' + ll.lon;
+    var weatherUrl = 'https://api.open-meteo.com/v1/forecast?latitude=' + ll.lat + '&longitude=' + ll.lon + '&current_weather=true&timezone=America%2FSao_Paulo';
+    var cacheKey = 'pelada_' + ORG + '_weather_v2_' + lastLatLonKey;
+    var cached = force ? undefined : readCache(cacheKey);
     if (cached !== undefined) { setMode(cached); return; }
-    fetch(WEATHER_URL, { cache: 'no-store' })
+    fetch(weatherUrl, { cache: 'no-store' })
       .then(function(r){ if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
       .then(function(json){
         var cw = json && json.current_weather;
         var cls = cw ? classify(cw.weathercode, cw.is_day === 1) : { mode: null };
-        writeCache(cls);
+        writeCache(cacheKey, cls);
         setMode(cls);
       })
-      .catch(function(){ setMode(readStale()); });
+      .catch(function(){ setMode(readStale(cacheKey)); });
   }
 
   // ── Partículas por modo ──
@@ -3802,6 +3826,12 @@ if('serviceWorker' in navigator){
     var _goTo = window.goTo;
     window.goTo = function(){ var r = _goTo.apply(this, arguments); setTimeout(sync, 0); return r; };
   }
+
+  window.__weatherConfigChanged = function(){
+    var ll = currentLatLon();
+    if (lastLatLonKey !== null && lastLatLonKey === (ll.lat + ',' + ll.lon)) return; // mesma localização, nada a fazer
+    refreshWeather(false);
+  };
 
   resize();
   refreshWeather(false);
