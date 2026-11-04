@@ -1934,7 +1934,8 @@ function calcPlayerScore(pid,games,expectedTotal,period){
     const _myTeam=getPlayerTeam(game,pid);
     const _winBonus=_res&&((_myTeam==="vermelho"&&_res.vermScore>_res.azulScore)||(_myTeam==="azul"&&_res.azulScore>_res.vermScore))?1.03:1;
     pg.push({
-      note:safeAvg(pv.map(v=>v.note||0))*_winBonus,
+      note:safeAvg(pv.map(v=>v.note||0)),
+      noteScore:safeAvg(pv.map(v=>v.note||0))*_winBonus,
       garra:safeAvg(pv.map(v=>v.garra||0)),
       comport:safeAvg(pv.map(v=>v.comportamento||0)),
       chutes:safeAvg(pv.map(v=>v.chutes||0)),
@@ -1952,13 +1953,13 @@ function calcPlayerScore(pid,games,expectedTotal,period){
   const freqDisplay=played/total;
   const freqScore=played/Math.max(total,expectedTotal||total);
   const a=k=>pg.reduce((s,g)=>s+(g[k]||0),0)/pg.length;
-  const note=a("note"),garra=a("garra"),comport=a("comport"),chutes=a("chutes"),desarmes=a("desarmes");
+  const note=a("note"),noteScore=a("noteScore"),garra=a("garra"),comport=a("comport"),chutes=a("chutes"),desarmes=a("desarmes");
   const gols=a("gols"),assists=a("assists"),amarelo=a("amarelo"),verm=a("verm"),azul=a("azul"),faltas=a("faltas"),grav=a("grav");
   const gravMult=grav<=0?0.1:grav<=1?0.3:grav<=2?0.6:1;
   const cardY=period==="ano"?20/12:20;
   const cardR=period==="ano"?35/12:35;
   const cardB=period==="ano"?10/12:10;
-  const notePts=note>0?note*3:0;
+  const notePts=noteScore>0?noteScore*3:0;
   const golsPts=Math.min(gols,3)*8;
   const assistsPts=Math.min(assists,3)*5;
   const chutesPts=Math.min(chutes,4)*2;
