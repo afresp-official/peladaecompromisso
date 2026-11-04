@@ -1563,10 +1563,16 @@ function renderVotar() {
   }
   // Avaliou mas não foi avaliado → auto-avaliação (só o card próprio)
   const others=alreadyVoted?[S.uid]:allPids;
-  if(voteState.gameId!==game.id){
+  const resuming=voteState.gameId===game.id;
+  if(!resuming){
     voteState={gameId:game.id,ratings:{}};
     others.forEach(pid=>{voteState.ratings[pid]=emptyRating();});
   }
+  // Já está com o formulário aberto pra este jogo: não reconstruir o DOM a cada
+  // atualização em tempo real (presença, votos de outros jogos, etc) — isso pode
+  // derrubar um toque em "Enviar votos" bem no meio do clique. O que já foi
+  // preenchido continua em voteState normalmente.
+  if(resuming&&document.querySelector("button[onclick='submitVotes()']")) return;
   const isGoleiro=pid=>game.players?.[pid]?.goleiro===true;
   const verm=others.filter(p=>getPlayerTeam(game,p)==="vermelho"&&!isGoleiro(p));
   const azul=others.filter(p=>getPlayerTeam(game,p)==="azul"&&!isGoleiro(p));
@@ -1707,8 +1713,11 @@ function addDesarmes(pid,d){
 }
 function setObs(pid,val){ensureRating(pid);voteState.ratings[pid].obs=val;}
 async function submitVotes(){
-  const gameId=voteState.gameId; if(!gameId||!S.uid) return;
-  const game=S.games[gameId]; if(!game) return;
+  const gameId=voteState.gameId;
+  if(!gameId||!S.uid){alert("Sua sessão de votação expirou. Toque em Voltar e entre na votação de novo.");return;}
+  const game=S.games[gameId];
+  if(!game){alert("Não encontrei esse jogo mais. Toque em Voltar e tente de novo.");return;}
+  if(!Object.keys(voteState.ratings).length){alert("Nenhum jogador pra avaliar foi carregado. Toque em Voltar e tente de novo.");return;}
   const missing=Object.entries(voteState.ratings).filter(([,v])=>!v.note||!v.garra||!v.comportamento).map(([pid])=>playerName(pid));
   if(missing.length){alert("Faltou avaliar (nota ⭐, garra ⚡ e comportamento 🤝) para: "+missing.slice(0,4).join(", ")+(missing.length>4?` e mais ${missing.length-4}...`:""));return;}
   const btn=document.querySelector("button[onclick='submitVotes()']");
