@@ -2576,6 +2576,18 @@ function logoutClub(){
   location.href="/peladaecompromisso/";
 }
 
+function pdfLogoHtml(size){
+  return `<img src="/peladaecompromisso/icon-512.png" crossorigin="anonymous" style="width:${size}px;height:${size}px;border-radius:50%;display:block;margin:0 auto 8px;box-shadow:0 2px 10px rgba(0,0,0,.5);" />`;
+}
+function pdfHeaderHtml(dateStr,subtitle){
+  return `<div style="text-align:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #1e4a2a;">
+      ${pdfLogoHtml(52)}
+      <div style="font-size:9px;color:#4ade80;text-transform:uppercase;letter-spacing:3px;margin-bottom:4px;">${clubDisplayName()}</div>
+      <div style="font-size:18px;font-weight:900;letter-spacing:0.5px;">PELADA É COMPROMISSO</div>
+      <div style="font-size:14px;color:#fff;font-weight:800;margin-top:6px;">${dateStr}</div>
+      ${subtitle?`<div style="font-size:11px;color:#86efac;margin-top:2px;">${subtitle}</div>`:""}
+    </div>`;
+}
 async function shareResultadoPDF(gid){
   const g=S.games[gid]; if(!g) return;
   const dias=["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
@@ -2624,11 +2636,7 @@ async function shareResultadoPDF(gid){
       <div style="font-size:11px;font-weight:900;color:#4ade80;flex-shrink:0;">${Math.round(p.score)}pts</div>
     </div>`).join("");
   const html=`<div style="background:#081510;padding:20px 16px;font-family:'Segoe UI',Arial,sans-serif;color:#fff;width:420px;">
-    <div style="text-align:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #1e4a2a;">
-      <div style="font-size:9px;color:#4ade80;text-transform:uppercase;letter-spacing:3px;margin-bottom:4px;">⚽ ${clubDisplayName()}</div>
-      <div style="font-size:18px;font-weight:900;letter-spacing:0.5px;">PELADA É COMPROMISSO</div>
-      <div style="font-size:11px;color:#86efac;margin-top:4px;">${diaSemana}, ${fmtDate(g.date)} · ${(g.type||"pelada").toUpperCase()}</div>
-    </div>
+    ${pdfHeaderHtml(`${diaSemana}, ${fmtDate(g.date)}`,(g.type||"pelada").toUpperCase())}
     ${result?`<div style="background:#0f2016;border:1px solid #1e4a2a;border-radius:12px;padding:14px;margin-bottom:12px;">
       <div style="display:flex;justify-content:center;align-items:center;gap:28px;padding-bottom:12px;margin-bottom:2px;">
         <div style="text-align:center;"><div style="font-size:46px;font-weight:900;color:#f87171;line-height:1;">${result.vermScore}</div><div style="font-size:9px;color:#f87171;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">🔴 Vermelho</div></div>
@@ -2855,6 +2863,7 @@ async function shareVotosPDF(gid){
   const teamDot=t=>t==="vermelho"?`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#ef4444;flex-shrink:0;margin-top:2px;"></span>`:t==="azul"?`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#3b82f6;flex-shrink:0;margin-top:2px;"></span>`:`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#22c55e;flex-shrink:0;margin-top:2px;"></span>`;
   const sortedVerm=Object.entries(votes).filter(([pid])=>getPlayerTeam(gameObj,pid)==="vermelho").sort((a,b)=>(b[1].note||0)-(a[1].note||0));
   const sortedAzul=Object.entries(votes).filter(([pid])=>getPlayerTeam(gameObj,pid)==="azul").sort((a,b)=>(b[1].note||0)-(a[1].note||0));
+  const sortedSemTime=Object.entries(votes).filter(([pid])=>{const t=getPlayerTeam(gameObj,pid);return t!=="vermelho"&&t!=="azul";}).sort((a,b)=>(b[1].note||0)-(a[1].note||0));
   const renderCard=([pid,v])=>{
     const team=getPlayerTeam(gameObj,pid);
     const stats=[];
@@ -2891,11 +2900,7 @@ async function shareVotosPDF(gid){
   const bpHtml=bp?`<div style="border-top:1px solid #1e4a2a;padding-top:8px;margin-top:8px;display:flex;align-items:center;gap:8px;"><span style="font-size:16px;">&#11088;</span><div><div style="font-size:8px;color:#ca8a04;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Melhor Jogador</div><div style="font-size:13px;font-weight:900;color:#fde68a;">${bp.name} <span style="color:#a16207;font-weight:400;font-size:10px;">${bp.score} pts</span></div></div></div>`:"";
   const sectionTitle=(label,color)=>`<div style="display:flex;align-items:center;gap:7px;margin:12px 0 8px;"><span style="width:9px;height:9px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span><span style="font-size:10px;font-weight:900;color:${color};text-transform:uppercase;letter-spacing:1.5px;">${label}</span></div>`;
   const html=`<div style="background:#081510;padding:20px 16px;font-family:'Segoe UI',Arial,sans-serif;color:#fff;width:420px;">
-    <div style="text-align:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid #1e4a2a;">
-      <div style="font-size:9px;color:#4ade80;text-transform:uppercase;letter-spacing:3px;margin-bottom:4px;">${clubDisplayName()}</div>
-      <div style="font-size:18px;font-weight:900;letter-spacing:0.5px;">PELADA E COMPROMISSO</div>
-      <div style="font-size:11px;color:#86efac;margin-top:4px;">Votos de ${playerName(vid)} &middot; ${diaSemana}, ${fmtDate(g.date)}</div>
-    </div>
+    ${pdfHeaderHtml(`${diaSemana}, ${fmtDate(g.date)}`,`Votos de ${playerName(vid)}`)}
     ${result?`<div style="background:#0f2016;border:1px solid #1e4a2a;border-radius:12px;padding:12px;margin-bottom:14px;">
       <div style="display:flex;justify-content:center;align-items:center;gap:28px;padding-bottom:10px;margin-bottom:2px;">
         <div style="text-align:center;"><div style="font-size:40px;font-weight:900;color:#f87171;line-height:1;">${result.vermScore}</div><div style="font-size:9px;color:#f87171;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Vermelho</div></div>
@@ -2906,6 +2911,7 @@ async function shareVotosPDF(gid){
     </div>`:""}
     ${sortedVerm.length?sectionTitle("Time Vermelho","#ef4444")+""+sortedVerm.map(renderCard).join(""):""}
     ${sortedAzul.length?sectionTitle("Time Azul","#3b82f6")+""+sortedAzul.map(renderCard).join(""):""}
+    ${sortedSemTime.length?sectionTitle("Sem time","#86efac")+""+sortedSemTime.map(renderCard).join(""):""}
     <div style="text-align:center;margin-top:12px;font-size:9px;color:#2a4a35;">Pelada e Compromisso · ${clubDisplayName()}</div>
   </div>`;
   showToast("Gerando PDF...",5000);
@@ -3022,9 +3028,10 @@ async function compartilharEscalacao(gameId){
   }
   const html='<div style="font-family:system-ui,sans-serif;background:#081510;color:#fff;padding:20px 14px;width:380px">'
     +'<div style="text-align:center;padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.1)">'
-    +'<div style="font-size:20px;margin-bottom:3px">⚽</div>'
+    +pdfLogoHtml(44)
     +'<div style="font-weight:900;font-size:15px;letter-spacing:1px">PELADA É COMPROMISSO</div>'
-    +'<div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:2px">'+clubDisplayName()+' · '+diaSemana+fmtDate(game.date)+'</div>'
+    +'<div style="font-size:13px;color:#fff;font-weight:800;margin-top:6px">'+diaSemana+fmtDate(game.date)+'</div>'
+    +'<div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:2px">'+clubDisplayName()+'</div>'
     +'<div style="margin-top:6px;font-size:10px;font-weight:700;color:rgba(74,222,128,0.65);letter-spacing:2px;text-transform:uppercase">Escalação Confirmada</div>'
     +'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
