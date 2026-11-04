@@ -388,7 +388,7 @@ function lsRemove(name){ localStorage.removeItem('pelada_'+ORG+'_'+name); if(ORG
 
 // ── State ──
 const S = {
-  players:{}, games:{}, ratings:{}, formations:{}, presenca:{}, ausencia:{},
+  players:{}, games:{}, ratings:{}, formations:{}, presenca:{}, ausencia:{}, voteDrafts:{},
   config:{adminPin:ORG,sitePass:ORG},
   uid: lsGet("uid")||null,
   adminOk:false, rankFilter:"all", currentPage:"inicio", selectedGameId:null, selectedVoteGameId:null,
@@ -543,6 +543,7 @@ function initListeners() {
   db.ref("formations").on("value",s=>{ S.formations=s.val()||{}; renderAll(); });
   db.ref("presenca").on("value",  s=>{ S.presenca=s.val()||{};   renderAll(); });
   db.ref("ausencia").on("value",  s=>{ S.ausencia=s.val()||{};   renderAll(); });
+  db.ref("voteDrafts").on("value",s=>{ S.voteDrafts=s.val()||{}; });
   db.ref("config").on("value",    s=>{ if(s.val()) S.config=s.val(); applyClubBranding(); applyTabVisibility(); if(typeof window.__weatherConfigChanged==="function") window.__weatherConfigChanged(); });
 }
 async function seedPlayersIfEmpty() {
@@ -1470,13 +1471,30 @@ async function onDragEnd(e) {
 
 // ── VOTAR ──
 let voteState = {gameId:null, ratings:{}};
+let _forceVotarRebuild = false;
 function emptyRating(){return{note:0,goals:0,assists:0,chutes:0,desarmes:0,obs:"",garra:0,comportamento:0,faltas:0,gravidade:0,amarelos:0,vermelhos:0,azuis:0};}
 function ensureRating(pid){if(!voteState.ratings[pid])voteState.ratings[pid]=emptyRating();}
+// ── Rascunho de votação: salva o progresso no Firebase (não só no navegador)
+// pra nunca se perder, mesmo se a aba fechar ou o clique final se perder.
+let _draftSaveTimer=null;
+function saveDraftNow(){
+  if(!voteState.gameId||!S.uid) return;
+  db.ref(`voteDrafts/${voteState.gameId}/${S.uid}`).set(voteState.ratings).catch(()=>{});
+}
+function scheduleDraftSave(){
+  clearTimeout(_draftSaveTimer);
+  _draftSaveTimer=setTimeout(saveDraftNow,900);
+}
+function saveDraftAndNotify(){
+  saveDraftNow();
+  showToast("💾 Progresso salvo");
+}
 function setRating5(pid,field,val){
   ensureRating(pid);
   voteState.ratings[pid][field]=val;
   const c=document.getElementById("vc-"+pid);
   if(c) c.querySelectorAll(`[data-field="${field}"]`).forEach((b,i)=>b.classList.toggle("sel",i+1===val));
+  scheduleDraftSave();
 }
 function renderGrav(pid){
   const c=document.getElementById("grav-"+pid); if(!c) return;
@@ -1492,24 +1510,27 @@ function renderGrav(pid){
     +'<div class="flex gap-1.5">'+opts+'</div>'
     +'</div>';
 }
-function setGravidade(pid,v){ensureRating(pid);voteState.ratings[pid].gravidade=v;renderGrav(pid);}
+function setGravidade(pid,v){ensureRating(pid);voteState.ratings[pid].gravidade=v;renderGrav(pid);scheduleDraftSave();}
 function addAmarelo(pid,d){
   ensureRating(pid);
   voteState.ratings[pid].amarelos=Math.max(0,Math.min(3,(voteState.ratings[pid].amarelos||0)+d));
   const e=document.getElementById("am-"+pid); if(e) e.textContent=voteState.ratings[pid].amarelos;
   const b=document.getElementById("am-min-"+pid); if(b) b.disabled=voteState.ratings[pid].amarelos<=0;
+  scheduleDraftSave();
 }
 function addVermelho(pid,d){
   ensureRating(pid);
   voteState.ratings[pid].vermelhos=Math.max(0,Math.min(2,(voteState.ratings[pid].vermelhos||0)+d));
   const e=document.getElementById("vm-"+pid); if(e) e.textContent=voteState.ratings[pid].vermelhos;
   const b=document.getElementById("vm-min-"+pid); if(b) b.disabled=voteState.ratings[pid].vermelhos<=0;
+  scheduleDraftSave();
 }
 function addAzul(pid,d){
   ensureRating(pid);
   voteState.ratings[pid].azuis=Math.max(0,Math.min(3,(voteState.ratings[pid].azuis||0)+d));
   const e=document.getElementById("az-"+pid); if(e) e.textContent=voteState.ratings[pid].azuis;
   const b=document.getElementById("az-min-"+pid); if(b) b.disabled=voteState.ratings[pid].azuis<=0;
+  scheduleDraftSave();
 }
 function addFalta(pid,d){
   ensureRating(pid);
@@ -1517,6 +1538,7 @@ function addFalta(pid,d){
   const e=document.getElementById("ft-"+pid); if(e) e.textContent=voteState.ratings[pid].faltas;
   const b=document.getElementById("ft-min-"+pid); if(b) b.disabled=voteState.ratings[pid].faltas<=0;
   renderGrav(pid);
+  scheduleDraftSave();
 }
 function renderVotar() {
   const el=document.getElementById("vote-container"); if(!el) return;
@@ -1565,14 +1587,38 @@ function renderVotar() {
   const others=alreadyVoted?[S.uid]:allPids;
   const resuming=voteState.gameId===game.id;
   if(!resuming){
+    const draft=(S.voteDrafts[game.id]||{})[S.uid]||null;
     voteState={gameId:game.id,ratings:{}};
-    others.forEach(pid=>{voteState.ratings[pid]=emptyRating();});
+    others.forEach(pid=>{voteState.ratings[pid]=(draft&&draft[pid])?Object.assign(emptyRating(),draft[pid]):emptyRating();});
+    if(draft) showToast("💾 Rascunho anterior recuperado");
+    // S.voteDrafts pode ainda não ter chegado do Firebase neste primeiro render
+    // (é um listener assíncrono independente). Busca direto pra garantir que um
+    // rascunho existente seja sempre recuperado, mesmo que a lista local esteja
+    // vazia ainda — e preenche sem apagar o que o jogador já tiver digitado.
+    if(!draft){
+      const _openedGameId=game.id, _openedUid=S.uid;
+      db.ref(`voteDrafts/${_openedGameId}/${_openedUid}`).once("value").then(snap=>{
+        const late=snap.val();
+        if(!late||voteState.gameId!==_openedGameId||S.uid!==_openedUid) return;
+        let changed=false;
+        Object.entries(late).forEach(([pid,v])=>{
+          if(voteState.ratings[pid]&&!voteState.ratings[pid].note&&!voteState.ratings[pid].garra&&!voteState.ratings[pid].comportamento){
+            voteState.ratings[pid]=Object.assign(emptyRating(),v);
+            changed=true;
+          }
+        });
+        if(changed){showToast("💾 Rascunho anterior recuperado");_forceVotarRebuild=true;renderVotar();}
+      }).catch(()=>{});
+    }
   }
   // Já está com o formulário aberto pra este jogo: não reconstruir o DOM a cada
   // atualização em tempo real (presença, votos de outros jogos, etc) — isso pode
   // derrubar um toque em "Enviar votos" bem no meio do clique. O que já foi
-  // preenchido continua em voteState normalmente.
-  if(resuming&&document.querySelector("button[onclick='submitVotes()']")) return;
+  // preenchido continua em voteState normalmente. _forceVotarRebuild é uma válvula
+  // de escape pra quando PRECISAMOS reconstruir mesmo assim (ex: um rascunho
+  // recuperado depois do primeiro render, que precisa aparecer marcado na tela).
+  if(resuming&&!_forceVotarRebuild&&document.querySelector("button[onclick='submitVotes()']")) return;
+  _forceVotarRebuild=false;
   const isGoleiro=pid=>game.players?.[pid]?.goleiro===true;
   const verm=others.filter(p=>getPlayerTeam(game,p)==="vermelho"&&!isGoleiro(p));
   const azul=others.filter(p=>getPlayerTeam(game,p)==="azul"&&!isGoleiro(p));
@@ -1583,7 +1629,7 @@ function renderVotar() {
   if(azul.length) sections+=`<div class="mb-1 flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span><span class="text-xs font-bold text-blue-400 uppercase tracking-wider">Time Azul</span></div><div class="space-y-3 mb-4">${azul.map(p=>renderVoteCard(p,game)).join("")}</div>`;
   if(sem.length)  sections+=`<div class="space-y-3 mb-4">${sem.map(p=>renderVoteCard(p,game)).join("")}</div>`;
   if(goleiros.length) sections+=`<div class="mb-1 flex items-center gap-2"><span class="text-lg">🥅</span><span class="text-xs font-bold text-yellow-400 uppercase tracking-wider">Goleiros</span></div><div class="space-y-3 mb-4">${goleiros.map(p=>renderVoteCard(p,game)).join("")}</div>`;
-  el.innerHTML=`${backBtn}<div class="mb-4"><div class="font-black text-base">${fmtDate(game.date)} ${badge(game.type)}</div><p class="text-xs text-green-300/50 mt-1">Avalie os ${others.length} jogadores</p></div>${sections}<button onclick="submitVotes()" class="mt-2 w-full py-4 rounded-xl bg-green-600 hover:bg-green-500 font-black text-base transition-colors">✅ Enviar votos</button>`;
+  el.innerHTML=`${backBtn}<div class="mb-4 flex items-start justify-between gap-2"><div><div class="font-black text-base">${fmtDate(game.date)} ${badge(game.type)}</div><p class="text-xs text-green-300/50 mt-1">Avalie os ${others.length} jogadores</p></div><button onclick="saveDraftAndNotify()" class="shrink-0 px-3 h-9 rounded-xl bg-[#1a2e1f] hover:bg-green-800/50 border border-green-700/40 text-green-400 font-bold text-xs transition-colors">💾 Salvar</button></div>${sections}<button onclick="submitVotes()" class="mt-2 w-full py-4 rounded-xl bg-green-600 hover:bg-green-500 font-black text-base transition-colors">✅ Enviar votos</button>`;
 }
 function renderVoteCard(pid,game){
   const v=voteState.ratings[pid]||emptyRating();
@@ -1686,32 +1732,37 @@ function setNote(pid,note){
   voteState.ratings[pid].note=note;
   const c=document.getElementById("vc-"+pid);
   if(c) c.querySelectorAll("[data-field='note']").forEach((b,i)=>b.classList.toggle("sel",i+1===note));
+  scheduleDraftSave();
 }
 function addGoal(pid,d){
   ensureRating(pid);
   voteState.ratings[pid].goals=Math.max(0,(voteState.ratings[pid].goals||0)+d);
   const e=document.getElementById("g-"+pid); if(e) e.textContent=voteState.ratings[pid].goals;
   const b=document.getElementById("g-min-"+pid); if(b) b.disabled=voteState.ratings[pid].goals<=0;
+  scheduleDraftSave();
 }
 function addAssist(pid,d){
   ensureRating(pid);
   voteState.ratings[pid].assists=Math.max(0,(voteState.ratings[pid].assists||0)+d);
   const e=document.getElementById("a-"+pid); if(e) e.textContent=voteState.ratings[pid].assists;
   const b=document.getElementById("a-min-"+pid); if(b) b.disabled=voteState.ratings[pid].assists<=0;
+  scheduleDraftSave();
 }
 function addChutes(pid,d){
   ensureRating(pid);
   voteState.ratings[pid].chutes=Math.max(0,(voteState.ratings[pid].chutes||0)+d);
   const e=document.getElementById("ch-"+pid); if(e) e.textContent=voteState.ratings[pid].chutes;
   const b=document.getElementById("ch-min-"+pid); if(b) b.disabled=voteState.ratings[pid].chutes<=0;
+  scheduleDraftSave();
 }
 function addDesarmes(pid,d){
   ensureRating(pid);
   voteState.ratings[pid].desarmes=Math.max(0,(voteState.ratings[pid].desarmes||0)+d);
   const e=document.getElementById("ds-"+pid); if(e) e.textContent=voteState.ratings[pid].desarmes;
   const b=document.getElementById("ds-min-"+pid); if(b) b.disabled=voteState.ratings[pid].desarmes<=0;
+  scheduleDraftSave();
 }
-function setObs(pid,val){ensureRating(pid);voteState.ratings[pid].obs=val;}
+function setObs(pid,val){ensureRating(pid);voteState.ratings[pid].obs=val;scheduleDraftSave();}
 async function submitVotes(){
   const gameId=voteState.gameId;
   if(!gameId||!S.uid){alert("Sua sessão de votação expirou. Toque em Voltar e entre na votação de novo.");return;}
@@ -1732,6 +1783,7 @@ async function submitVotes(){
         ts:Date.now()
       };
     });
+    updates[`/voteDrafts/${gameId}/${S.uid}`]=null;
     await db.ref().update(updates);
     voteState={gameId:null,ratings:{}};
     showSuccessModal();
