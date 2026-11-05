@@ -2318,7 +2318,7 @@ function renderAdmin(){
                 <div class="text-sm font-semibold truncate">${p.name}</div>
                 ${extraBits?`<div class="text-[10px] text-green-300/40 truncate">${extraBits}</div>`:""}
               </div>
-              <button onclick="toggleEditPlayer('${p.id}')" class="text-green-400/70 hover:text-green-400 text-xs px-1.5">✏️</button>
+              <button onclick="togglePlayerProfile('${p.id}')" class="text-green-400/70 hover:text-green-400 text-xs px-1.5">✏️</button>
               <button onclick="removePlayer('${p.id}')" class="text-red-400/60 hover:text-red-400 text-xs px-1">✕</button>
             </div>
             ${editPlayerId===p.id?`<div class="px-3 pb-3 pt-1 border-t border-[#1a3825] grid grid-cols-2 gap-2">
@@ -2541,7 +2541,7 @@ let editGameId=null, editTeams={}, editGoleiros=new Set();
 let adminPlayerSearch="", adminPlayersOpen=false, adminGamesOpen=true;
 let editPlayerId=null;
 const PLAYER_POS_LABELS={"GK":"🥅 Goleiro","ZAG":"🛡 Zagueiro","LAT":"↕ Lateral","VOL":"🔄 Volante","MEI":"🎯 Meia","ATA":"⚡ Atacante","PNT":"🔥 Ponta"};
-function toggleEditPlayer(id){editPlayerId=editPlayerId===id?null:id;renderAdmin();}
+function togglePlayerProfile(id){editPlayerId=editPlayerId===id?null:id;renderAdmin();}
 async function savePlayerExtra(id){
   const pos=document.getElementById("pe-pos-"+id)?.value||"";
   const idade=document.getElementById("pe-idade-"+id)?.value||"";
