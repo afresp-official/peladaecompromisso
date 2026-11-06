@@ -2360,9 +2360,11 @@ function sortearTimes(gameId){
 }
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
 function sortearTentativa(teams,arr,craqueNames){
-  const craquePids=arr.filter(pid=>craqueNames.has((S.players[pid]?.name||"").toLowerCase()));
-  const normaisPids=arr.filter(pid=>!craqueNames.has((S.players[pid]?.name||"").toLowerCase()));
-  shuffle(craquePids); shuffle(normaisPids);
+  const isGoleiro=pid=>S.players[pid]?.pos==="GK";
+  const golPids=arr.filter(isGoleiro);
+  const craquePids=arr.filter(pid=>!isGoleiro(pid)&&craqueNames.has((S.players[pid]?.name||"").toLowerCase()));
+  const normaisPids=arr.filter(pid=>!isGoleiro(pid)&&!craqueNames.has((S.players[pid]?.name||"").toLowerCase()));
+  shuffle(golPids); shuffle(craquePids); shuffle(normaisPids);
   const groups={}; teams.forEach(t=>{ groups[t.key]=[]; });
 
   // Com 3+ times ("ganhou fica"), prioriza encher os 2 times de campo (até o tamanho ideal)
@@ -2372,9 +2374,17 @@ function sortearTentativa(teams,arr,craqueNames){
   const usePitchPriority = benchTeams.length>0;
   const perPitchTarget = Math.max(1, Math.ceil(defaultVagas()/teams.length));
 
+  // Nível de habilidade (1-5, cadastrado no perfil do jogador) é usado pra balancear a
+  // FORÇA de cada time, não só a quantidade — jogador sem nível cadastrado conta como
+  // "neutro" (3) pra não distorcer o sorteio.
+  const nivelOf=pid=>S.players[pid]?.nivel||3;
+  function skillSum(key){ return groups[key].reduce((s,pid)=>s+nivelOf(pid),0); }
   function minKeyOf(keys){
-    let minKey=keys[0];
-    keys.forEach(k=>{ if(groups[k].length<groups[minKey].length) minKey=k; });
+    let minKey=keys[0], minScore=skillSum(minKey);
+    keys.forEach(k=>{
+      const score=skillSum(k);
+      if(score<minScore||(score===minScore&&groups[k].length<groups[minKey].length)){ minKey=k; minScore=score; }
+    });
     return minKey;
   }
   function assign(pid){
@@ -2386,6 +2396,12 @@ function sortearTentativa(teams,arr,craqueNames){
       groups[minKeyOf(teams.map(t=>t.key))].push(pid);
     }
   }
+  // Goleiro sempre espalha entre TODOS os times (inclusive o(s) time(s) reserva do "ganhou
+  // fica") — não segue a prioridade de encher o time de linha primeiro, senão o time reserva
+  // pode ficar sem goleiro nenhum enquanto um time de linha recebe 2.
+  golPids.forEach(pid=>{ groups[minKeyOf(teams.map(t=>t.key))].push(pid); });
+  // Ordem de prioridade pro resto: craques (espalhados) → resto por nível, respeitando a
+  // prioridade de encher o time de linha primeiro quando há time(s) reserva.
   craquePids.forEach(assign);
   normaisPids.forEach(assign);
   return groups;
