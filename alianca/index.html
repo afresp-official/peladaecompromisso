@@ -2308,18 +2308,8 @@ function renderAdmin(){
           <input id="new-player" type="text" placeholder="Adicionar jogador" class="flex-1 bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-green-500" onkeydown="if(event.key==='Enter')addPlayer()"/>
           <button onclick="addPlayer()" class="px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-sm font-bold">Adicionar</button>
         </div>
-        <input type="text" placeholder="🔍 Buscar jogador..." value="${adminPlayerSearch}" oninput="adminPlayerSearch=this.value;renderAdmin();" style="font-size:16px" class="w-full bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-green-500"/>
-        <div class="space-y-1.5 max-h-60 overflow-y-auto pr-1">
-          ${players.filter(p=>p.name.toLowerCase().includes(adminPlayerSearch.toLowerCase())).map(p=>{
-            const extraBits=[p.pos?PLAYER_POS_LABELS[p.pos]:"",p.idade?p.idade+" anos":"",p.nivel?"nível "+p.nivel:""].filter(Boolean).join(" · ");
-            return `<div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0b1a10] border border-[#2a4a35]">
-            <button onclick="openPlayerProfile('${p.id}')" class="flex-1 min-w-0 text-left">
-              <div class="text-sm font-semibold truncate">${p.name}</div>
-              ${extraBits?`<div class="text-[10px] text-green-300/40 truncate">${extraBits}</div>`:`<div class="text-[10px] text-green-300/25">Toque para cadastrar dados</div>`}
-            </button>
-            <button onclick="removePlayer('${p.id}')" class="text-red-400/60 hover:text-red-400 text-xs px-1">✕</button>
-          </div>`;}).join("")}
-        </div>
+        <input type="text" placeholder="🔍 Buscar jogador..." value="${adminPlayerSearch}" oninput="adminPlayerSearch=this.value;renderPlayerList();" style="font-size:16px" class="w-full bg-[#0b1a10] border border-[#2a4a35] rounded-lg px-3 py-2 text-white focus:outline-none focus:border-green-500"/>
+        <div class="space-y-1.5 max-h-60 overflow-y-auto pr-1" id="player-list">${playerListHtml(players)}</div>
       </div>`:""}
     </div>
     <div class="bg-[#132218] border border-[#2a4a35] rounded-xl p-4">
@@ -2510,6 +2500,21 @@ async function deleteGame(id){if(!confirm("Excluir este jogo e todos os votos?")
 let editGameId=null, editTeams={}, editGoleiros=new Set();
 let adminPlayerSearch="", adminPlayersOpen=false, adminGamesOpen=true;
 const PLAYER_POS_LABELS={"GK":"🥅 Goleiro","ZAG":"🛡 Zagueiro","LAT":"↕ Lateral","VOL":"🔄 Volante","MEI":"🎯 Meia","ATA":"⚡ Atacante","PNT":"🔥 Ponta"};
+function playerListHtml(players){
+  return players.filter(p=>p.name.toLowerCase().includes(adminPlayerSearch.toLowerCase())).map(p=>{
+    const extraBits=[p.pos?PLAYER_POS_LABELS[p.pos]:"",p.idade?p.idade+" anos":"",p.nivel?"nível "+p.nivel:""].filter(Boolean).join(" · ");
+    return `<div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0b1a10] border border-[#2a4a35]">
+    <button onclick="openPlayerProfile('${p.id}')" class="flex-1 min-w-0 text-left">
+      <div class="text-sm font-semibold truncate">${p.name}</div>
+      ${extraBits?`<div class="text-[10px] text-green-300/40 truncate">${extraBits}</div>`:`<div class="text-[10px] text-green-300/25">Toque para cadastrar dados</div>`}
+    </button>
+    <button onclick="removePlayer('${p.id}')" class="text-red-400/60 hover:text-red-400 text-xs px-1">✕</button>
+  </div>`;}).join("");
+}
+function renderPlayerList(){
+  const box=document.getElementById("player-list"); if(!box) return;
+  box.innerHTML=playerListHtml(activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR")));
+}
 function openPlayerProfile(id){
   const p=S.players[id]; if(!p) return;
   openModal(`
