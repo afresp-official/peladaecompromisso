@@ -2513,7 +2513,7 @@ async function addPlayer(){const i=document.getElementById("new-player");const n
 async function removePlayer(id){if(!confirm(`Remover ${playerName(id)}?`))return;await db.ref("players/"+id+"/active").set(false);}
 async function deleteGame(id){if(!confirm("Excluir este jogo e todos os votos?"))return;const u={};u["games/"+id]=null;u["ratings/"+id]=null;u["formations/"+id]=null;await db.ref().update(u);showToast("Jogo e avaliações excluídos!");}
 
-let editGameId=null, editTeams={}, editGoleiros=new Set();
+let editGameId=null, editTeams={}, editGoleiros=new Set(), editShowAll=false;
 let adminPlayerSearch="", adminPlayersOpen=false, adminGamesOpen=true;
 const PLAYER_POS_LABELS={"GK":"🥅 Goleiro","ZAG":"🛡 Zagueiro","LAT":"↕ Lateral","VOL":"🔄 Volante","MEI":"🎯 Meia","ATA":"⚡ Atacante","PNT":"🔥 Ponta"};
 function playerListHtml(players){
@@ -2573,8 +2573,9 @@ async function savePlayerExtra(id){
   showToast("Dados do jogador salvos!");
   renderAdmin();
 }
-function openEditGame(gid){
+function openEditGame(gid,keepShowAll){
   editGameId=gid;
+  if(!keepShowAll) editShowAll=false;
   const g=S.games[gid]; if(!g) return;
   const pids=getGamePlayerIds(g);
   editTeams={};
@@ -2585,12 +2586,16 @@ function openEditGame(gid){
   const confirmedPres=Object.entries(presSlots).filter(([k])=>Number(k)<=maxVg).map(([,v])=>v);
   const presNames=new Set(confirmedPres.map(e=>e.name.toLowerCase()));
   const allActive=activePlayers().sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
-  const confirmed=allActive.filter(p=>presNames.has(p.name.toLowerCase()));
-  const displayPlayers=confirmed.length>0?confirmed:allActive;
-  const filterNote=confirmed.length>0?`Confirmados na lista (${confirmed.length})`:"Todos os jogadores ativos";
+  const confirmed=allActive.filter(p=>presNames.has(p.name.toLowerCase())||pids.includes(p.id));
+  const displayPlayers=(editShowAll||confirmed.length===0)?allActive:confirmed;
+  const filterNote=(editShowAll||confirmed.length===0)?"Todos os jogadores ativos":`Confirmados na lista (${confirmed.length})`;
+  const toggleBtn=(!editShowAll&&confirmed.length>0&&confirmed.length<allActive.length)
+    ?`<button onclick="editShowAll=true;openEditGame('${gid}',true);" class="text-[10px] text-blue-400 font-bold underline mb-2">+ Incluir jogador que não estava na lista</button>`
+    :"";
   openModal(`
     <h3 class="font-black text-base mb-3">✏️ ${fmtDate(g.date)}</h3>
-    <p class="text-[10px] text-green-300/50 mb-3 uppercase tracking-wider">${filterNote} — selecione o time</p>
+    <p class="text-[10px] text-green-300/50 mb-1 uppercase tracking-wider">${filterNote} — selecione o time</p>
+    ${toggleBtn}
     <div class="space-y-1.5 max-h-[55vh] overflow-y-auto pr-1 mb-4" id="edit-player-list">
       ${displayPlayers.map(p=>{
         const inGame=pids.includes(p.id)||presNames.has(p.name.toLowerCase());
