@@ -1130,7 +1130,7 @@ function renderCampo() {
   const presNames = new Set(confirmedSlots.map(e=>e.name.toLowerCase()));
   // Inclui todos da presença confirmada mesmo que não estejam em game.players
   const presencePids = Object.entries(S.players).filter(([,p])=>presNames.has((p.name||"").toLowerCase())).map(([pid])=>pid);
-  const pidsSet = new Set([...allPids.filter(pid=>presNames.size===0||presNames.has((S.players[pid]?.name||"").toLowerCase())),...presencePids]);
+  const pidsSet = new Set([...allPids,...presencePids]);
   const _cSeenNames=new Set();const pids=[...pidsSet].filter(pid=>{const n=(S.players[pid]?.name||"").toLowerCase();if(_cSeenNames.has(n))return false;_cSeenNames.add(n);return true;});
   const formation = S.formations[game.id] || {};
 
@@ -1569,8 +1569,7 @@ function renderVotar() {
   const presNames=new Set(Object.values(presSlots).map(e=>e.name.toLowerCase()));
   const rawPids=getGamePlayerIds(game);
   const presencePids=Object.entries(S.players).filter(([,p])=>presNames.has((p.name||"").toLowerCase())).map(([pid])=>pid);
-  const filteredPids=presNames.size>0?rawPids.filter(pid=>presNames.has((S.players[pid]?.name||"").toLowerCase())):rawPids;
-  const _vSeenNames=new Set();const allPids=[...new Set([...filteredPids,...presencePids])].filter(pid=>{const n=(S.players[pid]?.name||"").toLowerCase();if(_vSeenNames.has(n))return false;_vSeenNames.add(n);return true;});
+  const _vSeenNames=new Set();const allPids=[...new Set([...rawPids,...presencePids])].filter(pid=>{const n=(S.players[pid]?.name||"").toLowerCase();if(_vSeenNames.has(n))return false;_vSeenNames.add(n);return true;});
   const existingRatings=S.ratings[game.id]||{};
   const totalVoters=Object.keys(existingRatings).length;
   const ratedPids=new Set(Object.values(existingRatings).flatMap(r=>Object.keys(r)));
