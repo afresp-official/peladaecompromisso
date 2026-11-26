@@ -1130,7 +1130,8 @@ function renderCampo() {
   const presNames = new Set(confirmedSlots.map(e=>e.name.toLowerCase()));
   // Inclui todos da presença confirmada mesmo que não estejam em game.players
   const presencePids = Object.entries(S.players).filter(([,p])=>presNames.has((p.name||"").toLowerCase())).map(([pid])=>pid);
-  const pidsSet = new Set([...allPids,...presencePids]);
+  const removedPids=new Set(game.removedPids||[]);
+  const pidsSet = new Set([...allPids,...presencePids].filter(pid=>!removedPids.has(pid)));
   const _cSeenNames=new Set();const pids=[...pidsSet].filter(pid=>{const n=(S.players[pid]?.name||"").toLowerCase();if(_cSeenNames.has(n))return false;_cSeenNames.add(n);return true;});
   const formation = S.formations[game.id] || {};
 
@@ -1569,7 +1570,8 @@ function renderVotar() {
   const presNames=new Set(Object.values(presSlots).map(e=>e.name.toLowerCase()));
   const rawPids=getGamePlayerIds(game);
   const presencePids=Object.entries(S.players).filter(([,p])=>presNames.has((p.name||"").toLowerCase())).map(([pid])=>pid);
-  const _vSeenNames=new Set();const allPids=[...new Set([...rawPids,...presencePids])].filter(pid=>{const n=(S.players[pid]?.name||"").toLowerCase();if(_vSeenNames.has(n))return false;_vSeenNames.add(n);return true;});
+  const removedPids=new Set(game.removedPids||[]);
+  const _vSeenNames=new Set();const allPids=[...new Set([...rawPids,...presencePids])].filter(pid=>{if(removedPids.has(pid))return false;const n=(S.players[pid]?.name||"").toLowerCase();if(_vSeenNames.has(n))return false;_vSeenNames.add(n);return true;});
   const existingRatings=S.ratings[game.id]||{};
   const totalVoters=Object.keys(existingRatings).length;
   const ratedPids=new Set(Object.values(existingRatings).flatMap(r=>Object.keys(r)));
@@ -2634,7 +2636,14 @@ async function saveEditGame(){
   if(checked.length<2){alert("Selecione ao menos 2 jogadores");return;}
   const players={};
   checked.forEach(pid=>{ players[pid]={team:editTeams[pid]||TEAMS()[0].key,goleiro:editGoleiros.has(pid)?true:false}; });
+  // Jogadores com presença confirmada que o admin desmarcou aqui precisam ficar
+  // de fora da votação/escalação também, já que a presença confirmada continua existindo.
+  const oldPids=getGamePlayerIds(S.games[editGameId]||{});
+  const removedSet=new Set(S.games[editGameId]?.removedPids||[]);
+  oldPids.forEach(pid=>{ if(!checked.includes(pid)) removedSet.add(pid); });
+  checked.forEach(pid=>removedSet.delete(pid));
   await db.ref("games/"+editGameId+"/players").set(players);
+  await db.ref("games/"+editGameId+"/removedPids").set([...removedSet]);
   closeModal();
   alert("Jogo atualizado!");
 }
