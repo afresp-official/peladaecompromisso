@@ -1026,7 +1026,9 @@ function calcGameResult(game){
   }));
   const scorers=pids.filter(p=>playerGoals[p]>0).map(p=>({name:playerName(p),team:getPlayerTeam(game,p),goals:playerGoals[p]}))
     .sort((a,b)=>b.goals-a.goals);
-  const result={scores,scorers};
+  const ownGoalScorers=pids.filter(p=>playerOwnGoals[p]>0).map(p=>({name:playerName(p),team:getPlayerTeam(game,p),goals:playerOwnGoals[p]}))
+    .sort((a,b)=>b.goals-a.goals);
+  const result={scores,scorers,ownGoalScorers};
   // Compat: clubes com exatamente 2 times (o padrão) continuam expondo vermScore/azulScore
   if(teams.length===2){ result.vermScore=scores[0].score; result.azulScore=scores[1].score; }
   return result;
@@ -1090,6 +1092,13 @@ function renderGameStatus(){
                 +list.map(s=>'<div class="px-2 py-1.5 rounded-lg text-center" style="background:rgba('+rgb+',0.18);border:1px solid rgba('+rgb+',0.4)"><div class="text-[10px] font-semibold leading-snug break-words" style="color:rgba('+rgb+',0.95)">'+s.name+'</div><div class="text-[11px] leading-tight mt-1">'+"⚽".repeat(Math.min(s.goals,8))+'</div></div>').join("")
                 +'</div>';
             }).join("")}
+          </div>
+        </div>`:""}
+        ${result.ownGoalScorers.length?`
+        <div class="border-t border-[#1e3a27] pt-2 mt-1">
+          <div class="text-[10px] text-rose-300/40 uppercase tracking-wider mb-1.5">🙈 Gol contra</div>
+          <div class="flex gap-1.5 flex-wrap">
+            ${result.ownGoalScorers.map(s=>'<div class="px-2 py-1 rounded-lg text-center bg-rose-950/40 border border-rose-800/30"><div class="text-[10px] font-semibold text-rose-300/90">'+s.name+'</div></div>').join("")}
           </div>
         </div>`:""}
         ${(()=>{const bp=bestPlayerOfGame(game);return bp?`<div class="border-t border-[#1e3a27] pt-2 mt-2 flex items-center gap-2"><span class="text-yellow-400 text-base">⭐</span><div><div class="text-[10px] text-yellow-400/50 uppercase tracking-wider font-bold">Melhor jogador</div><div class="text-sm font-black text-yellow-300">${bp.name} <span class="text-yellow-400/50 font-normal text-xs">${bp.score} pts${bp.note?` · nota ${bp.note}`:""}</span></div></div></div>`:""})()}
@@ -1884,6 +1893,9 @@ function buildGameShareText(gameId){
       txt+="\n⚽ *Artilheiros:*\n";
       if(vScorers.length) txt+="🔴 "+vScorers.map(function(s){return s.name+" "+"⚽".repeat(Math.min(s.goals,8));}).join(", ")+"\n";
       if(aScorers.length) txt+="🔵 "+aScorers.map(function(s){return s.name+" "+"⚽".repeat(Math.min(s.goals,8));}).join(", ")+"\n";
+    }
+    if(result.ownGoalScorers.length){
+      txt+="\n🙈 *Gol contra:* "+result.ownGoalScorers.map(function(s){return s.name;}).join(", ")+"\n";
     }
   }
 
@@ -2722,6 +2734,13 @@ async function shareResultadoPDF(gid){
         </div>
       </div>
     </div>`:"";
+  const ownGoalHtml=result&&result.ownGoalScorers.length?`
+    <div style="border-top:1px solid #1e4a2a;padding-top:10px;margin-top:10px;">
+      <div style="font-size:9px;color:#fda4af;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;font-weight:700;">🙈 Gol Contra</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${result.ownGoalScorers.map(s=>`<span style="font-size:11px;padding:3px 8px;border-radius:20px;font-weight:700;background:rgba(127,29,29,0.4);color:#fda4af;border:1px solid rgba(244,63,94,0.3);text-align:center;">${s.name}</span>`).join("")}
+      </div>
+    </div>`:"";
   const bpHtml=bp?`
     <div style="border-top:1px solid #1e4a2a;padding-top:10px;margin-top:10px;display:flex;align-items:center;gap:8px;">
       <span style="font-size:18px;">⭐</span>
@@ -2752,7 +2771,7 @@ async function shareResultadoPDF(gid){
         <div style="font-size:20px;color:#2a4a35;font-weight:900;">×</div>
         <div style="text-align:center;"><div style="font-size:46px;font-weight:900;color:#60a5fa;line-height:1;">${result.azulScore}</div><div style="font-size:9px;color:#60a5fa;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">🔵 Azul</div></div>
       </div>
-      ${artHtml}${bpHtml}
+      ${artHtml}${ownGoalHtml}${bpHtml}
     </div>`:""}
     <div style="background:#0f2016;border:1px solid #1e4a2a;border-radius:12px;padding:12px;">
       <div style="font-size:9px;color:#4ade80;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;font-weight:700;">🏆 Avaliação dos Jogadores</div>
@@ -2940,6 +2959,12 @@ async function viewVoter(gid,vid){
               </div>
             </div>
           </div>`:""}
+          ${result.ownGoalScorers.length?`<div class="border-t border-[#1e3a27] pt-2 mt-1">
+            <div class="text-[9px] text-rose-300/30 uppercase tracking-wider mb-1.5">🙈 Gol contra</div>
+            <div class="flex gap-1.5 flex-wrap">
+              ${result.ownGoalScorers.map(s=>`<div class="px-2 py-1 rounded-lg bg-rose-950/40 border border-rose-800/30 text-center"><div class="text-[10px] font-semibold text-rose-300/90">${s.name}</div></div>`).join("")}
+            </div>
+          </div>`:""}
           ${bp?`<div class="border-t border-[#1e3a27] pt-2 mt-2 flex items-center gap-2">
             <span class="text-yellow-400">⭐</span>
             <div>
@@ -3008,6 +3033,13 @@ async function shareVotosPDF(gid){
         </div>
       </div>
     </div>`:"";
+  const ownGoalHtml=result&&result.ownGoalScorers.length?`
+    <div style="border-top:1px solid #1e4a2a;padding-top:8px;margin-top:8px;">
+      <div style="font-size:9px;color:#fda4af;text-transform:uppercase;letter-spacing:2px;margin-bottom:7px;font-weight:700;">Gol Contra</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${result.ownGoalScorers.map(s=>`<span style="font-size:11px;padding:3px 8px;border-radius:20px;font-weight:700;background:rgba(127,29,29,0.4);color:#fda4af;border:1px solid rgba(244,63,94,0.3);text-align:center;">${s.name}</span>`).join("")}
+      </div>
+    </div>`:"";
   const bpHtml=bp?`<div style="border-top:1px solid #1e4a2a;padding-top:8px;margin-top:8px;display:flex;align-items:center;gap:8px;"><span style="font-size:16px;">&#11088;</span><div><div style="font-size:8px;color:#ca8a04;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Melhor Jogador</div><div style="font-size:13px;font-weight:900;color:#fde68a;">${bp.name} <span style="color:#a16207;font-weight:400;font-size:10px;">${bp.score} pts</span></div></div></div>`:"";
   const sectionTitle=(label,color)=>`<div style="display:flex;align-items:center;gap:7px;margin:12px 0 8px;"><span style="width:9px;height:9px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block;"></span><span style="font-size:10px;font-weight:900;color:${color};text-transform:uppercase;letter-spacing:1.5px;">${label}</span></div>`;
   const html=`<div style="background:#081510;padding:20px 16px;font-family:'Segoe UI',Arial,sans-serif;color:#fff;width:420px;">
@@ -3018,7 +3050,7 @@ async function shareVotosPDF(gid){
         <div style="font-size:18px;color:#2a4a35;font-weight:900;">x</div>
         <div style="text-align:center;"><div style="font-size:40px;font-weight:900;color:#60a5fa;line-height:1;">${result.azulScore}</div><div style="font-size:9px;color:#60a5fa;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Azul</div></div>
       </div>
-      ${artHtml}${bpHtml}
+      ${artHtml}${ownGoalHtml}${bpHtml}
     </div>`:""}
     ${sortedVerm.length?sectionTitle("Time Vermelho","#ef4444")+""+sortedVerm.map(renderCard).join(""):""}
     ${sortedAzul.length?sectionTitle("Time Azul","#3b82f6")+""+sortedAzul.map(renderCard).join(""):""}
