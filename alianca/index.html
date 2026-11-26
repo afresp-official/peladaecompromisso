@@ -1000,13 +1000,29 @@ function calcGameResult(game){
   if(!voters.length) return null;
   const pids=getGamePlayerIds(game);
   const playerGoals={};
+  const playerOwnGoals={};
   pids.forEach(pid=>{
     playerGoals[pid]=medianGoals(voters.map(v=>v[pid]?.goals||0));
+    playerOwnGoals[pid]=medianGoals(voters.map(v=>v[pid]?.ownGoals||0));
   });
   const teams=TEAMS();
+  // Gol contra soma pro time RIVAL de quem jogou na partida — só faz sentido
+  // entre os 2 times que de fato se enfrentam em campo (pitchTeams, igual ao
+  // Campo/"ganhou fica"); jogador de um time de banco não afeta nenhum placar.
+  const pitchKeys=teams.slice(0,2).map(t=>t.key);
+  const ownGoalsAgainst={};
+  teams.forEach(t=>{ ownGoalsAgainst[t.key]=0; });
+  if(pitchKeys.length===2){
+    pids.forEach(pid=>{
+      const og=playerOwnGoals[pid]||0; if(!og) return;
+      const team=getPlayerTeam(game,pid);
+      const rivalKey=team===pitchKeys[0]?pitchKeys[1]:team===pitchKeys[1]?pitchKeys[0]:null;
+      if(rivalKey) ownGoalsAgainst[rivalKey]+=og;
+    });
+  }
   const scores=teams.map(t=>({
     team:t,
-    score:pids.filter(p=>getPlayerTeam(game,p)===t.key).reduce((s,p)=>s+(playerGoals[p]||0),0),
+    score:pids.filter(p=>getPlayerTeam(game,p)===t.key).reduce((s,p)=>s+(playerGoals[p]||0),0)+(ownGoalsAgainst[t.key]||0),
   }));
   const scorers=pids.filter(p=>playerGoals[p]>0).map(p=>({name:playerName(p),team:getPlayerTeam(game,p),goals:playerGoals[p]}))
     .sort((a,b)=>b.goals-a.goals);
@@ -1473,7 +1489,7 @@ async function onDragEnd(e) {
 // ── VOTAR ──
 let voteState = {gameId:null, ratings:{}};
 let _forceVotarRebuild = false;
-function emptyRating(){return{note:0,goals:0,assists:0,chutes:0,desarmes:0,obs:"",garra:0,comportamento:0,faltas:0,gravidade:0,amarelos:0,vermelhos:0,azuis:0};}
+function emptyRating(){return{note:0,goals:0,ownGoals:0,assists:0,chutes:0,desarmes:0,obs:"",garra:0,comportamento:0,faltas:0,gravidade:0,amarelos:0,vermelhos:0,azuis:0};}
 function ensureRating(pid){if(!voteState.ratings[pid])voteState.ratings[pid]=emptyRating();}
 // ── Rascunho de votação: salva o progresso no Firebase (não só no navegador)
 // pra nunca se perder, mesmo se a aba fechar ou o clique final se perder.
@@ -1703,6 +1719,7 @@ function renderVoteCard(pid,game){
     +sec('Estatísticas')
     +'<div class="mt-1">'
     +ctrRow('⚽','Gols','text-yellow-300','g-'+pid,'g-min-'+pid,"addGoal('"+pid+"',-1)","addGoal('"+pid+"',1)",v.goals)
+    +ctrRow('🙈','Gol contra','text-rose-300','og-'+pid,'og-min-'+pid,"addOwnGoal('"+pid+"',-1)","addOwnGoal('"+pid+"',1)",v.ownGoals)
     +ctrRow('🎯','Assistências','text-blue-300','a-'+pid,'a-min-'+pid,"addAssist('"+pid+"',-1)","addAssist('"+pid+"',1)",v.assists)
     +ctrRow('🔫','Chutes a gol','text-green-300','ch-'+pid,'ch-min-'+pid,"addChutes('"+pid+"',-1)","addChutes('"+pid+"',1)",v.chutes)
     +ctrRow('⚔️','Desarmes/Duelos','text-cyan-300','ds-'+pid,'ds-min-'+pid,"addDesarmes('"+pid+"',-1)","addDesarmes('"+pid+"',1)",v.desarmes)
@@ -1744,6 +1761,13 @@ function addGoal(pid,d){
   const b=document.getElementById("g-min-"+pid); if(b) b.disabled=voteState.ratings[pid].goals<=0;
   scheduleDraftSave();
 }
+function addOwnGoal(pid,d){
+  ensureRating(pid);
+  voteState.ratings[pid].ownGoals=Math.max(0,(voteState.ratings[pid].ownGoals||0)+d);
+  const e=document.getElementById("og-"+pid); if(e) e.textContent=voteState.ratings[pid].ownGoals;
+  const b=document.getElementById("og-min-"+pid); if(b) b.disabled=voteState.ratings[pid].ownGoals<=0;
+  scheduleDraftSave();
+}
 function addAssist(pid,d){
   ensureRating(pid);
   voteState.ratings[pid].assists=Math.max(0,(voteState.ratings[pid].assists||0)+d);
@@ -1780,7 +1804,7 @@ async function submitVotes(){
     const updates={};
     Object.entries(voteState.ratings).forEach(([pid,v])=>{
       updates[`/ratings/${gameId}/${S.uid}/${pid}`]={
-        note:v.note,goals:v.goals,assists:v.assists,chutes:v.chutes||0,desarmes:v.desarmes||0,
+        note:v.note,goals:v.goals,ownGoals:v.ownGoals||0,assists:v.assists,chutes:v.chutes||0,desarmes:v.desarmes||0,
         obs:(v.obs||"").trim(),garra:v.garra||0,comportamento:v.comportamento||0,
         faltas:v.faltas||0,gravidade:v.gravidade||0,amarelos:v.amarelos||0,vermelhos:v.vermelhos||0,azuis:v.azuis||0,
         ts:Date.now()
@@ -1919,6 +1943,7 @@ function renderMyVotes(el,game){
         ${v.comportamento?`<span class="bg-green-950/60 border border-green-800/30 rounded-full px-2 py-0.5 text-green-300/70">🤝 ${v.comportamento}/5</span>`:""}
         ${v.passes?`<span class="bg-orange-950/40 border border-orange-800/30 rounded-full px-2 py-0.5 text-orange-300/70">❌ ${v.passes}/5</span>`:""}
         ${v.goals?`<span class="text-yellow-300 bg-yellow-950/40 border border-yellow-800/30 rounded-full px-2 py-0.5">⚽ ${v.goals}</span>`:""}
+        ${v.ownGoals?`<span class="text-rose-300 bg-rose-950/40 border border-rose-800/30 rounded-full px-2 py-0.5">🙈 ×${v.ownGoals}</span>`:""}
         ${v.assists?`<span class="text-blue-300 bg-blue-950/40 border border-blue-800/30 rounded-full px-2 py-0.5">🅰 ${v.assists}</span>`:""}
         ${v.amarelos?`<span class="text-amber-400 bg-amber-950/40 border border-amber-800/30 rounded-full px-2 py-0.5">🟡 ×${v.amarelos}</span>`:""}
         ${v.vermelhos?`<span class="text-red-400 bg-red-950/40 border border-red-800/30 rounded-full px-2 py-0.5">🔴 ×${v.vermelhos}</span>`:""}
@@ -2005,6 +2030,7 @@ function calcPlayerScore(pid,games,expectedTotal,period){
       chutes:safeAvg(pv.map(v=>v.chutes||0)),
       desarmes:safeAvg(pv.map(v=>v.desarmes||0)),
       gols:safeAvg(pv.map(v=>v.goals||0)),
+      ownGols:safeAvg(pv.map(v=>v.ownGoals||0)),
       assists:safeAvg(pv.map(v=>v.assists||0)),
       amarelo:safeAvg(pv.map(v=>v.amarelos||0)),
       verm:safeAvg(pv.map(v=>v.vermelhos||0)),
@@ -2018,7 +2044,7 @@ function calcPlayerScore(pid,games,expectedTotal,period){
   const freqScore=played/Math.max(total,expectedTotal||total);
   const a=k=>pg.reduce((s,g)=>s+(g[k]||0),0)/pg.length;
   const note=a("note"),noteScore=a("noteScore"),garra=a("garra"),comport=a("comport"),chutes=a("chutes"),desarmes=a("desarmes");
-  const gols=a("gols"),assists=a("assists"),amarelo=a("amarelo"),verm=a("verm"),azul=a("azul"),faltas=a("faltas"),grav=a("grav");
+  const gols=a("gols"),ownGols=a("ownGols"),assists=a("assists"),amarelo=a("amarelo"),verm=a("verm"),azul=a("azul"),faltas=a("faltas"),grav=a("grav");
   const gravMult=grav<=0?0.1:grav<=1?0.3:grav<=2?0.6:1;
   const cardY=period==="ano"?20/12:20;
   const cardR=period==="ano"?35/12:35;
@@ -2031,9 +2057,11 @@ function calcPlayerScore(pid,games,expectedTotal,period){
   const comportPts=comport>0?comport*2:0;
   const desarmesPts=Math.min(desarmes,3)*1;
   const positive=Math.min(100,notePts+golsPts+assistsPts+chutesPts+garraPts+comportPts+desarmesPts);
-  const quality=positive-amarelo*cardY-verm*cardR-azul*cardB-faltas*gravMult;
+  // Gol contra pesa igual cartão amarelo — já desconta do time no placar
+  // (calcGameResult), aqui é só o efeito individual na nota/ranking do jogador.
+  const quality=positive-amarelo*cardY-verm*cardR-azul*cardB-faltas*gravMult-ownGols*cardY;
   const score=freqScore*Math.max(0,quality);
-  return{score:Math.max(0,score),freq:freqDisplay,note,garra,comport,chutes,desarmes,gols,assists,amarelo,verm,azul,faltas,grav,played,total};
+  return{score:Math.max(0,score),freq:freqDisplay,note,garra,comport,chutes,desarmes,gols,ownGols,assists,amarelo,verm,azul,faltas,grav,played,total};
 }
 function getPlayerStats(pid,filter){
   const notes=[],ga=[],aa=[]; let games=0;
@@ -2064,6 +2092,7 @@ function rankPlayerCard(p,i){
     p.comport>0?('<span class="text-green-300/60">🤝 Comport. <b>'+p.comport.toFixed(1)+'</b></span>'):"",
     p.passes>0?('<span class="text-orange-400/70">❌ P.errados <b>'+p.passes.toFixed(1)+'</b></span>'):"",
     p.gols>0?('<span class="text-yellow-300/80">⚽ '+p.gols.toFixed(1)+'</span>'):"",
+    p.ownGols>0?('<span class="text-rose-400/70">🙈 ×'+p.ownGols.toFixed(1)+'</span>'):"",
     p.assists>0?('<span class="text-blue-300/80">🅰 '+p.assists.toFixed(1)+'</span>'):"",
     p.amarelo>0?('<span class="text-amber-400/70">🟡 ×'+p.amarelo.toFixed(1)+'</span>'):"",
     p.verm>0?('<span class="text-red-400/70">🔴 ×'+p.verm.toFixed(1)+'</span>'):"",
@@ -2855,6 +2884,7 @@ async function viewVoter(gid,vid){
         ${v.comportamento?`<span class="inline-flex items-center gap-1 bg-green-950/60 border border-green-800/30 rounded-lg px-3 py-1.5 text-green-300/70 leading-none">🤝 Comportamento: ${v.comportamento}/5</span>`:""}
         ${v.passes?`<span class="inline-flex items-center gap-1 bg-orange-950/40 border border-orange-800/30 rounded-lg px-3 py-1.5 text-orange-300/70 leading-none">❌ Passes errados: ${v.passes}/5</span>`:""}
         ${v.goals?`<span class="inline-flex items-center gap-1 bg-yellow-950/40 border border-yellow-800/30 rounded-lg px-3 py-1.5 text-yellow-300 leading-none">⚽ Gols: ${v.goals}</span>`:""}
+        ${v.ownGoals?`<span class="inline-flex items-center gap-1 bg-rose-950/40 border border-rose-800/30 rounded-lg px-3 py-1.5 text-rose-300 leading-none">🙈 Gol contra: ${v.ownGoals}</span>`:""}
         ${v.assists?`<span class="inline-flex items-center gap-1 bg-blue-950/40 border border-blue-800/30 rounded-lg px-3 py-1.5 text-blue-300 leading-none">🅰 Assist.: ${v.assists}</span>`:""}
         ${v.amarelos?`<span class="inline-flex items-center gap-1 bg-amber-950/40 border border-amber-800/30 rounded-lg px-3 py-1.5 text-amber-400 leading-none">🟡 Amarelo ×${v.amarelos}</span>`:""}
         ${v.vermelhos?`<span class="inline-flex items-center gap-1 bg-red-950/40 border border-red-800/30 rounded-lg px-3 py-1.5 text-red-400 leading-none">🔴 Vermelho ×${v.vermelhos}</span>`:""}
@@ -2951,6 +2981,7 @@ async function shareVotosPDF(gid){
     if(v.garra) stats.push(badge("rgba(20,83,45,0.6)","rgba(34,197,94,0.2)","#86efac",`⚡ Garra: ${v.garra}/5`));
     if(v.comportamento) stats.push(badge("rgba(20,83,45,0.6)","rgba(34,197,94,0.2)","#86efac",`🤝 Comportamento: ${v.comportamento}/5`));
     if(v.goals) stats.push(badge("rgba(113,63,18,0.5)","rgba(202,138,4,0.3)","#fde68a",`⚽ Gols: ${v.goals}`));
+    if(v.ownGoals) stats.push(badge("rgba(127,29,29,0.4)","rgba(244,63,94,0.3)","#fda4af",`🙈 Gol contra: ${v.ownGoals}`));
     if(v.assists) stats.push(badge("rgba(23,37,84,0.5)","rgba(59,130,246,0.3)","#93c5fd",`🅰 Assist.: ${v.assists}`));
     if(v.amarelos) stats.push(badge("rgba(120,53,15,0.5)","rgba(217,119,6,0.3)","#fcd34d",`🟡 Amarelo x${v.amarelos}`));
     if(v.vermelhos) stats.push(badge("rgba(127,29,29,0.5)","rgba(220,38,38,0.3)","#fca5a5",`🔴 Vermelho x${v.vermelhos}`));
@@ -3202,7 +3233,7 @@ async function openEditVoter(gid,vid){
   pids.forEach(pid=>{
     const v=existing[pid]||{};
     editVoteState.ratings[pid]={
-      note:v.note??0, goals:v.goals??0, assists:v.assists??0, chutes:v.chutes??0, desarmes:v.desarmes??0,
+      note:v.note??0, goals:v.goals??0, ownGoals:v.ownGoals??0, assists:v.assists??0, chutes:v.chutes??0, desarmes:v.desarmes??0,
       obs:v.obs??"", garra:v.garra??0, comportamento:v.comportamento??0,
       faltas:v.faltas??0, gravidade:v.gravidade??0, amarelos:v.amarelos??0, vermelhos:v.vermelhos??0, azuis:v.azuis??0
     };
@@ -3250,6 +3281,10 @@ function renderEditVoteCard(pid,game){
         <button class="counter-btn" id="evg-min-${pid}" onclick="adjEditGoal('${pid}',-1)" ${(v.goals||0)<=0?"disabled":""}>−</button>
         <span id="evg-${pid}" class="font-black text-yellow-300 w-4 text-center">${v.goals||0}</span>
         <button class="counter-btn" onclick="adjEditGoal('${pid}',1)">+</button></div>
+      <div class="flex items-center gap-1.5"><span class="text-rose-300/50">🙈</span>
+        <button class="counter-btn" id="evog-min-${pid}" onclick="adjEditOwnGoal('${pid}',-1)" ${(v.ownGoals||0)<=0?"disabled":""}>−</button>
+        <span id="evog-${pid}" class="font-black text-rose-300 w-4 text-center">${v.ownGoals||0}</span>
+        <button class="counter-btn" onclick="adjEditOwnGoal('${pid}',1)">+</button></div>
       <div class="flex items-center gap-1.5"><span class="text-blue-300/50">🎯</span>
         <button class="counter-btn" id="eva-min-${pid}" onclick="adjEditAssist('${pid}',-1)" ${(v.assists||0)<=0?"disabled":""}>−</button>
         <span id="eva-${pid}" class="font-black text-blue-300 w-4 text-center">${v.assists||0}</span>
@@ -3300,6 +3335,11 @@ function adjEditGoal(pid,d){
   const e=document.getElementById("evg-"+pid); if(e) e.textContent=editVoteState.ratings[pid].goals;
   const b=document.getElementById("evg-min-"+pid); if(b) b.disabled=editVoteState.ratings[pid].goals<=0;
 }
+function adjEditOwnGoal(pid,d){
+  editVoteState.ratings[pid].ownGoals=Math.max(0,(editVoteState.ratings[pid].ownGoals||0)+d);
+  const e=document.getElementById("evog-"+pid); if(e) e.textContent=editVoteState.ratings[pid].ownGoals;
+  const b=document.getElementById("evog-min-"+pid); if(b) b.disabled=editVoteState.ratings[pid].ownGoals<=0;
+}
 function adjEditAssist(pid,d){
   editVoteState.ratings[pid].assists=Math.max(0,(editVoteState.ratings[pid].assists||0)+d);
   const e=document.getElementById("eva-"+pid); if(e) e.textContent=editVoteState.ratings[pid].assists;
@@ -3342,7 +3382,7 @@ async function saveEditVoter(){
   const updates={};
   Object.entries(ratings).forEach(([pid,v])=>{
     updates[`/ratings/${gid}/${vid}/${pid}`]={
-      note:v.note,goals:v.goals,assists:v.assists,chutes:v.chutes||0,desarmes:v.desarmes||0,
+      note:v.note,goals:v.goals,ownGoals:v.ownGoals||0,assists:v.assists,chutes:v.chutes||0,desarmes:v.desarmes||0,
       obs:(v.obs||"").trim(),garra:v.garra||0,comportamento:v.comportamento||0,
       faltas:v.faltas||0,gravidade:v.gravidade||0,amarelos:v.amarelos||0,vermelhos:v.vermelhos||0,azuis:v.azuis||0,
       ts:Date.now()
