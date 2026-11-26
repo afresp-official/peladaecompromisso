@@ -1928,6 +1928,13 @@ async function shareGameResult(gameId){
   await shareVoterScreen(gameId,S.uid);
 }
 async function shareAfterVote(){
+  // Esconde o popup "Obrigado" (sem acionar closeSuccessModal(), que também
+  // navega pra "inicio" — isso derrubaria o modal de votos/PDF que abre em
+  // seguida). Os dois modais têm o mesmo z-index; como o success-modal vem
+  // depois no HTML, ele ficava por cima e escondia tudo que abria depois dele
+  // (achado real: a tela de instrução do PDF nunca aparecia na prática).
+  const sm=document.getElementById("success-modal");
+  if(sm){sm.classList.add("hidden");sm.classList.remove("flex");}
   // usa o jogo que acabou de ser votado
   const gameIds=Object.keys(S.games).sort(function(a,b){return(S.games[b].date||"").localeCompare(S.games[a].date||"");});
   if(gameIds.length) await shareGameResult(gameIds[0]);
@@ -2811,46 +2818,6 @@ async function shareResultadoPDF(gid){
 // ── Edição de Votos (Admin) ──
 let editVoteState={gid:null,vid:null,ratings:{}};
 
-async function shareGameResult(gid){
-  const g=S.games[gid]; if(!g) return;
-  const gr=S.ratings[gid]||{};
-  const dias=["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
-  let diaSemana="";
-  if(g.date){const[y,m,d]=g.date.split("-");diaSemana=dias[new Date(+y,+m-1,+d).getDay()];}
-
-  // Calcular médias por jogador
-  const scores={};
-  Object.values(gr).forEach(voterRatings=>{
-    Object.entries(voterRatings).forEach(([pid,v])=>{
-      if(!scores[pid]) scores[pid]={sum:0,count:0};
-      if(v.note>0){scores[pid].sum+=v.note;scores[pid].count++;}
-    });
-  });
-  const ranked=Object.entries(scores)
-    .filter(([,s])=>s.count>0)
-    .map(([pid,s])=>({pid,avg:s.sum/s.count}))
-    .sort((a,b)=>b.avg-a.avg);
-
-  const sep="━━━━━━━━━━━━━━━━━━━";
-  const medal=(i)=>i===0?"🥇":i===1?"🥈":i===2?"🥉":"  "+(i+1)+".";
-  let tabela=ranked.slice(0,10).map((r,i)=>"\n"+medal(i)+" "+playerName(r.pid)+" — "+r.avg.toFixed(1)).join("");
-  if(!tabela) tabela="\nNenhuma avaliação ainda";
-
-  const text="🏆 *PELADA É COMPROMISSO*\n"
-    +"⚽ _"+clubDisplayName()+" — Resultado do Jogo_\n"
-    +"📅 *"+diaSemana+", "+fmtDate(g.date)+"*\n"
-    +sep
-    +"\n\n🗳️ *MELHORES DO JOGO*"
-    +tabela
-    +"\n\n"+sep
-    +"\n"+Object.keys(gr).length+" jogadores avaliaram";
-
-  if(navigator.share){
-    try{await navigator.share({title:"Resultado — Pelada é Compromisso",text});}catch(e){}
-  } else {
-    try{await navigator.clipboard.writeText(text);showToast("Resultado copiado!");}catch(e){}
-  }
-}
 function openGameVotes(gid){
   const g=S.games[gid]; if(!g) return;
   const gr=S.ratings[gid]||{};
@@ -3132,11 +3099,27 @@ async function shareVoterScreen(gid,vid){
     if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
       try{await navigator.share({title:"Votos de "+playerName(vid),files:[file]});}catch(e){}
     }else{
+      // Celular/navegador sem suporte a compartilhar ARQUIVO (Web Share API) — não
+      // existe um jeito de "enviar pro WhatsApp" direto com anexo nesse caso (o
+      // WhatsApp não aceita arquivo via link wa.me, só texto). Baixa o PDF e deixa
+      // bem explícito o próximo passo num modal que não some sozinho, em vez de um
+      // toast rápido — achado real do usuário: a pessoa ficava sem saber o que
+      // fazer depois do PDF só "sumir" pra pasta de downloads.
       const url=URL.createObjectURL(blob);
       const a=document.createElement("a");
       a.href=url;a.download=fname;a.click();
       URL.revokeObjectURL(url);
-      showToast("PDF salvo!");
+      openModal(`
+        <div class="text-center">
+          <div class="text-5xl mb-3">📄</div>
+          <h3 class="font-black text-lg mb-2">PDF salvo!</h3>
+          <p class="text-sm text-green-200/70 leading-relaxed mb-5">
+            Baixamos <span class="font-semibold text-green-300">${fname}</span> no seu celular (pasta Downloads).<br><br>
+            Agora é só abrir o <span class="font-semibold text-green-300">WhatsApp</span>, escolher a conversa do grupo, tocar no 📎 (anexar) e selecionar esse arquivo.
+          </p>
+          <button onclick="closeModal();window.open('https://wa.me/','_blank')" class="w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 font-black text-sm text-white transition-colors">Abrir WhatsApp</button>
+        </div>
+      `);
     }
   }catch(e){
     if(document.body.contains(wrap))document.body.removeChild(wrap);
@@ -3821,13 +3804,16 @@ async function deleteClub(slug){
        style="animation:popIn .35s cubic-bezier(.34,1.56,.64,1) both">
     <div class="text-6xl mb-4">🎉</div>
     <div class="font-black text-2xl text-green-300 mb-2">Obrigado!</div>
-    <div class="text-green-200/60 text-sm leading-relaxed mb-6">
+    <div class="text-green-200/60 text-sm leading-relaxed mb-1">
       Sua avaliação foi registrada com sucesso.<br>Que venha a próxima pelada! ⚽
+    </div>
+    <div class="text-green-200/40 text-xs leading-relaxed mb-5">
+      Quer mandar seu PDF de votos pro grupo?
     </div>
     <button onclick="shareAfterVote()"
       class="w-full py-3.5 rounded-2xl bg-green-700 hover:bg-green-600 font-black text-base text-white transition-colors shadow-lg shadow-green-900/40 flex items-center justify-center gap-2 mb-3">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-      Compartilhar resultado
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.69.44 3.33 1.28 4.78L2 22l5.46-1.38a9.9 9.9 0 0 0 4.58 1.12h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.47 17.5 2 12.04 2zm5.83 14.06c-.24.68-1.39 1.3-1.91 1.37-.49.07-1.1.1-1.78-.11-.41-.13-.93-.3-1.6-.58-2.82-1.22-4.66-4.06-4.8-4.25-.14-.19-1.15-1.53-1.15-2.92s.73-2.07 1-2.35c.26-.28.56-.35.75-.35.19 0 .37 0 .54.01.17.01.41-.07.64.49.24.58.81 2 .88 2.14.07.14.12.3.02.49-.1.19-.15.3-.3.47-.15.16-.3.37-.44.49-.14.13-.3.27-.13.54.17.26.75 1.24 1.61 2.01 1.11.99 2.04 1.3 2.31 1.44.26.14.42.12.57-.07.16-.19.68-.79.86-1.06.18-.27.36-.22.6-.13.25.09 1.6.76 1.87.9.27.14.46.21.52.33.07.12.07.68-.16 1.36z"/></svg>
+      Enviar PDF no WhatsApp
     </button>
     <button onclick="closeSuccessModal()"
       class="w-full py-3 rounded-2xl bg-[#1a2e1f] hover:bg-[#243d29] font-bold text-sm text-green-400 transition-colors">
